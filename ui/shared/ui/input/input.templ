@@ -1,0 +1,18 @@
+package input
+
+css input_styles() {
+    padding: 0.5rem;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 0.25rem;
+    font-size: 1rem;
+    font-family: inherit;
+    line-height: 1.5;
+    color: #333;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+templ Input() {
+    <input class={input_styles()} type="text" />
+}

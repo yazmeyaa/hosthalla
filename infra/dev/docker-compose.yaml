@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: hosthalla-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hosthalla
+      POSTGRES_USER: hosthalla
+      POSTGRES_PASSWORD: hosthalla
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hosthalla -d hosthalla"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+  

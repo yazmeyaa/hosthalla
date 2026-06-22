@@ -1,0 +1,13 @@
+package auth_page
+
+import "github.com/yazmeyaa/hosthalla/ui/widgets/layouts"
+import "github.com/yazmeyaa/hosthalla/ui/shared/ui/input"
+
+templ AuthPage() {
+	@layouts.GenericLayout(layouts.GenericLayoutProps{Title: "Auth"}) {
+		<h1>Authentication page</h1>
+		<form>
+			@input.Input()
+		</form>
+	}
+}

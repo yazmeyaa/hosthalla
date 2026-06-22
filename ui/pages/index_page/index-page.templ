@@ -1,0 +1,30 @@
+package index_page
+
+import "github.com/yazmeyaa/hosthalla/internal/host"
+import "github.com/yazmeyaa/hosthalla/ui/widgets/layouts"
+import "time"
+import "github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
+
+templ HostsList(hosts []host.Host) {
+	<ul>
+		for _, host := range hosts {
+			<li style="list-style: none; margin-bottom: 10px;">
+				@card.Card() {
+					<div><span>Name: </span> <span>{ host.Name } </span> </div>
+					<div><span>Description: </span> <span>{ host.Description } </span> </div>
+					<div><span>IP: </span> <span>{ host.IP.String() } </span> </div>
+					<div><span>Port: </span> <span>{ host.Port } </span> </div>
+					<div><span>Created At: </span> <span>{ host.CreatedAt.Format(time.RFC3339) } </span> </div>
+					<div><span>Updated At: </span> <span>{ host.UpdatedAt.Format(time.RFC3339) } </span> </div>
+				}
+			</li>
+		}
+	</ul>
+}
+
+templ IndexPage(hosts []host.Host) {
+	@layouts.GenericLayout(layouts.GenericLayoutProps{Title: "Home"}) {
+		<h1>Hosthalla</h1>
+		@HostsList(hosts)
+	}
+}

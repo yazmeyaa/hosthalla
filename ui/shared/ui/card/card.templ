@@ -1,0 +1,14 @@
+package card
+
+css card() {
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 12px;
+}
+
+templ Card() {
+	<div class={ card() }>
+		{ children... }
+	</div>
+}
