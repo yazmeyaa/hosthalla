@@ -14,6 +14,7 @@ import (
 var (
 	ErrInvalidUsername = errors.New("invalid username")
 	ErrInvalidPassword = errors.New("invalid password")
+	ErrInvalidProfile  = errors.New("invalid profile")
 )
 
 const (
@@ -36,18 +37,25 @@ type SetPasswordDTO struct {
 	Password  string
 }
 
+type CreateSessionDTO struct {
+	ProfileID string
+}
+
 type Service struct {
 	profileRepository                storage.ProfileRepository
 	passwordAuthenticationRepository storage.PasswordAuthenticationRepository
+	sessionRepository                storage.SessionRepository
 }
 
 func New(
 	profileRepository storage.ProfileRepository,
 	passwordAuthenticationRepository storage.PasswordAuthenticationRepository,
+	sessionRepository storage.SessionRepository,
 ) *Service {
 	return &Service{
 		profileRepository:                profileRepository,
 		passwordAuthenticationRepository: passwordAuthenticationRepository,
+		sessionRepository:                sessionRepository,
 	}
 }
 
@@ -132,6 +140,25 @@ func (s *Service) ValidatePassword(ctx context.Context, username, plainPassword 
 		return false, err
 	}
 	return ComparePassword(passwordAuth.PasswordHash, plainPassword), nil
+}
+
+func (s *Service) CreateSession(ctx context.Context, data CreateSessionDTO) (authentication.Session, error) {
+	profileID := strings.TrimSpace(data.ProfileID)
+	if profileID == "" {
+		return authentication.Session{}, ErrInvalidProfile
+	}
+
+	return s.sessionRepository.CreateSession(ctx, storage.CreateSessionDTO{
+		ProfileID: profileID,
+	})
+}
+
+func (s *Service) GetSessionByID(ctx context.Context, id string) (authentication.Session, error) {
+	return s.sessionRepository.GetSessionByID(ctx, id)
+}
+
+func (s *Service) GetSessionByProfileID(ctx context.Context, profileID string) (authentication.Session, error) {
+	return s.sessionRepository.GetSessionByProfileID(ctx, profileID)
 }
 
 func HashPassword(plainPassword string) (string, error) {

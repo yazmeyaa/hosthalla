@@ -1,0 +1,104 @@
+package layouts
+
+import "github.com/yazmeyaa/hosthalla/internal/authentication"
+
+css authenticated_shell() {
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+
+css authenticated_header() {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px;
+	padding: 14px 16px;
+	border: 1px solid var(--border);
+	border-radius: 0.75rem;
+	background: linear-gradient(180deg, rgba(59, 130, 246, 0.1), rgba(17, 24, 39, 0.6));
+}
+
+css authenticated_brand() {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+css authenticated_title() {
+	margin: 0;
+	font-size: 1.25rem;
+	line-height: 1.1;
+}
+
+css authenticated_subtitle() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+css authenticated_nav_list() {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+css authenticated_nav_link() {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.45rem 0.7rem;
+	border: 1px solid var(--border);
+	border-radius: 0.55rem;
+	color: var(--text);
+	text-decoration: none;
+	font-size: 0.9rem;
+	transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+css authenticated_profile() {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.4rem 0.65rem;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: rgba(17, 24, 39, 0.65);
+}
+
+css authenticated_profile_text() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+type AuthenticatedLayoutProps struct {
+	GenericLayoutProps
+	Profile authentication.Profile
+}
+
+templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
+	@GenericLayout(GenericLayoutProps{Title: props.Title}) {
+		<div class={ authenticated_shell() }>
+			<header class={ authenticated_header() }>
+				<div class={ authenticated_brand() }>
+					<h1 class={ authenticated_title() }>Hosthalla</h1>
+					<p class={ authenticated_subtitle() }>Infrastructure dashboard</p>
+				</div>
+				<nav>
+					<ul class={ authenticated_nav_list() }>
+						<li><a class={ authenticated_nav_link() } href="/">Home</a></li>
+						<li><a class={ authenticated_nav_link() } href="/hosts">Hosts</a></li>
+						<li><a class={ authenticated_nav_link() } href="/notes">Notes</a></li>
+					</ul>
+				</nav>
+				<div class={ authenticated_profile() }>
+					<p class={ authenticated_profile_text() }>Logged in as <span>{ props.Profile.Username }</span></p>
+				</div>
+			</header>
+			{ children... }
+		</div>
+	}
+}

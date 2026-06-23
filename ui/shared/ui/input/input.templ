@@ -1,18 +1,43 @@
 package input
 
 css input_styles() {
-    padding: 0.5rem;
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
-    border-radius: 0.25rem;
-    font-size: 1rem;
-    font-family: inherit;
-    line-height: 1.5;
-    color: #333;
-    width: 100%;
-    box-sizing: border-box;
+	padding: 0.5rem;
+	background-color: var(--card);
+	border: 1px solid var(--border);
+	border-radius: 0.25rem;
+	font-size: 1rem;
+	font-family: inherit;
+	line-height: 1.5;
+	color: var(--text);
+	width: 100%;
+	box-sizing: border-box;
+	outline: none;
+	transition: border-color 120ms ease;
 }
 
-templ Input() {
-    <input class={input_styles()} type="text" />
+type InputProps struct {
+	Id          string
+	Type        string
+	Name        string
+	Value       string
+	Placeholder string
+	Required    bool
+}
+
+templ Input(props InputProps) {
+	{{
+		inputType := props.Type
+		if inputType == "" {
+			inputType = "text"
+		}
+	}}
+	<input
+		class={ input_styles() }
+		type={ inputType }
+		id={ props.Id }
+		name={ props.Name }
+		value={ props.Value }
+		placeholder={ props.Placeholder }
+		required={ props.Required }
+	/>
 }
