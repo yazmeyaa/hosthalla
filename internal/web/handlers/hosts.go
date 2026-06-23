@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"net/netip"
+	"strings"
 
 	"github.com/google/uuid"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
@@ -30,6 +31,15 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	hostManagementMethodsByHostID := make(map[string][]host.HostManagementMethod, len(hosts))
+	for _, listedHost := range hosts {
+		methods, err := h.hostService.ListHostManagementMethods(r.Context(), listedHost.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		hostManagementMethodsByHostID[listedHost.ID.String()] = methods
+	}
 
 	session, err := middlewares.GetSessionFromContext(r.Context())
 	if err != nil {
@@ -44,7 +54,8 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hosts_page.HostsPage(hosts_page.HostsPageProps{
-		Hosts: hosts,
+		Hosts:                         hosts,
+		HostManagementMethodsByHostID: hostManagementMethodsByHostID,
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
 			GenericLayoutProps: layout.GenericLayoutProps{Title: "Hosts"},
 			Profile:            profile,
@@ -156,6 +167,61 @@ func (h *HostsHandler) PingAllHosts(w http.ResponseWriter, r *http.Request) {
 	if err := host_actions.HostPingResultsBatch(pageResults).Render(r.Context(), w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (h *HostsHandler) CreateHostManagementMethod(w http.ResponseWriter, r *http.Request) {
+	hostID, err := parseHostID(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	methodType := strings.TrimSpace(r.FormValue("methodType"))
+	switch methodType {
+	case string(host.HostManagementMethodTypeSSHPassword):
+		port, err := host_service.ParsePort(r.FormValue("port"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		_, err = h.hostService.CreateSSHPasswordManagementMethod(r.Context(), hostID, host_service.CreateSSHPasswordManagementMethodDTO{
+			Username:    r.FormValue("username"),
+			Password:    r.FormValue("password"),
+			Port:        port,
+			Description: r.FormValue("description"),
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	case string(host.HostManagementMethodTypeSSHKey):
+		port, err := host_service.ParsePort(r.FormValue("port"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		_, err = h.hostService.CreateSSHKeyManagementMethod(r.Context(), hostID, host_service.CreateSSHKeyManagementMethodDTO{
+			Username:    r.FormValue("username"),
+			PublicKey:   r.FormValue("publicKey"),
+			PrivateKey:  r.FormValue("privateKey"),
+			Port:        port,
+			Description: r.FormValue("description"),
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	default:
+		http.Error(w, "unsupported management method type", http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, "/hosts", http.StatusSeeOther)
 }
 
 func parseHostForm(r *http.Request) (storage.CreateHostDTO, error) {

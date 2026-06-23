@@ -19,6 +19,14 @@ type CreateHostNoteDTO struct {
 	Body  string
 }
 
+type CreateHostManagementMethodDTO struct {
+	Type        host.HostManagementMethodType
+	Username    string
+	Port        uint16
+	Secret      []byte
+	Description string
+}
+
 type HostRepository interface {
 	ListHosts(ctx context.Context) ([]host.Host, error)
 	GetHostByID(ctx context.Context, hostID host.HostID) (host.Host, error)
@@ -33,4 +41,9 @@ type HostNoteRepository interface {
 	CreateHostNote(ctx context.Context, hostID host.HostID, data CreateHostNoteDTO) (host.HostNote, error)
 	DeleteHostNote(ctx context.Context, hostNoteID host.HostNoteID) error
 	UpdateHostNote(ctx context.Context, hostNote *host.HostNote) error
+}
+
+type HostManagementMethodRepository interface {
+	ListHostManagementMethods(ctx context.Context, hostID host.HostID) ([]host.HostManagementMethod, error)
+	CreateHostManagementMethod(ctx context.Context, hostID host.HostID, data CreateHostManagementMethodDTO) (host.HostManagementMethod, error)
 }

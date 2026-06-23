@@ -1,0 +1,16 @@
+package host_management_method
+
+import "github.com/yazmeyaa/hosthalla/internal/host"
+
+func managementMethodLabel(methodType host.HostManagementMethodType) string {
+	switch methodType {
+	case host.HostManagementMethodTypeSSHPassword, host.HostManagementMethodTypeSSHKey:
+		return "ssh"
+	default:
+		return string(methodType)
+	}
+}
+
+templ MethodTypeTag(methodType host.HostManagementMethodType) {
+	<span class={ method_type_tag() }>{ managementMethodLabel(methodType) }</span>
+}

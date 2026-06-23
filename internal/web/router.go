@@ -13,14 +13,15 @@ import (
 )
 
 type NewRouterParams struct {
-	HostRepository    *host_repository.HostRepositoryPostgresImpl
-	SessionRepository *authentication_repository.SessionRepositoryPostgresImpl
-	AuthService       *auth_service.Service
-	Logger            *slog.Logger
+	HostRepository                 *host_repository.HostRepositoryPostgresImpl
+	HostManagementMethodRepository *host_repository.HostManagementMethodRepositoryPostgresImpl
+	SessionRepository              *authentication_repository.SessionRepositoryPostgresImpl
+	AuthService                    *auth_service.Service
+	Logger                         *slog.Logger
 }
 
 func NewRouter(params NewRouterParams) *http.ServeMux {
-	hostService := host_service.New(params.HostRepository)
+	hostService := host_service.New(params.HostRepository, params.HostManagementMethodRepository)
 	indexHandler := handlers.NewIndexHandler(params.HostRepository, params.Logger, params.AuthService)
 	authHandler := handlers.NewAuthHandler(params.Logger, params.AuthService)
 	hostHandler := handlers.NewHostsHandler(hostService, params.AuthService)
@@ -35,6 +36,7 @@ func NewRouter(params NewRouterParams) *http.ServeMux {
 	mux.Handle("POST /hosts/{id}/update", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.UpdateHost)))
 	mux.Handle("POST /hosts/{id}/delete", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.DeleteHost)))
 	mux.Handle("POST /hosts/{id}/ping", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.PingHost)))
+	mux.Handle("POST /hosts/{id}/management-methods/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateHostManagementMethod)))
 	mux.Handle("POST /hosts/ping-all", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.PingAllHosts)))
 	mux.Handle("GET /administration", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.Administration)))
 

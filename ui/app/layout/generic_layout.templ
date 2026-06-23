@@ -23,9 +23,25 @@ templ layout_styles() {
 			color: rgba(156, 163, 175, 0.9);
 		}
 
+		.ui-input {
+			padding: 0.5rem;
+			background-color: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 0.5rem;
+			font-size: 1rem;
+			font-family: inherit;
+			line-height: 1.5;
+			color: var(--text);
+			width: 100%;
+			box-sizing: border-box;
+			outline: none;
+			transition: border-color 160ms ease, box-shadow 180ms ease, background-color 160ms ease;
+		}
+
 		.ui-input:hover {
 			border-color: rgba(59, 130, 246, 0.45);
 			background-color: rgba(31, 41, 55, 0.92);
+			color: var(--text);
 		}
 
 		.ui-input:focus,
@@ -33,6 +49,12 @@ templ layout_styles() {
 			border-color: rgba(96, 165, 250, 0.95);
 			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
 			background-color: rgba(31, 41, 55, 0.96);
+			color: var(--text);
+		}
+
+		.ui-input option {
+			background-color: var(--card);
+			color: var(--text);
 		}
 
 		.ui-input[type="number"] {

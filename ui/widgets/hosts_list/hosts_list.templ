@@ -8,20 +8,25 @@ import (
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
 )
 
-templ HostsList(hosts []host.Host) {
+templ HostsList(hosts []host.Host, hostManagementMethodsByHostID map[string][]host.HostManagementMethod) {
 	<ul class={ hosts_list() }>
 		for _, host := range hosts {
 			{{
 				updateDialogID := "update-host-dialog-" + host.ID.String()
+				detailsDialogID := "host-details-dialog-" + host.ID.String()
+				addManagementMethodDialogID := "add-host-management-method-dialog-" + host.ID.String()
+				hostManagementMethods := hostManagementMethodsByHostID[host.ID.String()]
 			}}
 			<li class={ host_list_item() }>
 				<div class={ host_list_item_card() }>
 					@card.Card() {
 						@host_details.HostDetails(host)
-						@host_actions.HostActions(host.ID.String(), updateDialogID)
+						@host_actions.HostActions(host.ID.String(), updateDialogID, detailsDialogID)
 					}
 				</div>
 				@host_dialog.UpdateHostDialog(host)
+				@host_dialog.HostDetailsDialog(host, hostManagementMethods, detailsDialogID, addManagementMethodDialogID)
+				@host_dialog.AddHostManagementMethodDialog(host, addManagementMethodDialogID)
 			</li>
 		}
 	</ul>

@@ -10,8 +10,9 @@ import (
 )
 
 type HostsPageProps struct {
-	Hosts           []host.Host
-	AuthLayoutProps layout.AuthenticatedLayoutProps
+	Hosts                         []host.Host
+	HostManagementMethodsByHostID map[string][]host.HostManagementMethod
+	AuthLayoutProps               layout.AuthenticatedLayoutProps
 }
 
 templ HostsPage(props HostsPageProps) {
@@ -37,7 +38,7 @@ templ HostsPage(props HostsPageProps) {
 			</div>
 		</div>
 		<div id="hosts-ping-all-status" class={ hosts_page_ping_all_status_slot() }></div>
-		@hosts_list.HostsList(props.Hosts)
+		@hosts_list.HostsList(props.Hosts, props.HostManagementMethodsByHostID)
 		@host_dialog.CreateHostDialog()
 		@host_actions.HostActionsScripts()
 		@host_dialog.HostDialogScripts()

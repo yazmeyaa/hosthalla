@@ -26,3 +26,19 @@ templ HostDetails(host host.Host) {
 		</dl>
 	</div>
 }
+
+templ HostDetailsSummary(host host.Host) {
+	<div class={ host_details_summary() }>
+		<p class={ host_details_summary_row() }>
+			<strong>Name:</strong> { host.Name }
+		</p>
+		<p class={ host_details_summary_row() }>
+			<strong>IP:</strong> { host.IP.String() }
+		</p>
+		if host.Description != "" {
+			<p class={ host_details_summary_row() }>
+				<strong>Description:</strong> { host.Description }
+			</p>
+		}
+	</div>
+}

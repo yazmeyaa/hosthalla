@@ -46,16 +46,18 @@ func main() {
 	defer pool.Close()
 
 	repo := host_repository.NewHostRepository(pool)
+	hostManagementMethodRepository := host_repository.NewHostManagementMethodRepository(pool)
 	authService := auth_service.New(
 		authentication_repository.NewProfileRepository(pool),
 		authentication_repository.NewPasswordAuthenticationRepository(pool),
 		authentication_repository.NewSessionRepository(pool),
 	)
 	router := web.NewRouter(web.NewRouterParams{
-		HostRepository:    repo,
-		AuthService:       authService,
-		SessionRepository: authentication_repository.NewSessionRepository(pool),
-		Logger:            logger,
+		HostRepository:                 repo,
+		HostManagementMethodRepository: hostManagementMethodRepository,
+		AuthService:                    authService,
+		SessionRepository:              authentication_repository.NewSessionRepository(pool),
+		Logger:                         logger,
 	})
 	if err := http.ListenAndServe(cfg.WEB.ListenAddress(), router); err != nil {
 		logger.Error("failed to start web server", slog.String("error", err.Error()))

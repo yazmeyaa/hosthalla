@@ -38,6 +38,25 @@ type SSHPasswordCredential struct {
 	UpdatedAt time.Time
 }
 
+type HostManagementMethodType string
+
+const (
+	HostManagementMethodTypeSSHPassword HostManagementMethodType = "ssh_password"
+	HostManagementMethodTypeSSHKey      HostManagementMethodType = "ssh_key"
+)
+
+type HostManagementMethod struct {
+	ID          uuid.UUID
+	HostID      HostID
+	Type        HostManagementMethodType
+	Username    string
+	Port        uint16
+	Secret      []byte
+	Description string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type HostNote struct {
 	ID        uuid.UUID
 	HostID    HostID
