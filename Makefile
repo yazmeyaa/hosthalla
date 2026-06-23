@@ -7,7 +7,7 @@ DATABASE_URL := postgres://hosthalla:hosthalla@localhost:5432/hosthalla?sslmode=
 DATABASE_URL_DOCKER := postgres://hosthalla:hosthalla@postgres:5432/hosthalla?sslmode=disable
 MIGRATE_IMAGE := migrate/migrate:v4.18.2
 
-.PHONY: dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down
+.PHONY: dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down templ-generate
 
 # Start dev infrastructure and wait until services are healthy.
 dev: dev-up
@@ -47,3 +47,7 @@ migrate-down: dev-up
 		-path=/migrations \
 		-database "$(DATABASE_URL_DOCKER)" \
 		down 1
+
+templ-generate:
+	go tool templ generate
+
