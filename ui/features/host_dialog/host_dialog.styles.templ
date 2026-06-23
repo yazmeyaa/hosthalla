@@ -1,27 +1,5 @@
 package host_dialog
 
-css host_dialog() {
-	width: min(520px, calc(100vw - 24px));
-	padding: 0;
-	border: 1px solid var(--border);
-	border-radius: 0.75rem;
-	background: var(--card);
-}
-
-css host_dialog_content() {
-	padding: 14px;
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-}
-
-css host_dialog_title() {
-	margin: 0;
-	color: var(--text);
-	font-size: 1.8rem;
-	line-height: 1.2;
-}
-
 css host_form() {
 	display: flex;
 	flex-direction: column;
@@ -37,10 +15,4 @@ css host_form_field() {
 css host_form_label() {
 	font-size: 0.9rem;
 	color: var(--muted);
-}
-
-css host_dialog_actions() {
-	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
 }

@@ -4,7 +4,7 @@ import "github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 
 templ HostActions(hostID string, updateDialogID string) {
 	<div class={ host_actions() }>
-		@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openHostDialog", updateDialogID)}) {
+		@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", updateDialogID)}) {
 			Update
 		}
 		<form class={ host_delete_form() } method="post" action={ "/hosts/" + hostID + "/delete" }>

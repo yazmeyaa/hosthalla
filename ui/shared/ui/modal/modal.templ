@@ -1,0 +1,68 @@
+package modal
+
+type ModalProps struct {
+	ID        string
+	ClassName string
+	AriaLabel string
+}
+
+templ Modal(props ModalProps) {
+	<dialog id={ props.ID } class={ modal_dialog(), "ui-modal", props.ClassName } aria-label={ props.AriaLabel }>
+		{ children... }
+	</dialog>
+}
+
+templ Content() {
+	<div class={ modal_content() }>
+		{ children... }
+	</div>
+}
+
+templ Title(text string) {
+	<h2 class={ modal_title() }>{ text }</h2>
+}
+
+templ Actions() {
+	<div class={ modal_actions() }>
+		{ children... }
+	</div>
+}
+
+templ Scripts() {
+	<script>
+		function bindModalInteractions(dialog) {
+			if (!(dialog instanceof HTMLDialogElement)) {
+				return;
+			}
+
+			if (dialog.dataset.backdropCloseBound === "true") {
+				return;
+			}
+			dialog.dataset.backdropCloseBound = "true";
+
+			dialog.addEventListener("click", function(event) {
+				// Native modal UX: click on backdrop closes dialog.
+				if (event.target === dialog) {
+					dialog.close();
+				}
+			});
+		}
+
+		document.querySelectorAll("dialog.ui-modal").forEach(bindModalInteractions);
+
+		function openModalDialog(dialogId) {
+			const dialog = document.getElementById(dialogId);
+			bindModalInteractions(dialog);
+			if (dialog && typeof dialog.showModal === "function") {
+				dialog.showModal();
+			}
+		}
+
+		function closeModalDialog(dialogId) {
+			const dialog = document.getElementById(dialogId);
+			if (dialog && typeof dialog.close === "function") {
+				dialog.close();
+			}
+		}
+	</script>
+}
