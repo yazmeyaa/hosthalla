@@ -15,10 +15,12 @@ templ HostsList(hosts []host.Host) {
 				updateDialogID := "update-host-dialog-" + host.ID.String()
 			}}
 			<li class={ host_list_item() }>
-				@card.Card() {
-					@host_details.HostDetails(host)
-					@host_actions.HostActions(host.ID.String(), updateDialogID)
-				}
+				<div class={ host_list_item_card() }>
+					@card.Card() {
+						@host_details.HostDetails(host)
+						@host_actions.HostActions(host.ID.String(), updateDialogID)
+					}
+				</div>
 				@host_dialog.UpdateHostDialog(host)
 			</li>
 		}

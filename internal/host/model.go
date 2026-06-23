@@ -24,7 +24,6 @@ type Host struct {
 	Description string
 	Tags        []string
 	IP          netip.Addr
-	Port        uint16
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -33,6 +32,7 @@ type SSHPasswordCredential struct {
 	ID        uuid.UUID
 	HostID    HostID
 	User      string
+	Port      uint16
 	Password  string
 	CreatedAt time.Time
 	UpdatedAt time.Time

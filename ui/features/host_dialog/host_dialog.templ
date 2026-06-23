@@ -1,14 +1,13 @@
 package host_dialog
 
 import (
-	"fmt"
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/input"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
 )
 
-templ HostFormFields(idPrefix string, name string, description string, ip string, port string) {
+templ HostFormFields(idPrefix string, name string, description string, ip string) {
 	<div class={ host_form_field() }>
 		<label class={ host_form_label() } for={ idPrefix + "-name" }>Name</label>
 		@input.Input(input.InputProps{Id: idPrefix + "-name", Name: "name", Value: name, Required: true})
@@ -21,10 +20,6 @@ templ HostFormFields(idPrefix string, name string, description string, ip string
 		<label class={ host_form_label() } for={ idPrefix + "-ip" }>IP</label>
 		@input.Input(input.InputProps{Id: idPrefix + "-ip", Name: "ip", Value: ip, Placeholder: "127.0.0.1", Required: true})
 	</div>
-	<div class={ host_form_field() }>
-		<label class={ host_form_label() } for={ idPrefix + "-port" }>Port</label>
-		@input.Input(input.InputProps{Id: idPrefix + "-port", Type: "number", Name: "port", Value: port, Placeholder: "22", Required: true})
-	</div>
 }
 
 templ CreateHostDialog() {
@@ -32,7 +27,7 @@ templ CreateHostDialog() {
 		@modal.Content() {
 			@modal.Title("Add Host")
 			<form class={ host_form() } method="post" action="/hosts/create">
-				@HostFormFields("create-host", "", "", "", "")
+				@HostFormFields("create-host", "", "", "")
 				@modal.Actions() {
 					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", "create-host-dialog")}) {
 						Cancel
@@ -54,7 +49,7 @@ templ UpdateHostDialog(host host.Host) {
 		@modal.Content() {
 			@modal.Title("Update Host")
 			<form class={ host_form() } method="post" action={ "/hosts/" + host.ID.String() + "/update" }>
-				@HostFormFields("update-host-"+host.ID.String(), host.Name, host.Description, host.IP.String(), fmt.Sprintf("%d", host.Port))
+				@HostFormFields("update-host-"+host.ID.String(), host.Name, host.Description, host.IP.String())
 				@modal.Actions() {
 					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", dialogID)}) {
 						Cancel

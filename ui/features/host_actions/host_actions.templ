@@ -2,15 +2,138 @@ package host_actions
 
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 
+type PingResult struct {
+	HostID     string
+	Reachable  bool
+	DurationMS int64
+	Message    string
+}
+
+templ HostPingResult(hostID string, pingResult *PingResult) {
+	{{
+		showPingResult := pingResult != nil && pingResult.HostID == hostID
+		pingResultClass := host_ping_result_error()
+		pingStatus := "Unreachable"
+		if showPingResult && pingResult.Reachable {
+			pingResultClass = host_ping_result_success()
+			pingStatus = "Reachable"
+		}
+	}}
+	<div id={ "host-ping-result-" + hostID }>
+		if showPingResult {
+			<p class={ host_ping_result(), pingResultClass }>
+				{ pingStatus } in { pingResult.DurationMS } ms
+				if pingResult.Message != "" {
+					<span>{ " - " + pingResult.Message }</span>
+				}
+			</p>
+		}
+	</div>
+}
+
+templ HostPingResultOOB(pingResult PingResult) {
+	{{
+		pingResultClass := host_ping_result_error()
+		pingStatus := "Unreachable"
+		if pingResult.Reachable {
+			pingResultClass = host_ping_result_success()
+			pingStatus = "Reachable"
+		}
+	}}
+	<div id={ "host-ping-result-" + pingResult.HostID } hx-swap-oob="outerHTML">
+		<p class={ host_ping_result(), pingResultClass }>
+			{ pingStatus } in { pingResult.DurationMS } ms
+			if pingResult.Message != "" {
+				<span>{ " - " + pingResult.Message }</span>
+			}
+		</p>
+	</div>
+}
+
+templ HostPingResultsBatch(results []PingResult) {
+	{{
+		reachableCount := 0
+		for _, result := range results {
+			if result.Reachable {
+				reachableCount++
+			}
+		}
+	}}
+	<div id="hosts-ping-all-status">
+		<p class={ host_ping_all_status() }>
+			Finished: { reachableCount }/{ len(results) } reachable
+		</p>
+	</div>
+	for _, result := range results {
+		@HostPingResultOOB(result)
+	}
+}
+
 templ HostActions(hostID string, updateDialogID string) {
 	<div class={ host_actions() }>
-		@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", updateDialogID)}) {
-			Update
-		}
-		<form class={ host_delete_form() } method="post" action={ "/hosts/" + hostID + "/delete" }>
-			@button.Button(button.ButtonProps{Type: "submit", Variant: "danger"}) {
-				Delete
+		<form
+			class={ host_ping_form() }
+			method="post"
+			action={ "/hosts/" + hostID + "/ping" }
+			hx-post={ "/hosts/" + hostID + "/ping" }
+			hx-target={ "#host-ping-result-" + hostID }
+			hx-swap="outerHTML"
+		>
+			@button.Button(button.ButtonProps{Type: "submit"}) {
+				Ping
 			}
 		</form>
+		<details class={ host_actions_menu(), "host-actions-menu" }>
+			<summary class={ host_actions_menu_trigger() }>⋯</summary>
+			<div class={ host_actions_menu_panel() }>
+				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", updateDialogID)}) {
+					Update
+				}
+				<form class={ host_delete_form() } method="post" action={ "/hosts/" + hostID + "/delete" }>
+					@button.Button(button.ButtonProps{Type: "submit", Variant: "danger"}) {
+						Delete
+					}
+				</form>
+			</div>
+		</details>
 	</div>
+	@HostPingResult(hostID, nil)
+}
+
+templ HostActionsScripts() {
+	<script>
+		if (!window.__hostActionsOutsideClickBound) {
+			window.__hostActionsOutsideClickBound = true;
+
+			function closeHostActionMenus(exceptMenu) {
+				document.querySelectorAll("details.host-actions-menu[open]").forEach(function(menu) {
+					if (exceptMenu && menu === exceptMenu) {
+						return;
+					}
+					menu.removeAttribute("open");
+				});
+			}
+
+			document.addEventListener("click", function(event) {
+				const target = event.target;
+				if (!(target instanceof Element)) {
+					closeHostActionMenus(null);
+					return;
+				}
+
+				const clickedSummary = target.closest("summary");
+				const clickedMenu = clickedSummary ? clickedSummary.parentElement : null;
+				if (clickedMenu instanceof HTMLDetailsElement && clickedMenu.classList.contains("host-actions-menu")) {
+					closeHostActionMenus(clickedMenu);
+					return;
+				}
+
+				if (target.closest(".host-actions-menu")) {
+					return;
+				}
+
+				closeHostActionMenus(null);
+			});
+		}
+	</script>
 }

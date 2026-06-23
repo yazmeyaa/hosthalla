@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
+	host_service "github.com/yazmeyaa/hosthalla/internal/host/service"
 	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage/postgres"
 	host_repository "github.com/yazmeyaa/hosthalla/internal/host/storage/postgres"
 	"github.com/yazmeyaa/hosthalla/internal/web/handlers"
@@ -19,9 +20,11 @@ type NewRouterParams struct {
 }
 
 func NewRouter(params NewRouterParams) *http.ServeMux {
+	hostService := host_service.New(params.HostRepository)
 	indexHandler := handlers.NewIndexHandler(params.HostRepository, params.Logger, params.AuthService)
 	authHandler := handlers.NewAuthHandler(params.Logger, params.AuthService)
-	hostHandler := handlers.NewHostsHandler(params.HostRepository, params.AuthService)
+	hostHandler := handlers.NewHostsHandler(hostService, params.AuthService)
+	administrationHandler := handlers.NewAdministrationHandler(params.AuthService)
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(indexHandler.Index)))
@@ -31,6 +34,9 @@ func NewRouter(params NewRouterParams) *http.ServeMux {
 	mux.Handle("POST /hosts/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateHost)))
 	mux.Handle("POST /hosts/{id}/update", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.UpdateHost)))
 	mux.Handle("POST /hosts/{id}/delete", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.DeleteHost)))
+	mux.Handle("POST /hosts/{id}/ping", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.PingHost)))
+	mux.Handle("POST /hosts/ping-all", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.PingAllHosts)))
+	mux.Handle("GET /administration", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.Administration)))
 
 	return mux
 }

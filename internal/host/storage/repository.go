@@ -12,7 +12,6 @@ type CreateHostDTO struct {
 	Description string
 	Tags        []string
 	IP          netip.Addr
-	Port        uint16
 }
 
 type CreateHostNoteDTO struct {

@@ -2,14 +2,27 @@ package host_details
 
 import (
 	"github.com/yazmeyaa/hosthalla/internal/host"
-	"time"
 )
 
 templ HostDetails(host host.Host) {
-	<div><span>Name: </span> <span>{ host.Name } </span> </div>
-	<div><span>Description: </span> <span>{ host.Description } </span> </div>
-	<div><span>IP: </span> <span>{ host.IP.String() } </span> </div>
-	<div><span>Port: </span> <span>{ host.Port } </span> </div>
-	<div><span>Created At: </span> <span>{ host.CreatedAt.Format(time.RFC3339) } </span> </div>
-	<div><span>Updated At: </span> <span>{ host.UpdatedAt.Format(time.RFC3339) } </span> </div>
+	{{
+		description := host.Description
+		if description == "" {
+			description = "No description"
+		}
+	}}
+	<div class={ host_details() }>
+		<h3 class={ host_details_name() }>{ host.Name }</h3>
+		<p class={ host_details_description() }>{ description }</p>
+		<dl class={ host_details_meta() }>
+			<div class={ host_details_meta_row() }>
+				<dt class={ host_details_meta_label() }>IP</dt>
+				<dd class={ host_details_meta_value() }>{ host.IP.String() }</dd>
+			</div>
+			<div class={ host_details_meta_row() }>
+				<dt class={ host_details_meta_label() }>Created</dt>
+				<dd class={ host_details_meta_value() }>{ host.CreatedAt.Local().Format("02 Jan 2006 15:04") }</dd>
+			</div>
+		</dl>
+	</div>
 }

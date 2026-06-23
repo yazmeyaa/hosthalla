@@ -3,28 +3,29 @@ package handlers
 import (
 	"net/http"
 	"net/netip"
-	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/yazmeyaa/hosthalla/internal/authentication/service"
+	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	"github.com/yazmeyaa/hosthalla/internal/host"
+	host_service "github.com/yazmeyaa/hosthalla/internal/host/service"
 	"github.com/yazmeyaa/hosthalla/internal/host/storage"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
 	"github.com/yazmeyaa/hosthalla/ui/app/layout"
+	"github.com/yazmeyaa/hosthalla/ui/features/host_actions"
 	"github.com/yazmeyaa/hosthalla/ui/pages/hosts_page"
 )
 
 type HostsHandler struct {
-	hostRepository storage.HostRepository
-	profileService *service.Service
+	hostService    *host_service.Service
+	profileService *auth_service.Service
 }
 
-func NewHostsHandler(hostRepository storage.HostRepository, profileService *service.Service) *HostsHandler {
-	return &HostsHandler{hostRepository, profileService}
+func NewHostsHandler(hostService *host_service.Service, profileService *auth_service.Service) *HostsHandler {
+	return &HostsHandler{hostService, profileService}
 }
 
 func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
-	hosts, err := h.hostRepository.ListHosts(r.Context())
+	hosts, err := h.hostService.ListHosts(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -58,7 +59,7 @@ func (h *HostsHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err = h.hostRepository.CreateHost(r.Context(), data); err != nil {
+	if _, err = h.hostService.CreateHost(r.Context(), data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -79,7 +80,7 @@ func (h *HostsHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentHost, err := h.hostRepository.GetHostByID(r.Context(), hostID)
+	currentHost, err := h.hostService.GetHostByID(r.Context(), hostID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -87,9 +88,8 @@ func (h *HostsHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 	currentHost.Name = data.Name
 	currentHost.Description = data.Description
 	currentHost.IP = data.IP
-	currentHost.Port = data.Port
 
-	if err := h.hostRepository.UpdateHost(r.Context(), &currentHost); err != nil {
+	if err := h.hostService.UpdateHost(r.Context(), &currentHost); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -104,7 +104,7 @@ func (h *HostsHandler) DeleteHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.hostRepository.DeleteHost(r.Context(), hostID); err != nil {
+	if err := h.hostService.DeleteHost(r.Context(), hostID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -112,13 +112,54 @@ func (h *HostsHandler) DeleteHost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/hosts", http.StatusSeeOther)
 }
 
-func parseHostForm(r *http.Request) (storage.CreateHostDTO, error) {
-	if err := r.ParseForm(); err != nil {
-		return storage.CreateHostDTO{}, err
+func (h *HostsHandler) PingHost(w http.ResponseWriter, r *http.Request) {
+	hostID, err := parseHostID(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	portValue, err := strconv.ParseUint(r.FormValue("port"), 10, 16)
+	result, err := h.hostService.PingHost(r.Context(), hostID)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	pingResult := &host_actions.PingResult{
+		HostID:     result.HostID.String(),
+		Reachable:  result.Reachable,
+		DurationMS: result.Duration.Milliseconds(),
+		Message:    result.ErrorMessage,
+	}
+	if err := host_actions.HostPingResult(result.HostID.String(), pingResult).Render(r.Context(), w); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (h *HostsHandler) PingAllHosts(w http.ResponseWriter, r *http.Request) {
+	results, err := h.hostService.PingAllHosts(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	pageResults := make([]host_actions.PingResult, 0, len(results))
+	for _, result := range results {
+		pageResults = append(pageResults, host_actions.PingResult{
+			HostID:     result.HostID.String(),
+			Reachable:  result.Reachable,
+			DurationMS: result.Duration.Milliseconds(),
+			Message:    result.ErrorMessage,
+		})
+	}
+
+	if err := host_actions.HostPingResultsBatch(pageResults).Render(r.Context(), w); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func parseHostForm(r *http.Request) (storage.CreateHostDTO, error) {
+	if err := r.ParseForm(); err != nil {
 		return storage.CreateHostDTO{}, err
 	}
 
@@ -131,7 +172,6 @@ func parseHostForm(r *http.Request) (storage.CreateHostDTO, error) {
 		Name:        r.FormValue("name"),
 		Description: r.FormValue("description"),
 		IP:          ip,
-		Port:        uint16(portValue),
 	}, nil
 }
 

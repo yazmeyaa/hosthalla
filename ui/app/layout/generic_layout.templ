@@ -57,7 +57,6 @@ templ layout_styles() {
 			filter: brightness(0.98);
 		}
 
-		.ui-button:focus,
 		.ui-button:focus-visible {
 			outline: none;
 			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.24);
@@ -77,6 +76,7 @@ templ GenericLayout(props GenericLayoutProps) {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>Hosthalla - { props.Title }</title>
+			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
 			@layout_styles()
 		</head>
 		<body class={ generic_layout_styles() }>

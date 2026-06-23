@@ -3,6 +3,7 @@ package hosts_page
 import (
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/ui/app/layout"
+	"github.com/yazmeyaa/hosthalla/ui/features/host_actions"
 	"github.com/yazmeyaa/hosthalla/ui/features/host_dialog"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 	"github.com/yazmeyaa/hosthalla/ui/widgets/hosts_list"
@@ -17,12 +18,28 @@ templ HostsPage(props HostsPageProps) {
 	@layout.AuthenticatedLayout(props.AuthLayoutProps) {
 		<div class={ hosts_page_header() }>
 			<h1 class={ hosts_page_title() }>Hosts Page</h1>
-			@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "create-host-dialog")}) {
-				+ Add Host
-			}
+			<div class={ hosts_page_actions() }>
+				<form
+					class={ hosts_page_ping_all_form() }
+					method="post"
+					action="/hosts/ping-all"
+					hx-post="/hosts/ping-all"
+					hx-target="#hosts-ping-all-status"
+					hx-swap="outerHTML"
+				>
+					@button.Button(button.ButtonProps{Type: "submit", Variant: "secondary"}) {
+						Ping All
+					}
+				</form>
+				@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "create-host-dialog")}) {
+					+ Add Host
+				}
+			</div>
 		</div>
+		<div id="hosts-ping-all-status" class={ hosts_page_ping_all_status_slot() }></div>
 		@hosts_list.HostsList(props.Hosts)
 		@host_dialog.CreateHostDialog()
+		@host_actions.HostActionsScripts()
 		@host_dialog.HostDialogScripts()
 	}
 }

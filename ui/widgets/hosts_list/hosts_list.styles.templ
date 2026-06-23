@@ -3,9 +3,20 @@ package hosts_list
 css hosts_list() {
 	margin: 0;
 	padding: 0;
+	list-style: none;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	gap: 12px;
+	align-items: stretch;
 }
 
 css host_list_item() {
 	list-style: none;
-	margin-bottom: 10px;
+	margin: 0;
+	min-width: 0;
+	display: grid;
+}
+
+css host_list_item_card() {
+	display: grid;
 }

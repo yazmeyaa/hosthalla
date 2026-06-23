@@ -1,0 +1,17 @@
+package administration_page
+
+import (
+	"github.com/yazmeyaa/hosthalla/internal/authentication"
+	"github.com/yazmeyaa/hosthalla/ui/app/layout"
+)
+
+type AdministrationPageProps struct {
+	Profile authentication.Profile
+}
+
+templ AdministrationPage(props AdministrationPageProps) {
+	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{GenericLayoutProps: layout.GenericLayoutProps{Title: "Administration"}, Profile: props.Profile}) {
+		<h1>Administration</h1>
+		<p>Administration page is under construction.</p>
+	}
+}

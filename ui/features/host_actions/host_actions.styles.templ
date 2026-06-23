@@ -7,6 +7,67 @@ css host_actions() {
 	margin-top: 12px;
 }
 
+css host_ping_form() {
+	margin: 0;
+}
+
 css host_delete_form() {
 	margin: 0;
+	display: grid;
+}
+
+css host_actions_menu() {
+	position: relative;
+}
+
+css host_actions_menu_trigger() {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	list-style: none;
+	width: 40px;
+	height: 34px;
+	border-radius: 0.5rem;
+	border: 1px solid var(--border);
+	background: transparent;
+	color: var(--text);
+	cursor: pointer;
+	user-select: none;
+	font-size: 1rem;
+	font-weight: 600;
+	line-height: 1;
+}
+
+css host_actions_menu_panel() {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 6px);
+	z-index: 10;
+	min-width: 132px;
+	padding: 8px;
+	border: 1px solid var(--border);
+	border-radius: 0.6rem;
+	background: rgba(17, 24, 39, 0.98);
+	box-shadow: 0 8px 20px rgba(2, 6, 23, 0.45);
+	display: grid;
+	gap: 6px;
+}
+
+css host_ping_result() {
+	margin: 8px 0 0 0;
+	font-size: 0.88rem;
+}
+
+css host_ping_result_success() {
+	color: #86efac;
+}
+
+css host_ping_result_error() {
+	color: #fca5a5;
+}
+
+css host_ping_all_status() {
+	margin: 0;
+	font-size: 0.88rem;
+	color: var(--muted);
 }
