@@ -1,0 +1,30 @@
+---
+description: Use docs/templ.md as source of truth for UI templ work
+globs: ui/**/*
+alwaysApply: false
+---
+
+# UI Templ Documentation Rule
+
+When working in `ui/**/*`, treat `docs/templ.md` as the primary reference for templ syntax, component patterns, and rendering behavior.
+
+## Required workflow
+
+- Follow templ patterns from `docs/templ.md` before introducing new template constructs.
+- Keep markup/components in `*.templ` and styles in matching `*.styles.templ` files.
+- Never manually edit generated `*_templ.go` files.
+- After changing any `*.templ` file, run `templ generate` and include generated updates.
+- Use regular Go view models/prepared data instead of complex data shaping directly in templates.
+
+## Guardrails
+
+- Avoid code-only HTML rendering unless necessary; if used, escape content correctly.
+- Keep template logic readable: prefer simple `if`, `switch`, and `for`, and move heavy logic to Go code.
+- If uncertain about templ behavior, check `docs/templ.md` first and follow its documented approach.
+
+## Examples
+
+```text
+Good: edit ui/features/host_actions/host_actions.templ, run templ generate, commit both source and generated files.
+Bad: edit ui/features/host_actions/host_actions_templ.go directly to "quick fix" output.
+```
