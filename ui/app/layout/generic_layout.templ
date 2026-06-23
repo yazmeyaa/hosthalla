@@ -1,0 +1,88 @@
+package layout
+
+type GenericLayoutProps struct {
+	Title string
+}
+
+templ layout_styles() {
+	<style>
+        :root {
+            --bg: #0F172A;
+            --surface: #111827;
+            --card: #1F2937;
+            --text: #E5E7EB;
+            --muted: #9CA3AF;
+            --primary: #3B82F6;
+            --success: #22C55E;
+            --warn: #F59E0B;
+            --danger: #EF4444;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+		.ui-input::placeholder {
+			color: rgba(156, 163, 175, 0.9);
+		}
+
+		.ui-input:hover {
+			border-color: rgba(59, 130, 246, 0.45);
+			background-color: rgba(31, 41, 55, 0.92);
+		}
+
+		.ui-input:focus,
+		.ui-input:focus-visible {
+			border-color: rgba(96, 165, 250, 0.95);
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
+			background-color: rgba(31, 41, 55, 0.96);
+		}
+
+		.ui-input[type="number"] {
+			appearance: textfield;
+			-moz-appearance: textfield;
+		}
+
+		.ui-input[type="number"]::-webkit-outer-spin-button,
+		.ui-input[type="number"]::-webkit-inner-spin-button {
+			appearance: none;
+			-webkit-appearance: none;
+			margin: 0;
+		}
+
+		.ui-button:hover {
+			filter: brightness(1.06);
+			transform: translateY(-1px);
+		}
+
+		.ui-button:active {
+			transform: translateY(0);
+			filter: brightness(0.98);
+		}
+
+		.ui-button:focus,
+		.ui-button:focus-visible {
+			outline: none;
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.24);
+		}
+
+		.ui-modal::backdrop {
+			background: rgba(2, 6, 23, 0.78);
+			backdrop-filter: blur(3px);
+		}
+	</style>
+}
+
+templ GenericLayout(props GenericLayoutProps) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Hosthalla - { props.Title }</title>
+			@layout_styles()
+		</head>
+		<body class={ generic_layout_styles() }>
+			<main style="max-width: 1100px; margin: 0 auto; padding: 12px;">
+				{ children... }
+			</main>
+		</body>
+	</html>
+}

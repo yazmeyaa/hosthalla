@@ -1,0 +1,56 @@
+---
+description: Strict FSD rules for all UI work
+globs: ui/**/*
+alwaysApply: false
+---
+
+# UI Development: Strict Feature-Sliced Design
+
+Use FSD as a hard constraint for every UI change. Do not adapt to the current project structure if it conflicts with FSD.
+
+## Mandatory architecture
+
+- Use only FSD layers: `app`, `pages`, `widgets`, `features`, `entities`, `shared`.
+- `app` and `shared` do not contain business slices.
+- Slice names are business/domain-oriented (not technical names like `components`, `hooks`, `types`).
+- Inside slices, use purpose-based segments: `ui`, `model`, `api`, `lib`, `config`.
+
+## Dependency and import rules (strict)
+
+- Import only from lower layers (`pages -> widgets/features/entities/shared`, etc.).
+- Same-layer cross-imports are forbidden.
+- The only allowed same-layer exception is `entities` via `@x` public API notation.
+- Inside one slice, use relative imports with full internal paths.
+- Between slices/layers, use only the slice public API (never internal files).
+
+## Public API rules (strict)
+
+- Every slice must expose a single explicit public API entry point (an `index` file appropriate for the stack).
+- No wildcard re-exports (`export *`) in slice public APIs.
+- Never import from internal paths like `features/x/ui/...` from outside `features/x`.
+- For `shared/ui` and `shared/lib`, expose APIs per module (for example `shared/ui/button`) instead of one global barrel.
+
+## Templ style placement (strict)
+
+- Keep style declarations (`css ...`) in a dedicated sibling file named `{module}.styles.templ`.
+- Keep markup/components in the main `{module}.templ` file.
+- Use the same package name in both files so style functions remain available without extra imports.
+- Apply this convention consistently to every UI module in all FSD layers.
+
+## Agent behavior for UI tasks
+
+- First place/relocate code into the correct FSD layer and slice, then implement logic.
+- If requested change violates FSD, perform an FSD-compliant restructure as part of the task.
+- Keep slices independent and cohesive: no hidden coupling through utils or deep cross-links.
+- Add/update public API files when creating or moving UI capabilities.
+- In final response, explicitly confirm: layer placement, import direction, and public API compliance.
+
+## Examples
+
+```text
+Good: pages/host-list imports widgets/host-table via widgets/host-table public API.
+Bad: pages/host-list imports widgets/host-table/ui/table.templ directly.
+
+Good: features/notes exposes only required symbols via its index API.
+Bad: features/notes/index re-exports everything from model/ui with wildcard exports.
+```

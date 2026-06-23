@@ -1,0 +1,64 @@
+package auth_page
+
+css auth_page_wrapper() {
+	min-height: calc(100vh - 24px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+css auth_card_content() {
+	width: 100%;
+	max-width: 420px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+css auth_title() {
+	margin: 0;
+	font-size: 1.75rem;
+	line-height: 1.2;
+}
+
+css auth_subtitle() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.95rem;
+}
+
+css auth_form() {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+css auth_field() {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+css auth_label() {
+	font-size: 0.9rem;
+	color: var(--muted);
+}
+
+css auth_button() {
+	margin-top: 8px;
+	padding: 0.65rem 0.9rem;
+	border: 1px solid transparent;
+	border-radius: 0.5rem;
+	background: var(--primary);
+	color: var(--text);
+	font-weight: 600;
+	cursor: pointer;
+	transition: filter 120ms ease;
+}
+
+css auth_footer_text() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.85rem;
+	text-align: center;
+}

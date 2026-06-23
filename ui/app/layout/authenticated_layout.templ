@@ -1,0 +1,32 @@
+package layout
+
+import "github.com/yazmeyaa/hosthalla/internal/authentication"
+
+type AuthenticatedLayoutProps struct {
+	GenericLayoutProps
+	Profile authentication.Profile
+}
+
+templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
+	@GenericLayout(GenericLayoutProps{Title: props.Title}) {
+		<div class={ authenticated_shell() }>
+			<header class={ authenticated_header() }>
+				<div class={ authenticated_brand() }>
+					<h1 class={ authenticated_title() }>Hosthalla</h1>
+					<p class={ authenticated_subtitle() }>Infrastructure dashboard</p>
+				</div>
+				<nav>
+					<ul class={ authenticated_nav_list() }>
+						<li><a class={ authenticated_nav_link() } href="/">Home</a></li>
+						<li><a class={ authenticated_nav_link() } href="/hosts">Hosts</a></li>
+						<li><a class={ authenticated_nav_link() } href="/notes">Notes</a></li>
+					</ul>
+				</nav>
+				<div class={ authenticated_profile() }>
+					<p class={ authenticated_profile_text() }>Logged in as <span>{ props.Profile.Username }</span></p>
+				</div>
+			</header>
+			{ children... }
+		</div>
+	}
+}

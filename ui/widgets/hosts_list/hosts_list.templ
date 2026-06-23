@@ -1,0 +1,26 @@
+package hosts_list
+
+import (
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/ui/entities/host_details"
+	"github.com/yazmeyaa/hosthalla/ui/features/host_actions"
+	"github.com/yazmeyaa/hosthalla/ui/features/host_dialog"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
+)
+
+templ HostsList(hosts []host.Host) {
+	<ul class={ hosts_list() }>
+		for _, host := range hosts {
+			{{
+				updateDialogID := "update-host-dialog-" + host.ID.String()
+			}}
+			<li class={ host_list_item() }>
+				@card.Card() {
+					@host_details.HostDetails(host)
+					@host_actions.HostActions(host.ID.String(), updateDialogID)
+				}
+				@host_dialog.UpdateHostDialog(host)
+			</li>
+		}
+	</ul>
+}

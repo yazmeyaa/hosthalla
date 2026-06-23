@@ -1,0 +1,86 @@
+package host_dialog
+
+import (
+	"fmt"
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/input"
+)
+
+templ HostFormFields(idPrefix string, name string, description string, ip string, port string) {
+	<div class={ host_form_field() }>
+		<label class={ host_form_label() } for={ idPrefix + "-name" }>Name</label>
+		@input.Input(input.InputProps{Id: idPrefix + "-name", Name: "name", Value: name, Required: true})
+	</div>
+	<div class={ host_form_field() }>
+		<label class={ host_form_label() } for={ idPrefix + "-description" }>Description</label>
+		@input.Input(input.InputProps{Id: idPrefix + "-description", Name: "description", Value: description})
+	</div>
+	<div class={ host_form_field() }>
+		<label class={ host_form_label() } for={ idPrefix + "-ip" }>IP</label>
+		@input.Input(input.InputProps{Id: idPrefix + "-ip", Name: "ip", Value: ip, Placeholder: "127.0.0.1", Required: true})
+	</div>
+	<div class={ host_form_field() }>
+		<label class={ host_form_label() } for={ idPrefix + "-port" }>Port</label>
+		@input.Input(input.InputProps{Id: idPrefix + "-port", Type: "number", Name: "port", Value: port, Placeholder: "22", Required: true})
+	</div>
+}
+
+templ CreateHostDialog() {
+	<dialog id="create-host-dialog" class={ host_dialog(), "ui-modal" }>
+		<div class={ host_dialog_content() }>
+			<h2 class={ host_dialog_title() }>Add Host</h2>
+			<form class={ host_form() } method="post" action="/hosts/create">
+				@HostFormFields("create-host", "", "", "", "")
+				<div class={ host_dialog_actions() }>
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeHostDialog", "create-host-dialog")}) {
+						Cancel
+					}
+					@button.Button(button.ButtonProps{Type: "submit"}) {
+						Add Host
+					}
+				</div>
+			</form>
+		</div>
+	</dialog>
+}
+
+templ UpdateHostDialog(host host.Host) {
+	{{
+		dialogID := "update-host-dialog-" + host.ID.String()
+	}}
+	<dialog id={ dialogID } class={ host_dialog(), "ui-modal" }>
+		<div class={ host_dialog_content() }>
+			<h2 class={ host_dialog_title() }>Update Host</h2>
+			<form class={ host_form() } method="post" action={ "/hosts/" + host.ID.String() + "/update" }>
+				@HostFormFields("update-host-"+host.ID.String(), host.Name, host.Description, host.IP.String(), fmt.Sprintf("%d", host.Port))
+				<div class={ host_dialog_actions() }>
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeHostDialog", dialogID)}) {
+						Cancel
+					}
+					@button.Button(button.ButtonProps{Type: "submit"}) {
+						Save
+					}
+				</div>
+			</form>
+		</div>
+	</dialog>
+}
+
+templ HostDialogScripts() {
+	<script>
+		function openHostDialog(dialogId) {
+			const dialog = document.getElementById(dialogId);
+			if (dialog && typeof dialog.showModal === "function") {
+				dialog.showModal();
+			}
+		}
+
+		function closeHostDialog(dialogId) {
+			const dialog = document.getElementById(dialogId);
+			if (dialog && typeof dialog.close === "function") {
+				dialog.close();
+			}
+		}
+	</script>
+}

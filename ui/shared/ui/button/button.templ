@@ -1,0 +1,47 @@
+package button
+
+type ButtonProps struct {
+	Type    string
+	Variant string
+	OnClick templ.ComponentScript
+}
+
+templ Button(props ButtonProps) {
+	{{
+		buttonType := props.Type
+		if buttonType == "" {
+			buttonType = "button"
+		}
+
+		variantClass := button_variant_primary()
+		switch props.Variant {
+		case "secondary":
+			variantClass = button_variant_secondary()
+		case "danger":
+			variantClass = button_variant_danger()
+		}
+	}}
+	<button class={ button_base(), variantClass, "ui-button" } type={ buttonType } onclick={ props.OnClick }>
+		{ children... }
+	</button>
+}
+
+type LinkProps struct {
+	Href    string
+	Variant string
+}
+
+templ Link(props LinkProps) {
+	{{
+		variantClass := button_variant_primary()
+		switch props.Variant {
+		case "secondary":
+			variantClass = button_variant_secondary()
+		case "danger":
+			variantClass = button_variant_danger()
+		}
+	}}
+	<a class={ button_base(), variantClass, "ui-button" } href={ props.Href }>
+		{ children... }
+	</a>
+}

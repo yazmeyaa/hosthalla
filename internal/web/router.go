@@ -28,6 +28,9 @@ func NewRouter(params NewRouterParams) *http.ServeMux {
 	mux.HandleFunc("GET /auth", authHandler.Auth)
 	mux.HandleFunc("POST /auth/login", authHandler.Login)
 	mux.Handle("GET /hosts", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.ListHosts)))
+	mux.Handle("POST /hosts/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateHost)))
+	mux.Handle("POST /hosts/{id}/update", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.UpdateHost)))
+	mux.Handle("POST /hosts/{id}/delete", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.DeleteHost)))
 
 	return mux
 }

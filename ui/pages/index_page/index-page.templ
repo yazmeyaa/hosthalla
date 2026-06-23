@@ -2,7 +2,7 @@ package index_page
 
 import (
 	"github.com/yazmeyaa/hosthalla/internal/authentication"
-	"github.com/yazmeyaa/hosthalla/ui/widgets/layouts"
+	"github.com/yazmeyaa/hosthalla/ui/app/layout"
 )
 
 
@@ -12,7 +12,7 @@ type IndexPageProps struct {
 }
 
 templ IndexPage(props IndexPageProps) {
-	@layouts.AuthenticatedLayout(layouts.AuthenticatedLayoutProps{GenericLayoutProps: layouts.GenericLayoutProps{Title: "Home"}, Profile: props.Profile}) {
+	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{GenericLayoutProps: layout.GenericLayoutProps{Title: "Home"}, Profile: props.Profile}) {
 		<h1>Home Page</h1>
 	}
 }
