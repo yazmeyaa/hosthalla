@@ -65,7 +65,13 @@ func createUser(logger *slog.Logger, pool *pgxpool.Pool, args []string) {
 	var profileRepo auth_repository.ProfileRepository = auth_storage.NewProfileRepository(pool)
 	var passwordRepo auth_repository.PasswordAuthenticationRepository = auth_storage.NewPasswordAuthenticationRepository(pool)
 	var sessionRepo auth_repository.SessionRepository = auth_storage.NewSessionRepository(pool)
-	svc := auth_service.New(profileRepo, passwordRepo, sessionRepo)
+	var apiTokenRepo auth_repository.APITokenRepository = auth_storage.NewAPITokenRepository(pool)
+	svc := auth_service.New(auth_service.NewParams{
+		ProfileRepository:                profileRepo,
+		PasswordAuthenticationRepository: passwordRepo,
+		SessionRepository:                sessionRepo,
+		APITokenRepository:               apiTokenRepo,
+	})
 	username := args[0]
 	password := args[1]
 

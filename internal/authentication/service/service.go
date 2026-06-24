@@ -2,8 +2,13 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -15,11 +20,15 @@ var (
 	ErrInvalidUsername = errors.New("invalid username")
 	ErrInvalidPassword = errors.New("invalid password")
 	ErrInvalidProfile  = errors.New("invalid profile")
+	ErrInvalidToken    = errors.New("invalid token")
 )
 
 const (
-	minPasswordLength = 8
-	passwordHashCost  = bcrypt.DefaultCost
+	minPasswordLength    = 8
+	passwordHashCost     = bcrypt.DefaultCost
+	apiTokenBytesSize    = 32
+	apiTokenPrefixLen    = 8
+	apiTokenDefaultScope = "hosts:register"
 )
 
 type CreateUserDTO struct {
@@ -41,21 +50,38 @@ type CreateSessionDTO struct {
 	ProfileID string
 }
 
+type CreateAPITokenDTO struct {
+	ProfileID string
+	Name      string
+	Scopes    []string
+	ExpiresIn time.Duration
+}
+
+type CreateAPITokenResult struct {
+	Token      authentication.APIToken
+	PlainToken string
+}
+
 type Service struct {
 	profileRepository                storage.ProfileRepository
 	passwordAuthenticationRepository storage.PasswordAuthenticationRepository
 	sessionRepository                storage.SessionRepository
+	apiTokenRepository               storage.APITokenRepository
 }
 
-func New(
-	profileRepository storage.ProfileRepository,
-	passwordAuthenticationRepository storage.PasswordAuthenticationRepository,
-	sessionRepository storage.SessionRepository,
-) *Service {
+type NewParams struct {
+	ProfileRepository                storage.ProfileRepository
+	PasswordAuthenticationRepository storage.PasswordAuthenticationRepository
+	SessionRepository                storage.SessionRepository
+	APITokenRepository               storage.APITokenRepository
+}
+
+func New(params NewParams) *Service {
 	return &Service{
-		profileRepository:                profileRepository,
-		passwordAuthenticationRepository: passwordAuthenticationRepository,
-		sessionRepository:                sessionRepository,
+		profileRepository:                params.ProfileRepository,
+		passwordAuthenticationRepository: params.PasswordAuthenticationRepository,
+		sessionRepository:                params.SessionRepository,
+		apiTokenRepository:               params.APITokenRepository,
 	}
 }
 
@@ -161,6 +187,65 @@ func (s *Service) GetSessionByProfileID(ctx context.Context, profileID string) (
 	return s.sessionRepository.GetSessionByProfileID(ctx, profileID)
 }
 
+func (s *Service) CreateAPIToken(ctx context.Context, data CreateAPITokenDTO) (CreateAPITokenResult, error) {
+	profileID := strings.TrimSpace(data.ProfileID)
+	if profileID == "" {
+		return CreateAPITokenResult{}, ErrInvalidProfile
+	}
+
+	name := strings.TrimSpace(data.Name)
+	if name == "" {
+		return CreateAPITokenResult{}, fmt.Errorf("%w: name is required", ErrInvalidToken)
+	}
+
+	scopes := normalizeScopes(data.Scopes)
+	if len(scopes) == 0 {
+		scopes = []string{apiTokenDefaultScope}
+	}
+
+	rawToken, err := generateRawToken()
+	if err != nil {
+		return CreateAPITokenResult{}, err
+	}
+	plainToken := "hht_" + rawToken
+	tokenHash := hashToken(plainToken)
+
+	var expiresAt *time.Time
+	if data.ExpiresIn > 0 {
+		value := time.Now().Add(data.ExpiresIn)
+		expiresAt = &value
+	}
+
+	token, err := s.apiTokenRepository.CreateAPIToken(ctx, storage.CreateAPITokenDTO{
+		ProfileID: profileID,
+		Name:      name,
+		Prefix:    rawToken[:apiTokenPrefixLen],
+		Hash:      tokenHash,
+		Scopes:    scopes,
+		ExpiresAt: expiresAt,
+	})
+	if err != nil {
+		return CreateAPITokenResult{}, err
+	}
+
+	return CreateAPITokenResult{
+		Token:      token,
+		PlainToken: plainToken,
+	}, nil
+}
+
+func (s *Service) GetAPITokenByID(ctx context.Context, id string) (authentication.APIToken, error) {
+	return s.apiTokenRepository.GetAPITokenByID(ctx, id)
+}
+
+func (s *Service) ListAPITokensByProfileID(ctx context.Context, profileID string) ([]authentication.APIToken, error) {
+	return s.apiTokenRepository.ListAPITokensByProfileID(ctx, profileID)
+}
+
+func (s *Service) RevokeAPIToken(ctx context.Context, id string) error {
+	return s.apiTokenRepository.RevokeAPIToken(ctx, id)
+}
+
 func HashPassword(plainPassword string) (string, error) {
 	if len(plainPassword) < minPasswordLength {
 		return "", ErrInvalidPassword
@@ -175,4 +260,34 @@ func HashPassword(plainPassword string) (string, error) {
 
 func ComparePassword(passwordHash, plainPassword string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(plainPassword)) == nil
+}
+
+func generateRawToken() (string, error) {
+	buf := make([]byte, apiTokenBytesSize)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf), nil
+}
+
+func hashToken(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
+}
+
+func normalizeScopes(scopes []string) []string {
+	result := make([]string, 0, len(scopes))
+	seen := make(map[string]struct{}, len(scopes))
+	for _, scope := range scopes {
+		normalized := strings.ToLower(strings.TrimSpace(scope))
+		if normalized == "" {
+			continue
+		}
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		result = append(result, normalized)
+	}
+	return result
 }

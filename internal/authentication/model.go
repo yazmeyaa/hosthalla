@@ -21,3 +21,21 @@ type Session struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+type APIToken struct {
+	ID        string
+	ProfileID string
+
+	Name string
+
+	Prefix string
+	Hash   string
+
+	Scopes []string
+
+	LastUsedAt *time.Time
+
+	CreatedAt time.Time
+	ExpiresAt *time.Time
+	RevokedAt *time.Time
+}

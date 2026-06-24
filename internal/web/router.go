@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
-	host_service "github.com/yazmeyaa/hosthalla/internal/host/service"
 	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage/postgres"
+	host_service "github.com/yazmeyaa/hosthalla/internal/host/service"
 	host_repository "github.com/yazmeyaa/hosthalla/internal/host/storage/postgres"
 	"github.com/yazmeyaa/hosthalla/internal/web/handlers"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
@@ -20,7 +20,7 @@ type NewRouterParams struct {
 	Logger                         *slog.Logger
 }
 
-func NewRouter(params NewRouterParams) *http.ServeMux {
+func NewRouter(params NewRouterParams) http.Handler {
 	hostService := host_service.New(params.HostRepository, params.HostManagementMethodRepository)
 	indexHandler := handlers.NewIndexHandler(params.HostRepository, params.Logger, params.AuthService)
 	authHandler := handlers.NewAuthHandler(params.Logger, params.AuthService)
@@ -39,6 +39,8 @@ func NewRouter(params NewRouterParams) *http.ServeMux {
 	mux.Handle("POST /hosts/{id}/management-methods/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateHostManagementMethod)))
 	mux.Handle("POST /hosts/ping-all", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.PingAllHosts)))
 	mux.Handle("GET /administration", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.Administration)))
+	mux.Handle("POST /administration/api-tokens/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.CreateAPIToken)))
+	mux.Handle("POST /administration/api-tokens/{id}/revoke", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.RevokeAPIToken)))
 
 	return mux
 }

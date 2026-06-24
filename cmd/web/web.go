@@ -47,11 +47,12 @@ func main() {
 
 	repo := host_repository.NewHostRepository(pool)
 	hostManagementMethodRepository := host_repository.NewHostManagementMethodRepository(pool)
-	authService := auth_service.New(
-		authentication_repository.NewProfileRepository(pool),
-		authentication_repository.NewPasswordAuthenticationRepository(pool),
-		authentication_repository.NewSessionRepository(pool),
-	)
+	authService := auth_service.New(auth_service.NewParams{
+		ProfileRepository:                authentication_repository.NewProfileRepository(pool),
+		PasswordAuthenticationRepository: authentication_repository.NewPasswordAuthenticationRepository(pool),
+		SessionRepository:                authentication_repository.NewSessionRepository(pool),
+		APITokenRepository:               authentication_repository.NewAPITokenRepository(pool),
+	})
 	router := web.NewRouter(web.NewRouterParams{
 		HostRepository:                 repo,
 		HostManagementMethodRepository: hostManagementMethodRepository,

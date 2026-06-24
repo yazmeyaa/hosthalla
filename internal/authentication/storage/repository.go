@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"time"
 
 	"github.com/yazmeyaa/hosthalla/internal/authentication"
 )
@@ -17,6 +18,15 @@ type CreatePasswordAuthenticationDTO struct {
 
 type CreateSessionDTO struct {
 	ProfileID string
+}
+
+type CreateAPITokenDTO struct {
+	ProfileID string
+	Name      string
+	Prefix    string
+	Hash      string
+	Scopes    []string
+	ExpiresAt *time.Time
 }
 
 type ProfileRepository interface {
@@ -37,4 +47,11 @@ type SessionRepository interface {
 	CreateSession(ctx context.Context, data CreateSessionDTO) (authentication.Session, error)
 	GetSessionByID(ctx context.Context, id string) (authentication.Session, error)
 	GetSessionByProfileID(ctx context.Context, profileID string) (authentication.Session, error)
+}
+
+type APITokenRepository interface {
+	CreateAPIToken(ctx context.Context, data CreateAPITokenDTO) (authentication.APIToken, error)
+	GetAPITokenByID(ctx context.Context, id string) (authentication.APIToken, error)
+	ListAPITokensByProfileID(ctx context.Context, profileID string) ([]authentication.APIToken, error)
+	RevokeAPIToken(ctx context.Context, id string) error
 }
