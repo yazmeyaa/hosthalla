@@ -1,0 +1,53 @@
+package host_details
+
+templ HostDetailsScripts() {
+	<script>
+		if (!window.__hostDetailsIPDisclosureBound) {
+			window.__hostDetailsIPDisclosureBound = true;
+
+			document.addEventListener("click", function(event) {
+				const target = event.target;
+				if (!(target instanceof Element)) {
+					return;
+				}
+
+				const toggle = target.closest("[data-host-ip-toggle]");
+				if (!(toggle instanceof HTMLButtonElement)) {
+					return;
+				}
+
+				const disclosure = toggle.closest("[data-host-ip-disclosure]");
+				if (!(disclosure instanceof HTMLElement)) {
+					return;
+				}
+
+				const value = disclosure.querySelector("[data-host-ip-value]");
+				const hiddenIcon = toggle.querySelector("[data-host-ip-icon-hidden]");
+				const visibleIcon = toggle.querySelector("[data-host-ip-icon-visible]");
+				const expanded = toggle.getAttribute("aria-expanded") === "true";
+				const nextExpanded = !expanded;
+
+				toggle.setAttribute("aria-expanded", String(nextExpanded));
+				toggle.setAttribute("aria-label", nextExpanded ? "Hide IP" : "Show IP");
+
+				if (value instanceof HTMLElement) {
+					if (nextExpanded) {
+						value.style.color = "var(--text)";
+						value.style.textShadow = "none";
+						value.style.background = "transparent";
+						value.style.filter = "none";
+						value.style.userSelect = "text";
+					} else {
+						value.removeAttribute("style");
+					}
+				}
+				if (hiddenIcon instanceof HTMLElement || hiddenIcon instanceof SVGElement) {
+					hiddenIcon.style.display = nextExpanded ? "none" : "inline-flex";
+				}
+				if (visibleIcon instanceof HTMLElement || visibleIcon instanceof SVGElement) {
+					visibleIcon.style.display = nextExpanded ? "inline-flex" : "none";
+				}
+			});
+		}
+	</script>
+}

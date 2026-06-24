@@ -5,6 +5,7 @@ import (
 
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/ui/app/layout"
+	"github.com/yazmeyaa/hosthalla/ui/entities/host_details"
 	"github.com/yazmeyaa/hosthalla/ui/features/host_actions"
 	"github.com/yazmeyaa/hosthalla/ui/features/host_dialog"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
@@ -66,6 +67,7 @@ templ HostsPage(props HostsPageProps) {
 		@host_dialog.CreateHostDialog(props.AvailableTags)
 		@host_actions.HostActionsScripts()
 		@host_dialog.HostDialogScripts()
+		@host_details.HostDetailsScripts()
 	}
 }
 

@@ -57,6 +57,55 @@ css host_details_meta_value() {
 	text-align: right;
 }
 
+css host_details_ip_disclosure() {
+	display: inline-flex;
+	flex-direction: row-reverse;
+	align-items: center;
+	gap: 10px;
+}
+
+css host_details_ip_toggle() {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border: none;
+	border-radius: 9999px;
+	color: var(--text);
+	background: transparent;
+	line-height: 1;
+	cursor: pointer;
+	user-select: none;
+}
+
+css host_details_ip_toggle_icon() {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: currentColor;
+}
+
+css host_details_ip_value() {
+	display: inline-flex;
+	align-items: center;
+	min-width: 9ch;
+	min-height: 1.35em;
+	padding: 1px 4px;
+	border-radius: 3px;
+	color: var(--text);
+	word-break: break-word;
+}
+
+css host_details_ip_value_masked() {
+	color: transparent;
+	text-shadow: 0 0 7px rgba(226, 232, 240, 0.7);
+	background: rgba(255,255,255, 0.1);
+	filter: blur(4px);
+	user-select: none;
+}
+
 css host_details_summary() {
 	display: flex;
 	flex-direction: column;
