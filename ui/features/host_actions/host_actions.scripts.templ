@@ -1,0 +1,39 @@
+package host_actions
+
+templ HostActionsScripts() {
+	<script>
+		if (!window.__hostActionsOutsideClickBound) {
+			window.__hostActionsOutsideClickBound = true;
+
+			function closeHostActionMenus(exceptMenu) {
+				document.querySelectorAll("details.host-actions-menu[open]").forEach(function(menu) {
+					if (exceptMenu && menu === exceptMenu) {
+						return;
+					}
+					menu.removeAttribute("open");
+				});
+			}
+
+			document.addEventListener("click", function(event) {
+				const target = event.target;
+				if (!(target instanceof Element)) {
+					closeHostActionMenus(null);
+					return;
+				}
+
+				const clickedSummary = target.closest("summary");
+				const clickedMenu = clickedSummary ? clickedSummary.parentElement : null;
+				if (clickedMenu instanceof HTMLDetailsElement && clickedMenu.classList.contains("host-actions-menu")) {
+					closeHostActionMenus(clickedMenu);
+					return;
+				}
+
+				if (target.closest(".host-actions-menu")) {
+					return;
+				}
+
+				closeHostActionMenus(null);
+			});
+		}
+	</script>
+}

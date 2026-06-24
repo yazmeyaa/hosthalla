@@ -1,0 +1,59 @@
+package host_dialog
+
+import (
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/input"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
+)
+
+templ AddHostManagementMethodDialog(host host.Host, dialogID string) {
+	@modal.Modal(modal.ModalProps{ID: dialogID, AriaLabel: "Add management method"}) {
+		@modal.Content() {
+			@modal.Title("Add Management Method")
+			<form class={ host_form(), host_management_method_form(), "host-management-method-form" } method="post" action={ "/hosts/" + host.ID.String() + "/management-methods/create" }>
+				<div class={ host_form_field() }>
+					<label class={ host_form_label() } for={ "management-method-type-" + host.ID.String() }>Type</label>
+					<select class={ host_management_method_select(), "ui-input", "host-management-method-type-select" } id={ "management-method-type-" + host.ID.String() } name="methodType" onchange="syncHostManagementMethodForm(this.form)">
+						<option value="ssh_password">SSH (Username + Password)</option>
+						<option value="ssh_key">SSH (RSA Key)</option>
+					</select>
+				</div>
+				<div class={ host_form_field() }>
+					<label class={ host_form_label() } for={ "management-method-description-" + host.ID.String() }>Description (optional)</label>
+					@input.Input(input.InputProps{Id: "management-method-description-" + host.ID.String(), Name: "description"})
+				</div>
+				<div class={ host_form_field() } data-method-field="username">
+					<label class={ host_form_label() } for={ "management-method-username-" + host.ID.String() }>Username</label>
+					@input.Input(input.InputProps{Id: "management-method-username-" + host.ID.String(), Name: "username", Required: true})
+				</div>
+				<div class={ host_form_field() }>
+					<label class={ host_form_label() } for={ "management-method-port-" + host.ID.String() }>Port</label>
+					@input.Input(input.InputProps{Id: "management-method-port-" + host.ID.String(), Name: "port", Type: "number", Value: "22"})
+				</div>
+				<div class={ host_form_field() } data-method-field="password">
+					<label class={ host_form_label() } for={ "management-method-password-" + host.ID.String() }>Password</label>
+					@input.Input(input.InputProps{Id: "management-method-password-" + host.ID.String(), Name: "password", Type: "password", Required: true})
+				</div>
+				<div class={ host_management_method_key_fields() }>
+					<div class={ host_form_field() } data-method-field="publicKey">
+						<label class={ host_form_label() } for={ "management-method-public-key-" + host.ID.String() }>Public Key</label>
+						<textarea class={ host_management_method_textarea(), "ui-input" } id={ "management-method-public-key-" + host.ID.String() } name="publicKey" rows="4"></textarea>
+					</div>
+					<div class={ host_form_field() } data-method-field="privateKey">
+						<label class={ host_form_label() } for={ "management-method-private-key-" + host.ID.String() }>Private Key</label>
+						<textarea class={ host_management_method_textarea(), "ui-input" } id={ "management-method-private-key-" + host.ID.String() } name="privateKey" rows="7"></textarea>
+					</div>
+				</div>
+				@modal.Actions() {
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", dialogID)}) {
+						Cancel
+					}
+					@button.Button(button.ButtonProps{Type: "submit"}) {
+						Add
+					}
+				}
+			</form>
+		}
+	}
+}

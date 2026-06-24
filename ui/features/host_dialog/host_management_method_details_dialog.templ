@@ -1,0 +1,87 @@
+package host_dialog
+
+import (
+	"strconv"
+
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/ui/entities/host_management_method"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
+)
+
+func hostManagementMethodDetailsTypeLabel(methodType host.HostManagementMethodType) string {
+	switch methodType {
+	case host.HostManagementMethodTypeSSHPassword:
+		return "SSH (password)"
+	case host.HostManagementMethodTypeSSHKey:
+		return "SSH (key)"
+	default:
+		return string(methodType)
+	}
+}
+
+templ HostManagementMethodDetailsDialog(hostIP string, method host.HostManagementMethod, dialogID string) {
+	{{
+		descriptionValue := method.Description
+		if descriptionValue == "" {
+			descriptionValue = "Not provided"
+		}
+
+		passwordValue := "N/A"
+		if method.Type == host.HostManagementMethodTypeSSHPassword {
+			passwordValue = string(method.Secret)
+			if passwordValue == "" {
+				passwordValue = "Not provided"
+			}
+		}
+
+		authenticationTypeLabel := hostManagementMethodDetailsTypeLabel(method.Type)
+	}}
+	@modal.Modal(modal.ModalProps{ID: dialogID, AriaLabel: "Management method details"}) {
+		@modal.Content() {
+			<h3 class={ host_management_method_details_title() }>Connection Details</h3>
+			<div
+				hidden
+				data-copy-source="host-management-method"
+				data-description={ descriptionValue }
+				data-authentication-type={ authenticationTypeLabel }
+				data-ip={ hostIP }
+				data-port={ strconv.Itoa(int(method.Port)) }
+				data-user={ method.Username }
+				data-password={ passwordValue }
+			></div>
+			<div class={ host_management_method_details_list() }>
+				<div class={ host_management_method_details_row() }>
+					<span class={ host_management_method_details_label() }>Type</span>
+					<span class={ host_management_method_details_value() }>
+						@host_management_method.MethodTypeTag(method.Type)
+					</span>
+				</div>
+				<div class={ host_management_method_details_row() }>
+					<span class={ host_management_method_details_label() }>IP</span>
+					<span class={ host_management_method_details_value() }>{ hostIP }</span>
+				</div>
+				<div class={ host_management_method_details_row() }>
+					<span class={ host_management_method_details_label() }>Username</span>
+					<span class={ host_management_method_details_value() }>{ method.Username }</span>
+				</div>
+				<div class={ host_management_method_details_row() }>
+					<span class={ host_management_method_details_label() }>Port</span>
+					<span class={ host_management_method_details_value() }>{ method.Port }</span>
+				</div>
+				<div class={ host_management_method_details_row() }>
+					<span class={ host_management_method_details_label() }>Description</span>
+					<span class={ host_management_method_details_value() }>{ descriptionValue }</span>
+				</div>
+			</div>
+			@modal.Actions() {
+				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("copyHostManagementMethodDetails", dialogID)}) {
+					Copy
+				}
+				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", dialogID)}) {
+					Close
+				}
+			}
+		}
+	}
+}

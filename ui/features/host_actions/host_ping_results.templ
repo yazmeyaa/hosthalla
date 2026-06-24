@@ -1,0 +1,68 @@
+package host_actions
+
+type PingResult struct {
+	HostID     string
+	Reachable  bool
+	DurationMS int64
+	Message    string
+}
+
+templ HostPingResult(hostID string, pingResult *PingResult) {
+	{{
+		showPingResult := pingResult != nil && pingResult.HostID == hostID
+		pingResultClass := host_ping_result_error()
+		pingStatus := "Unreachable"
+		if showPingResult && pingResult.Reachable {
+			pingResultClass = host_ping_result_success()
+			pingStatus = "Reachable"
+		}
+	}}
+	<div id={ "host-ping-result-" + hostID }>
+		if showPingResult {
+			<p class={ host_ping_result(), pingResultClass }>
+				{ pingStatus } in { pingResult.DurationMS } ms
+				if pingResult.Message != "" {
+					<span>{ " - " + pingResult.Message }</span>
+				}
+			</p>
+		}
+	</div>
+}
+
+templ HostPingResultOOB(pingResult PingResult) {
+	{{
+		pingResultClass := host_ping_result_error()
+		pingStatus := "Unreachable"
+		if pingResult.Reachable {
+			pingResultClass = host_ping_result_success()
+			pingStatus = "Reachable"
+		}
+	}}
+	<div id={ "host-ping-result-" + pingResult.HostID } hx-swap-oob="outerHTML">
+		<p class={ host_ping_result(), pingResultClass }>
+			{ pingStatus } in { pingResult.DurationMS } ms
+			if pingResult.Message != "" {
+				<span>{ " - " + pingResult.Message }</span>
+			}
+		</p>
+	</div>
+}
+
+templ HostPingResultsBatch(results []PingResult) {
+	{{
+		reachableCount := 0
+		for _, result := range results {
+			if result.Reachable {
+				reachableCount++
+			}
+		}
+	}}
+	<div id="hosts-ping-all-status">
+		<p class={ host_ping_all_status() }>
+			Finished: { reachableCount }/{ len(results) } reachable
+		</p>
+	</div>
+	for _, result := range results {
+		@HostPingResultOOB(result)
+	}
+}

@@ -1,0 +1,49 @@
+package host_dialog
+
+import (
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/ui/entities/host_details"
+	"github.com/yazmeyaa/hosthalla/ui/entities/host_management_method"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
+)
+
+templ HostDetailsDialog(host host.Host, methods []host.HostManagementMethod, detailsDialogID string, addManagementMethodDialogID string) {
+	@modal.Modal(modal.ModalProps{ID: detailsDialogID, AriaLabel: "Host Details"}) {
+		@modal.Content() {
+			@modal.Title("Host Details")
+			@host_details.HostDetailsSummary(host)
+			<div class={ host_management_methods_section() }>
+				<h3 class={ host_management_methods_title() }>Management Methods</h3>
+				if len(methods) == 0 {
+					<p class={ host_management_methods_empty() }>No methods added yet.</p>
+				} else {
+					<div class={ host_management_methods_list() }>
+						for _, method := range methods {
+							{{
+								methodDetailsDialogID := "host-management-method-details-" + method.ID.String()
+							}}
+							<button
+								type="button"
+								class={ host_management_method_details_trigger() }
+								aria-label={ "Show connection details for " + method.Username }
+								onclick={ templ.JSFuncCall("openModalDialog", methodDetailsDialogID) }
+							>
+								@host_management_method.MethodTypeTag(method.Type)
+							</button>
+							@HostManagementMethodDetailsDialog(host.IP.String(), method, methodDetailsDialogID)
+						}
+					</div>
+				}
+			</div>
+			@modal.Actions() {
+				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", detailsDialogID)}) {
+					Close
+				}
+				@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", addManagementMethodDialogID)}) {
+					Add Method
+				}
+			}
+		}
+	}
+}

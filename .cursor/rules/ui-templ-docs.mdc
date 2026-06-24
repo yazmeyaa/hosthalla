@@ -11,7 +11,10 @@ When working in `ui/**/*`, treat `docs/templ.md` as the primary reference for te
 ## Required workflow
 
 - Follow templ patterns from `docs/templ.md` before introducing new template constructs.
-- Keep markup/components in `*.templ` and styles in matching `*.styles.templ` files.
+- Use consistent module naming:
+  - `xxx.templ` for markup/components
+  - `xxx.styles.templ` for styles
+  - `xxx.scripts.templ` for inline scripts/helpers bound to the same module
 - Never manually edit generated `*_templ.go` files.
 - After changing any `*.templ` file, run `templ generate` and include generated updates.
 - Use regular Go view models/prepared data instead of complex data shaping directly in templates.

@@ -1,0 +1,24 @@
+package badge
+
+type BadgeProps struct {
+	Variant string
+}
+
+templ Badge(props BadgeProps) {
+	{{
+		variantClass := badge_variant_neutral()
+		switch props.Variant {
+		case "info":
+			variantClass = badge_variant_info()
+		case "success":
+			variantClass = badge_variant_success()
+		case "warning":
+			variantClass = badge_variant_warning()
+		case "danger":
+			variantClass = badge_variant_danger()
+		}
+	}}
+	<span class={ badge_base(), variantClass, "ui-badge" }>
+		{ children... }
+	</span>
+}

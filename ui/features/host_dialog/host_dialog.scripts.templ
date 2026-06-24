@@ -1,0 +1,127 @@
+package host_dialog
+
+import "github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
+
+templ HostDialogScripts() {
+	@modal.Scripts()
+	<script>
+		async function writeToClipboard(text) {
+			if (typeof text !== "string" || text.length === 0) {
+				return;
+			}
+
+			if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+				await navigator.clipboard.writeText(text);
+				return;
+			}
+
+			const textarea = document.createElement("textarea");
+			textarea.value = text;
+			textarea.setAttribute("readonly", "");
+			textarea.style.position = "fixed";
+			textarea.style.left = "-9999px";
+			document.body.appendChild(textarea);
+			textarea.select();
+			document.execCommand("copy");
+			document.body.removeChild(textarea);
+		}
+
+		async function copyHostManagementMethodDetails(dialogId) {
+			const dialog = document.getElementById(dialogId);
+			if (!(dialog instanceof HTMLDialogElement)) {
+				return;
+			}
+
+			const source = dialog.querySelector("[data-copy-source='host-management-method']");
+			if (!(source instanceof HTMLElement)) {
+				return;
+			}
+
+			const description = source.dataset.description || "Not provided";
+			const authenticationType = source.dataset.authenticationType || "Unknown";
+			const ip = source.dataset.ip || "Not provided";
+			const port = source.dataset.port || "Not provided";
+			const user = source.dataset.user || "Not provided";
+			const password = source.dataset.password || "Not provided";
+			const payload = [
+				"Description: " + description,
+				"Authentication Type: " + authenticationType,
+				"IP: " + ip,
+				"Port: " + port,
+				"User: " + user,
+				"Password: " + password,
+			].join("\n");
+
+			await writeToClipboard(payload);
+		}
+
+		window.copyHostManagementMethodDetails = copyHostManagementMethodDetails;
+
+		function syncHostManagementMethodForm(form) {
+			if (!(form instanceof HTMLFormElement)) {
+				return;
+			}
+
+			const typeSelect = form.querySelector("select[name='methodType']");
+			if (!(typeSelect instanceof HTMLSelectElement)) {
+				return;
+			}
+
+			const usernameInput = form.querySelector("input[name='username']");
+			const passwordInput = form.querySelector("input[name='password']");
+			const publicKeyInput = form.querySelector("textarea[name='publicKey']");
+			const privateKeyInput = form.querySelector("textarea[name='privateKey']");
+			const passwordField = form.querySelector("[data-method-field='password']");
+			const publicKeyField = form.querySelector("[data-method-field='publicKey']");
+			const privateKeyField = form.querySelector("[data-method-field='privateKey']");
+			const isSSHKey = typeSelect.value === "ssh_key";
+
+			if (passwordField instanceof HTMLElement) {
+				passwordField.style.display = isSSHKey ? "none" : "";
+			}
+			if (publicKeyField instanceof HTMLElement) {
+				publicKeyField.style.display = isSSHKey ? "" : "none";
+			}
+			if (privateKeyField instanceof HTMLElement) {
+				privateKeyField.style.display = isSSHKey ? "" : "none";
+			}
+
+			if (usernameInput instanceof HTMLInputElement) {
+				usernameInput.required = true;
+				usernameInput.disabled = false;
+			}
+			if (passwordInput instanceof HTMLInputElement) {
+				passwordInput.required = !isSSHKey;
+				passwordInput.disabled = isSSHKey;
+			}
+			if (publicKeyInput instanceof HTMLTextAreaElement) {
+				publicKeyInput.required = isSSHKey;
+				publicKeyInput.disabled = !isSSHKey;
+			}
+			if (privateKeyInput instanceof HTMLTextAreaElement) {
+				privateKeyInput.required = isSSHKey;
+				privateKeyInput.disabled = !isSSHKey;
+			}
+		}
+
+		window.syncHostManagementMethodForm = syncHostManagementMethodForm;
+
+		if (!window.__hostManagementMethodFormBound) {
+			window.__hostManagementMethodFormBound = true;
+			document.querySelectorAll("form.host-management-method-form").forEach(function(form) {
+				syncHostManagementMethodForm(form);
+			});
+
+			document.addEventListener("change", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLSelectElement)) {
+					return;
+				}
+				if (!target.classList.contains("host-management-method-type-select")) {
+					return;
+				}
+				syncHostManagementMethodForm(target.form);
+			});
+		}
+	</script>
+}
