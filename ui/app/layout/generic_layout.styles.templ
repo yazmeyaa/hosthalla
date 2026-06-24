@@ -1,9 +1,139 @@
 package layout
 
+templ layout_styles() {
+	<style>
+        :root {
+            --bg: #0F172A;
+            --surface: #111827;
+            --card: #1F2937;
+            --text: #E5E7EB;
+            --muted: #9CA3AF;
+            --primary: #3B82F6;
+            --success: #22C55E;
+            --warn: #F59E0B;
+            --danger: #EF4444;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+		.ui-input::placeholder {
+			color: rgba(156, 163, 175, 0.9);
+		}
+
+		.ui-input {
+			padding: 0.5rem;
+			background-color: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 0.5rem;
+			font-size: 1rem;
+			font-family: inherit;
+			line-height: 1.5;
+			color: var(--text);
+			width: 100%;
+			box-sizing: border-box;
+			outline: none;
+			transition: border-color 160ms ease, box-shadow 180ms ease, background-color 160ms ease;
+		}
+
+		.ui-input:hover {
+			border-color: rgba(59, 130, 246, 0.45);
+			background-color: rgba(31, 41, 55, 0.92);
+			color: var(--text);
+		}
+
+		.ui-input:focus,
+		.ui-input:focus-visible {
+			border-color: rgba(96, 165, 250, 0.95);
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
+			background-color: rgba(31, 41, 55, 0.96);
+			color: var(--text);
+		}
+
+		.ui-input option {
+			background-color: var(--card);
+			color: var(--text);
+		}
+
+		.ui-input[type="number"] {
+			appearance: textfield;
+			-moz-appearance: textfield;
+		}
+
+		.ui-input[type="number"]::-webkit-outer-spin-button,
+		.ui-input[type="number"]::-webkit-inner-spin-button {
+			appearance: none;
+			-webkit-appearance: none;
+			margin: 0;
+		}
+
+		.ui-button:hover {
+			filter: brightness(1.06);
+			transform: translateY(-1px);
+		}
+
+		.ui-button:active {
+			transform: translateY(0);
+			filter: brightness(0.98);
+		}
+
+		.ui-button:focus-visible {
+			outline: none;
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.24);
+		}
+
+		.ui-modal::backdrop {
+			background: rgba(2, 6, 23, 0.78);
+			backdrop-filter: blur(3px);
+		}
+	</style>
+}
+
 css generic_layout_styles() {
 	background-color: var(--bg);
 	color: var(--text);
 	font-size: 14px;
 	font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 	margin: 0;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+css generic_layout_main() {
+	width: 100%;
+	max-width: 1100px;
+	margin: 0 auto;
+	padding: 12px;
+	box-sizing: border-box;
+	flex: 1;
+}
+
+css generic_layout_footer() {
+	width: 100%;
+	border-top: 1px solid var(--border);
+	background: rgba(17, 24, 39, 0.72);
+}
+
+css generic_layout_footer_inner() {
+	max-width: 1100px;
+	margin: 0 auto;
+	padding: 14px 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+css generic_layout_footer_brand() {
+	color: var(--text);
+	font-weight: 700;
+	letter-spacing: 0.01em;
+}
+
+css generic_layout_footer_link() {
+	color: #93c5fd;
+	text-decoration: none;
+	transition: color 160ms ease;
 }
