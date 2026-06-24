@@ -2,6 +2,7 @@ package host_details
 
 import (
 	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
 )
 
 templ HostDetails(host host.Host) {
@@ -14,6 +15,15 @@ templ HostDetails(host host.Host) {
 	<div class={ host_details() }>
 		<h3 class={ host_details_name() }>{ host.Name }</h3>
 		<p class={ host_details_description() }>{ description }</p>
+		if len(host.Tags) > 0 {
+			<div class={ host_details_tags() }>
+				for _, tag := range host.Tags {
+					@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+						{ "#" + tag }
+					}
+				}
+			</div>
+		}
 		<dl class={ host_details_meta() }>
 			<div class={ host_details_meta_row() }>
 				<dt class={ host_details_meta_label() }>IP</dt>

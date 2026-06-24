@@ -26,7 +26,10 @@ func NewHostsHandler(hostService *host_service.Service, profileService *auth_ser
 }
 
 func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
-	hosts, err := h.hostService.ListHosts(r.Context())
+	tags := parseHostTagsValues(r.URL.Query()["tag"])
+	tags = append(tags, parseHostTagsValues(r.URL.Query()["tags"])...)
+
+	hosts, err := h.hostService.ListHosts(r.Context(), storage.ListHostsFilter{Tags: tags})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -39,6 +42,12 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hostManagementMethodsByHostID[listedHost.ID.String()] = methods
+	}
+
+	availableTags, err := h.hostService.ListTags(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	session, err := middlewares.GetSessionFromContext(r.Context())
@@ -55,6 +64,8 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 
 	hosts_page.HostsPage(hosts_page.HostsPageProps{
 		Hosts:                         hosts,
+		AvailableTags:                 availableTags,
+		SelectedTags:                  tags,
 		HostManagementMethodsByHostID: hostManagementMethodsByHostID,
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
 			GenericLayoutProps: layout.GenericLayoutProps{Title: "Hosts"},
@@ -98,6 +109,9 @@ func (h *HostsHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 	}
 	currentHost.Name = data.Name
 	currentHost.Description = data.Description
+	if hostTagsSubmitted(r) {
+		currentHost.Tags = data.Tags
+	}
 	currentHost.IP = data.IP
 
 	if err := h.hostService.UpdateHost(r.Context(), &currentHost); err != nil {
@@ -237,8 +251,40 @@ func parseHostForm(r *http.Request) (storage.CreateHostDTO, error) {
 	return storage.CreateHostDTO{
 		Name:        r.FormValue("name"),
 		Description: r.FormValue("description"),
+		Tags:        append(parseHostTagsValues(r.Form["tag"]), parseHostTagsValues(r.Form["tags"])...),
 		IP:          ip,
 	}, nil
+}
+
+func parseHostTagsValues(values []string) []string {
+	tags := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		for _, tag := range parseHostTags(value) {
+			normalized := strings.ToLower(strings.TrimSpace(tag))
+			if normalized == "" {
+				continue
+			}
+			if _, ok := seen[normalized]; ok {
+				continue
+			}
+			seen[normalized] = struct{}{}
+			tags = append(tags, normalized)
+		}
+	}
+	return tags
+}
+
+func parseHostTags(rawTags string) []string {
+	return strings.FieldsFunc(rawTags, func(r rune) bool {
+		return r == ',' || r == '\n'
+	})
+}
+
+func hostTagsSubmitted(r *http.Request) bool {
+	_, hasTag := r.Form["tag"]
+	_, hasTags := r.Form["tags"]
+	return hasTag || hasTags
 }
 
 func parseHostID(rawHostID string) (host.HostID, error) {

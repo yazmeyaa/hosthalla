@@ -4,6 +4,7 @@ import (
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/ui/entities/host_details"
 	"github.com/yazmeyaa/hosthalla/ui/entities/host_management_method"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
 )
@@ -13,6 +14,20 @@ templ HostDetailsDialog(host host.Host, methods []host.HostManagementMethod, det
 		@modal.Content() {
 			@modal.Title("Host Details")
 			@host_details.HostDetailsSummary(host)
+			<div class={ host_tags_section() }>
+				<h3 class={ host_tags_title() }>Tags</h3>
+				if len(host.Tags) == 0 {
+					<p class={ host_tags_empty() }>No tags added yet.</p>
+				} else {
+					<div class={ host_tags_list() }>
+						for _, tag := range host.Tags {
+							@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+								{ "#" + tag }
+							}
+						}
+					</div>
+				}
+			</div>
 			<div class={ host_management_methods_section() }>
 				<h3 class={ host_management_methods_title() }>Management Methods</h3>
 				if len(methods) == 0 {

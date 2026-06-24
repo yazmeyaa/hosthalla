@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
+	"github.com/yazmeyaa/hosthalla/internal/host/storage"
 	"github.com/yazmeyaa/hosthalla/internal/host/storage/postgres"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
 	"github.com/yazmeyaa/hosthalla/ui/pages/index_page"
@@ -22,7 +23,7 @@ func NewIndexHandler(r *postgres.HostRepositoryPostgresImpl, l *slog.Logger, a *
 
 func (h *IndexHandler) Index(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	hosts, err := h.r.ListHosts(ctx)
+	hosts, err := h.r.ListHosts(ctx, storage.ListHostsFilter{})
 	if err != nil {
 		h.l.Error("failed to list hosts", slog.String("error", err.Error()))
 		http.Error(w, err.Error(), http.StatusInternalServerError)

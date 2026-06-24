@@ -28,3 +28,41 @@ css hosts_page_ping_all_status_slot() {
 	padding-inline: 12px;
 	margin-bottom: 8px;
 }
+
+css hosts_page_tag_filter() {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding-inline: 12px;
+	margin-bottom: 12px;
+}
+
+css hosts_page_tag_filter_label() {
+	color: var(--muted);
+	font-size: 0.86rem;
+}
+
+css hosts_page_tag_filter_list() {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+css hosts_page_tag_filter_chip() {
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	border-radius: 9999px;
+	border: 1px solid rgba(148, 163, 184, 0.45);
+	background: rgba(148, 163, 184, 0.16);
+	color: #e2e8f0;
+	font-size: 0.82rem;
+	text-decoration: none;
+}
+
+css hosts_page_tag_filter_chip_selected() {
+	border-color: rgba(59, 130, 246, 0.65);
+	background: rgba(59, 130, 246, 0.28);
+	color: #bfdbfe;
+}

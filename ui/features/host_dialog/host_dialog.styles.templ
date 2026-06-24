@@ -17,6 +17,87 @@ css host_form_label() {
 	color: var(--muted);
 }
 
+css host_tags_control() {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	min-height: 42px;
+	padding: 6px;
+	border: 1px solid var(--border);
+	border-radius: 0.5rem;
+	background: rgba(15, 23, 42, 0.38);
+}
+
+css host_tags_chips() {
+	display: contents;
+}
+
+css host_tag_chip() {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 9px;
+	border-radius: 9999px;
+	border: 1px solid rgba(59, 130, 246, 0.45);
+	background: rgba(59, 130, 246, 0.2);
+	color: #bfdbfe;
+	font-size: 0.82rem;
+	cursor: pointer;
+}
+
+css host_tags_input() {
+	flex: 1 1 160px;
+	min-width: 120px;
+	border: 0;
+	outline: 0;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+}
+
+css host_tags_suggestions() {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+css host_tags_suggestion() {
+	display: inline-flex;
+	align-items: center;
+	padding: 3px 8px;
+	border-radius: 9999px;
+	border: 1px solid rgba(148, 163, 184, 0.35);
+	background: rgba(148, 163, 184, 0.12);
+	color: #e2e8f0;
+	font-size: 0.78rem;
+	cursor: pointer;
+}
+
+css host_tags_section() {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+css host_tags_title() {
+	margin: 0;
+	font-size: 1rem;
+}
+
+css host_tags_empty() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+css host_tags_list() {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
 css host_management_methods_section() {
 	display: flex;
 	flex-direction: column;

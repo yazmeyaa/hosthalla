@@ -28,6 +28,13 @@ type Host struct {
 	UpdatedAt   time.Time
 }
 
+type Tag struct {
+	ID        uuid.UUID
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type SSHPasswordCredential struct {
 	ID        uuid.UUID
 	HostID    HostID

@@ -1,6 +1,8 @@
 package hosts_page
 
 import (
+	"net/url"
+
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/ui/app/layout"
 	"github.com/yazmeyaa/hosthalla/ui/features/host_actions"
@@ -11,6 +13,8 @@ import (
 
 type HostsPageProps struct {
 	Hosts                         []host.Host
+	AvailableTags                 []host.Tag
+	SelectedTags                  []string
 	HostManagementMethodsByHostID map[string][]host.HostManagementMethod
 	AuthLayoutProps               layout.AuthenticatedLayoutProps
 }
@@ -37,10 +41,58 @@ templ HostsPage(props HostsPageProps) {
 				}
 			</div>
 		</div>
+		if len(props.AvailableTags) > 0 {
+			<div class={ hosts_page_tag_filter() }>
+				<span class={ hosts_page_tag_filter_label() }>Filter by tags</span>
+				<div class={ hosts_page_tag_filter_list() }>
+					for _, tag := range props.AvailableTags {
+						<a
+							class={ hosts_page_tag_filter_chip(), templ.KV(hosts_page_tag_filter_chip_selected(), hostTagSelected(tag.Name, props.SelectedTags)) }
+							href={ hostTagFilterHref(tag.Name, props.SelectedTags) }
+						>
+							{ "#" + tag.Name }
+						</a>
+					}
+					if len(props.SelectedTags) > 0 {
+						@button.Link(button.LinkProps{Href: "/hosts", Variant: "secondary"}) {
+							Clear
+						}
+					}
+				</div>
+			</div>
+		}
 		<div id="hosts-ping-all-status" class={ hosts_page_ping_all_status_slot() }></div>
-		@hosts_list.HostsList(props.Hosts, props.HostManagementMethodsByHostID)
-		@host_dialog.CreateHostDialog()
+		@hosts_list.HostsList(props.Hosts, props.HostManagementMethodsByHostID, props.AvailableTags)
+		@host_dialog.CreateHostDialog(props.AvailableTags)
 		@host_actions.HostActionsScripts()
 		@host_dialog.HostDialogScripts()
 	}
+}
+
+func hostTagSelected(tag string, selectedTags []string) bool {
+	for _, selectedTag := range selectedTags {
+		if selectedTag == tag {
+			return true
+		}
+	}
+	return false
+}
+
+func hostTagFilterHref(tag string, selectedTags []string) string {
+	query := url.Values{}
+	shouldAdd := true
+	for _, selectedTag := range selectedTags {
+		if selectedTag == tag {
+			shouldAdd = false
+			continue
+		}
+		query.Add("tag", selectedTag)
+	}
+	if shouldAdd {
+		query.Add("tag", tag)
+	}
+	if len(query) == 0 {
+		return "/hosts"
+	}
+	return "/hosts?" + query.Encode()
 }

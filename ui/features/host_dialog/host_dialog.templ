@@ -1,8 +1,13 @@
 package host_dialog
 
-import "github.com/yazmeyaa/hosthalla/ui/shared/ui/input"
+import (
+	"strings"
 
-templ HostFormFields(idPrefix string, name string, description string, ip string) {
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/input"
+)
+
+templ HostFormFields(idPrefix string, name string, description string, ip string, selectedTags []string, availableTags []host.Tag) {
 	<div class={ host_form_field() }>
 		<label class={ host_form_label() } for={ idPrefix + "-name" }>Name</label>
 		@input.Input(input.InputProps{Id: idPrefix + "-name", Name: "name", Value: name, Required: true})
@@ -15,4 +20,53 @@ templ HostFormFields(idPrefix string, name string, description string, ip string
 		<label class={ host_form_label() } for={ idPrefix + "-ip" }>IP</label>
 		@input.Input(input.InputProps{Id: idPrefix + "-ip", Name: "ip", Value: ip, Placeholder: "127.0.0.1", Required: true})
 	</div>
+	<div class={ host_form_field(), "host-tags-field" } data-host-tags-field>
+		<label class={ host_form_label() } for={ idPrefix + "-tags-input" }>Tags</label>
+		<input type="hidden" name="tags" value={ strings.Join(selectedTags, ",") } data-host-tags-value/>
+		<div class={ host_tags_control() }>
+			<div class={ host_tags_chips() } data-host-tags-list>
+				for _, tag := range selectedTags {
+					@HostTagFormChip(tag)
+				}
+			</div>
+			<input
+				class={ host_tags_input() }
+				type="text"
+				id={ idPrefix + "-tags-input" }
+				placeholder="Type a tag and press Enter"
+				autocomplete="off"
+				data-host-tags-input
+			/>
+		</div>
+		<template data-host-tag-chip-template>
+			@HostTagFormChip("")
+		</template>
+		if len(availableTags) > 0 {
+			<div class={ host_tags_suggestions() } aria-label="Existing tags">
+				for _, tag := range availableTags {
+					<button
+						type="button"
+						class={ host_tags_suggestion() }
+						data-host-tag-suggestion
+						data-tag-name={ tag.Name }
+					>
+						{ "#" + tag.Name }
+					</button>
+				}
+			</div>
+		}
+	</div>
+}
+
+templ HostTagFormChip(tag string) {
+	<button
+		type="button"
+		class={ host_tag_chip(), "host-tag-chip" }
+		data-host-tag-remove
+		data-tag-name={ tag }
+		aria-label={ "Remove tag " + tag }
+	>
+		<span data-host-tag-chip-label>{ "#" + tag }</span>
+		<span aria-hidden="true">×</span>
+	</button>
 }

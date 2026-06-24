@@ -1,16 +1,17 @@
 package host_dialog
 
 import (
+	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
 )
 
-templ CreateHostDialog() {
+templ CreateHostDialog(availableTags []host.Tag) {
 	@modal.Modal(modal.ModalProps{ID: "create-host-dialog", AriaLabel: "Add Host"}) {
 		@modal.Content() {
 			@modal.Title("Add Host")
 			<form class={ host_form() } method="post" action="/hosts/create">
-				@HostFormFields("create-host", "", "", "")
+				@HostFormFields("create-host", "", "", "", nil, availableTags)
 				@modal.Actions() {
 					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", "create-host-dialog")}) {
 						Cancel

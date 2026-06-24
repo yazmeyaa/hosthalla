@@ -57,6 +57,91 @@ templ HostDialogScripts() {
 
 		window.copyHostManagementMethodDetails = copyHostManagementMethodDetails;
 
+		function normalizeHostTag(rawTag) {
+			return String(rawTag || "").trim().replace(/^#+/, "").toLowerCase();
+		}
+
+		function readHostTags(field) {
+			const valueInput = field.querySelector("[data-host-tags-value]");
+			if (!(valueInput instanceof HTMLInputElement) || valueInput.value.trim() === "") {
+				return [];
+			}
+
+			const tags = [];
+			const seen = new Set();
+			valueInput.value.split(",").forEach(function(rawTag) {
+				const tag = normalizeHostTag(rawTag);
+				if (tag === "" || seen.has(tag)) {
+					return;
+				}
+				seen.add(tag);
+				tags.push(tag);
+			});
+			return tags;
+		}
+
+		function writeHostTags(field, tags) {
+			const valueInput = field.querySelector("[data-host-tags-value]");
+			if (valueInput instanceof HTMLInputElement) {
+				valueInput.value = tags.join(",");
+			}
+			renderHostTags(field, tags);
+		}
+
+		function renderHostTags(field, tags) {
+			const list = field.querySelector("[data-host-tags-list]");
+			const template = field.querySelector("[data-host-tag-chip-template]");
+			if (!(list instanceof HTMLElement) || !(template instanceof HTMLTemplateElement)) {
+				return;
+			}
+
+			list.replaceChildren();
+			tags.forEach(function(tag) {
+				const fragment = template.content.cloneNode(true);
+				const chip = fragment.querySelector("[data-host-tag-remove]");
+				const label = fragment.querySelector("[data-host-tag-chip-label]");
+				if (chip instanceof HTMLElement) {
+					chip.dataset.tagName = tag;
+					chip.setAttribute("aria-label", "Remove tag " + tag);
+				}
+				if (label instanceof HTMLElement) {
+					label.textContent = "#" + tag;
+				}
+				list.appendChild(fragment);
+			});
+		}
+
+		function addHostTags(field, rawTags) {
+			const tags = readHostTags(field);
+			const seen = new Set(tags);
+			rawTags.forEach(function(rawTag) {
+				const tag = normalizeHostTag(rawTag);
+				if (tag === "" || seen.has(tag)) {
+					return;
+				}
+				seen.add(tag);
+				tags.push(tag);
+			});
+			writeHostTags(field, tags);
+		}
+
+		function removeHostTag(field, tag) {
+			writeHostTags(field, readHostTags(field).filter(function(existingTag) {
+				return existingTag !== tag;
+			}));
+		}
+
+		function initHostTagsField(field) {
+			if (!(field instanceof HTMLElement)) {
+				return;
+			}
+			writeHostTags(field, readHostTags(field));
+		}
+
+		function splitHostTagsInput(value) {
+			return String(value || "").split(/[\n,]+/);
+		}
+
 		function syncHostManagementMethodForm(form) {
 			if (!(form instanceof HTMLFormElement)) {
 				return;
@@ -108,6 +193,83 @@ templ HostDialogScripts() {
 
 		if (!window.__hostManagementMethodFormBound) {
 			window.__hostManagementMethodFormBound = true;
+			document.querySelectorAll("[data-host-tags-field]").forEach(initHostTagsField);
+
+			document.addEventListener("click", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLElement)) {
+					return;
+				}
+
+				const suggestion = target.closest("[data-host-tag-suggestion]");
+				if (suggestion instanceof HTMLElement) {
+					const field = suggestion.closest("[data-host-tags-field]");
+					if (field instanceof HTMLElement) {
+						addHostTags(field, [suggestion.dataset.tagName || ""]);
+					}
+					return;
+				}
+
+				const removeButton = target.closest("[data-host-tag-remove]");
+				if (removeButton instanceof HTMLElement) {
+					const field = removeButton.closest("[data-host-tags-field]");
+					if (field instanceof HTMLElement) {
+						removeHostTag(field, normalizeHostTag(removeButton.dataset.tagName || ""));
+					}
+				}
+			});
+
+			document.addEventListener("keydown", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLInputElement) || !target.matches("[data-host-tags-input]")) {
+					return;
+				}
+				if (event.key !== "Enter" && event.key !== ",") {
+					return;
+				}
+
+				event.preventDefault();
+				const field = target.closest("[data-host-tags-field]");
+				if (field instanceof HTMLElement) {
+					addHostTags(field, splitHostTagsInput(target.value));
+					target.value = "";
+				}
+			});
+
+			document.addEventListener("input", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLInputElement) || !target.matches("[data-host-tags-input]")) {
+					return;
+				}
+				if (!target.value.includes(",") && !target.value.includes("\n")) {
+					return;
+				}
+
+				const field = target.closest("[data-host-tags-field]");
+				if (field instanceof HTMLElement) {
+					addHostTags(field, splitHostTagsInput(target.value));
+					target.value = "";
+				}
+			});
+
+			document.addEventListener("submit", function(event) {
+				const form = event.target;
+				if (!(form instanceof HTMLFormElement)) {
+					return;
+				}
+
+				form.querySelectorAll("[data-host-tags-field]").forEach(function(field) {
+					if (!(field instanceof HTMLElement)) {
+						return;
+					}
+					const input = field.querySelector("[data-host-tags-input]");
+					if (input instanceof HTMLInputElement && input.value.trim() !== "") {
+						addHostTags(field, splitHostTagsInput(input.value));
+						input.value = "";
+					}
+				});
+			});
+
 			document.querySelectorAll("form.host-management-method-form").forEach(function(form) {
 				syncHostManagementMethodForm(form);
 			});

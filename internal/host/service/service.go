@@ -35,8 +35,13 @@ func New(hostRepository storage.HostRepository, hostManagementMethodRepository s
 	}
 }
 
-func (s *Service) ListHosts(ctx context.Context) ([]host.Host, error) {
-	return s.hostRepository.ListHosts(ctx)
+func (s *Service) ListHosts(ctx context.Context, filter storage.ListHostsFilter) ([]host.Host, error) {
+	filter.Tags = normalizeTags(filter.Tags)
+	return s.hostRepository.ListHosts(ctx, filter)
+}
+
+func (s *Service) ListTags(ctx context.Context) ([]host.Tag, error) {
+	return s.hostRepository.ListTags(ctx)
 }
 
 func (s *Service) GetHostByID(ctx context.Context, hostID host.HostID) (host.Host, error) {
@@ -44,10 +49,12 @@ func (s *Service) GetHostByID(ctx context.Context, hostID host.HostID) (host.Hos
 }
 
 func (s *Service) CreateHost(ctx context.Context, data storage.CreateHostDTO) (host.Host, error) {
+	data.Tags = normalizeTags(data.Tags)
 	return s.hostRepository.CreateHost(ctx, data)
 }
 
 func (s *Service) UpdateHost(ctx context.Context, target *host.Host) error {
+	target.Tags = normalizeTags(target.Tags)
 	return s.hostRepository.UpdateHost(ctx, target)
 }
 
@@ -137,7 +144,7 @@ func (s *Service) PingHost(ctx context.Context, hostID host.HostID) (PingResult,
 }
 
 func (s *Service) PingAllHosts(ctx context.Context) ([]PingResult, error) {
-	hosts, err := s.hostRepository.ListHosts(ctx)
+	hosts, err := s.hostRepository.ListHosts(ctx, storage.ListHostsFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -212,4 +219,21 @@ func normalizePort(port uint16) uint16 {
 		return 22
 	}
 	return port
+}
+
+func normalizeTags(tags []string) []string {
+	result := make([]string, 0, len(tags))
+	seen := make(map[string]struct{}, len(tags))
+	for _, tag := range tags {
+		normalized := strings.ToLower(strings.TrimSpace(tag))
+		if normalized == "" {
+			continue
+		}
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		result = append(result, normalized)
+	}
+	return result
 }

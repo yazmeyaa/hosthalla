@@ -27,8 +27,13 @@ type CreateHostManagementMethodDTO struct {
 	Description string
 }
 
+type ListHostsFilter struct {
+	Tags []string
+}
+
 type HostRepository interface {
-	ListHosts(ctx context.Context) ([]host.Host, error)
+	ListHosts(ctx context.Context, filter ListHostsFilter) ([]host.Host, error)
+	ListTags(ctx context.Context) ([]host.Tag, error)
 	GetHostByID(ctx context.Context, hostID host.HostID) (host.Host, error)
 	DeleteHost(ctx context.Context, hostID host.HostID) error
 	UpdateHost(ctx context.Context, host *host.Host) error
