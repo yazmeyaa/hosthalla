@@ -13,8 +13,8 @@ css authenticated_header() {
 	gap: 14px;
 	padding: 14px 16px;
 	border: 1px solid var(--border);
-	border-radius: 0.75rem;
-	background: linear-gradient(180deg, rgba(59, 130, 246, 0.1), rgba(17, 24, 39, 0.6));
+	border-radius: var(--radius-xl);
+	background: var(--surface-header-gradient);
 }
 
 css authenticated_brand() {
@@ -50,7 +50,7 @@ css authenticated_nav_link() {
 	justify-content: center;
 	padding: 0.45rem 0.7rem;
 	border: 1px solid var(--border);
-	border-radius: 0.55rem;
+	border-radius: var(--radius-md);
 	color: var(--text);
 	text-decoration: none;
 	font-size: 0.9rem;
@@ -62,8 +62,8 @@ css authenticated_profile() {
 	align-items: center;
 	padding: 0.4rem 0.65rem;
 	border: 1px solid var(--border);
-	border-radius: 999px;
-	background: rgba(17, 24, 39, 0.65);
+	border-radius: var(--radius-pill);
+	background: var(--surface-overlay-muted);
 }
 
 css authenticated_profile_text() {

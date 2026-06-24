@@ -4,36 +4,36 @@ css badge_base() {
 	display: inline-flex;
 	align-items: center;
 	padding: 4px 10px;
-	border-radius: 9999px;
+	border-radius: var(--radius-pill);
 	font-size: 0.82rem;
 }
 
 css badge_variant_neutral() {
-	border: 1px solid rgba(148, 163, 184, 0.45);
-	background: rgba(148, 163, 184, 0.2);
-	color: #e2e8f0;
+	border: 1px solid var(--border-interactive-subtle-strong);
+	background: var(--surface-interactive-subtle-strong);
+	color: var(--text-neutral-soft);
 }
 
 css badge_variant_info() {
-	border: 1px solid rgba(59, 130, 246, 0.45);
-	background: rgba(59, 130, 246, 0.2);
-	color: #bfdbfe;
+	border: 1px solid var(--border-interactive-info);
+	background: var(--surface-interactive-info);
+	color: var(--text-info-soft);
 }
 
 css badge_variant_success() {
-	border: 1px solid rgba(34, 197, 94, 0.45);
-	background: rgba(34, 197, 94, 0.2);
-	color: #bbf7d0;
+	border: 1px solid var(--border-interactive-success);
+	background: var(--surface-interactive-success);
+	color: var(--text-success-muted);
 }
 
 css badge_variant_warning() {
-	border: 1px solid rgba(245, 158, 11, 0.45);
-	background: rgba(245, 158, 11, 0.2);
-	color: #fde68a;
+	border: 1px solid var(--border-interactive-warning);
+	background: var(--surface-interactive-warning);
+	color: var(--text-warning-muted);
 }
 
 css badge_variant_danger() {
-	border: 1px solid rgba(239, 68, 68, 0.45);
-	background: rgba(239, 68, 68, 0.2);
-	color: #fecaca;
+	border: 1px solid var(--border-interactive-danger);
+	background: var(--surface-interactive-danger);
+	color: var(--text-danger-muted);
 }

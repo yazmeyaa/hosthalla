@@ -13,17 +13,82 @@ templ layout_styles() {
             --warn: #F59E0B;
             --danger: #EF4444;
             --border: rgba(255, 255, 255, 0.08);
+            --text-link: #93c5fd;
+            --text-neutral-soft: #e2e8f0;
+            --text-info-soft: #bfdbfe;
+            --text-success-soft: #86efac;
+            --text-danger-soft: #fca5a5;
+            --text-success-muted: #bbf7d0;
+            --text-warning-muted: #fde68a;
+            --text-danger-muted: #fecaca;
+            --text-danger-on: #fee2e2;
+
+            --surface-footer: rgba(17, 24, 39, 0.72);
+            --surface-overlay: rgba(17, 24, 39, 0.98);
+            --surface-overlay-muted: rgba(17, 24, 39, 0.65);
+            --surface-header-gradient: linear-gradient(180deg, rgba(59, 130, 246, 0.1), rgba(17, 24, 39, 0.6));
+            --surface-sensitive-mask: rgba(255, 255, 255, 0.1);
+            --surface-interactive-subtle: rgba(148, 163, 184, 0.12);
+            --surface-interactive-subtle-strong: rgba(148, 163, 184, 0.16);
+            --surface-interactive-info: rgba(59, 130, 246, 0.2);
+            --surface-interactive-info-strong: rgba(59, 130, 246, 0.28);
+
+            --border-interactive-subtle: rgba(148, 163, 184, 0.35);
+            --border-interactive-subtle-strong: rgba(148, 163, 184, 0.45);
+            --border-interactive-info: rgba(59, 130, 246, 0.45);
+            --border-interactive-info-strong: rgba(59, 130, 246, 0.65);
+            --border-interactive-success: rgba(34, 197, 94, 0.45);
+            --border-interactive-warning: rgba(245, 158, 11, 0.45);
+            --border-interactive-danger: rgba(239, 68, 68, 0.45);
+
+            --surface-interactive-success: rgba(34, 197, 94, 0.2);
+            --surface-interactive-warning: rgba(245, 158, 11, 0.2);
+            --surface-interactive-danger: rgba(239, 68, 68, 0.2);
+            --surface-danger-strong: #7f1d1d;
+
+            --input-placeholder: rgba(156, 163, 175, 0.9);
+            --input-border-hover: rgba(59, 130, 246, 0.45);
+            --input-bg-hover: rgba(31, 41, 55, 0.92);
+            --input-border-focus: rgba(96, 165, 250, 0.95);
+            --input-focus-ring: rgba(59, 130, 246, 0.22);
+            --input-bg-focus: rgba(31, 41, 55, 0.96);
+            --focus-ring: rgba(59, 130, 246, 0.24);
+
+            --overlay-backdrop: rgba(2, 6, 23, 0.78);
+            --blur-backdrop: 3px;
+            --blur-sensitive: 4px;
+            --shadow-overlay: 0 8px 20px rgba(2, 6, 23, 0.45);
+            --shadow-sensitive-text: 0 0 7px rgba(226, 232, 240, 0.7);
+
+            --radius-xs: 3px;
+            --radius-sm: 0.5rem;
+            --radius-md: 0.55rem;
+            --radius-lg: 0.6rem;
+            --radius-xl: 0.75rem;
+            --radius-card: 10px;
+            --radius-pill: 9999px;
+
+            --border-danger-strong: #991b1b;
+
+            --space-2: 2px;
+            --space-3: 3px;
+            --space-4: 4px;
+            --space-6: 6px;
+            --space-8: 8px;
+            --space-10: 10px;
+            --space-12: 12px;
+            --space-14: 14px;
         }
 
 		.ui-input::placeholder {
-			color: rgba(156, 163, 175, 0.9);
+			color: var(--input-placeholder);
 		}
 
 		.ui-input {
 			padding: 0.5rem;
 			background-color: var(--card);
 			border: 1px solid var(--border);
-			border-radius: 0.5rem;
+			border-radius: var(--radius-sm);
 			font-size: 1rem;
 			font-family: inherit;
 			line-height: 1.5;
@@ -35,16 +100,16 @@ templ layout_styles() {
 		}
 
 		.ui-input:hover {
-			border-color: rgba(59, 130, 246, 0.45);
-			background-color: rgba(31, 41, 55, 0.92);
+			border-color: var(--input-border-hover);
+			background-color: var(--input-bg-hover);
 			color: var(--text);
 		}
 
 		.ui-input:focus,
 		.ui-input:focus-visible {
-			border-color: rgba(96, 165, 250, 0.95);
-			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
-			background-color: rgba(31, 41, 55, 0.96);
+			border-color: var(--input-border-focus);
+			box-shadow: 0 0 0 3px var(--input-focus-ring);
+			background-color: var(--input-bg-focus);
 			color: var(--text);
 		}
 
@@ -77,12 +142,12 @@ templ layout_styles() {
 
 		.ui-button:focus-visible {
 			outline: none;
-			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.24);
+			box-shadow: 0 0 0 3px var(--focus-ring);
 		}
 
 		.ui-modal::backdrop {
-			background: rgba(2, 6, 23, 0.78);
-			backdrop-filter: blur(3px);
+			background: var(--overlay-backdrop);
+			backdrop-filter: blur(var(--blur-backdrop));
 		}
 	</style>
 }
@@ -110,7 +175,7 @@ css generic_layout_main() {
 css generic_layout_footer() {
 	width: 100%;
 	border-top: 1px solid var(--border);
-	background: rgba(17, 24, 39, 0.72);
+	background: var(--surface-footer);
 }
 
 css generic_layout_footer_inner() {
@@ -133,7 +198,7 @@ css generic_layout_footer_brand() {
 }
 
 css generic_layout_footer_link() {
-	color: #93c5fd;
+	color: var(--text-link);
 	text-decoration: none;
 	transition: color 160ms ease;
 }

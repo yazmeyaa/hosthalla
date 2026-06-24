@@ -6,7 +6,7 @@ css button_base() {
 	justify-content: center;
 	gap: 0.35rem;
 	padding: 0.55rem 0.85rem;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-sm);
 	border: 1px solid transparent;
 	font-size: 0.9rem;
 	font-weight: 600;
@@ -28,7 +28,7 @@ css button_variant_secondary() {
 }
 
 css button_variant_danger() {
-	background: #7f1d1d;
-	color: #fee2e2;
-	border-color: #991b1b;
+	background: var(--surface-danger-strong);
+	color: var(--text-danger-on);
+	border-color: var(--border-danger-strong);
 }

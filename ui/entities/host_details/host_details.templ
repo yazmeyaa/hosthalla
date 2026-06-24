@@ -2,7 +2,7 @@ package host_details
 
 import (
 	"github.com/yazmeyaa/hosthalla/internal/host"
-	"github.com/yazmeyaa/hosthalla/ui/shared/assets/icons"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/icons"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
 )
 
@@ -38,10 +38,10 @@ templ HostDetails(host host.Host) {
 							data-host-ip-toggle
 						>
 							<span class={ host_details_ip_toggle_icon() } data-host-ip-icon-hidden>
-								@icons.EyeClosed()
+								@icons.EyeClosedIcon()
 							</span>
 							<span class={ host_details_ip_toggle_icon() } data-host-ip-icon-visible style="display: none;">
-								@icons.EyeOpen()
+								@icons.EyeOpenIcon()
 							</span>
 						</button>
 						<span class={ host_details_ip_value(), host_details_ip_value_masked() } data-host-ip-value>{ host.IP.String() }</span>

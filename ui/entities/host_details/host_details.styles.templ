@@ -29,7 +29,7 @@ css host_details_tags() {
 css host_details_meta() {
 	margin: 0;
 	padding-top: 8px;
-	border-top: 1px solid rgba(255, 255, 255, 0.06);
+	border-top: 1px solid var(--border);
 	display: grid;
 	gap: 6px;
 }
@@ -72,7 +72,7 @@ css host_details_ip_toggle() {
 	height: 30px;
 	padding: 0;
 	border: none;
-	border-radius: 9999px;
+	border-radius: var(--radius-pill);
 	color: var(--text);
 	background: transparent;
 	line-height: 1;
@@ -93,16 +93,16 @@ css host_details_ip_value() {
 	min-width: 9ch;
 	min-height: 1.35em;
 	padding: 1px 4px;
-	border-radius: 3px;
+	border-radius: var(--radius-xs);
 	color: var(--text);
 	word-break: break-word;
 }
 
 css host_details_ip_value_masked() {
 	color: transparent;
-	text-shadow: 0 0 7px rgba(226, 232, 240, 0.7);
-	background: rgba(255,255,255, 0.1);
-	filter: blur(4px);
+	text-shadow: var(--shadow-sensitive-text);
+	background: var(--surface-sensitive-mask);
+	filter: blur(var(--blur-sensitive));
 	user-select: none;
 }
 

@@ -25,8 +25,8 @@ css host_tags_control() {
 	min-height: 42px;
 	padding: 6px;
 	border: 1px solid var(--border);
-	border-radius: 0.5rem;
-	background: rgba(15, 23, 42, 0.38);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
 }
 
 css host_tags_chips() {
@@ -38,10 +38,10 @@ css host_tag_chip() {
 	align-items: center;
 	gap: 6px;
 	padding: 4px 9px;
-	border-radius: 9999px;
-	border: 1px solid rgba(59, 130, 246, 0.45);
-	background: rgba(59, 130, 246, 0.2);
-	color: #bfdbfe;
+	border-radius: var(--radius-pill);
+	border: 1px solid var(--border-interactive-info);
+	background: var(--surface-interactive-info);
+	color: var(--text-info-soft);
 	font-size: 0.82rem;
 	cursor: pointer;
 }
@@ -66,10 +66,10 @@ css host_tags_suggestion() {
 	display: inline-flex;
 	align-items: center;
 	padding: 3px 8px;
-	border-radius: 9999px;
-	border: 1px solid rgba(148, 163, 184, 0.35);
-	background: rgba(148, 163, 184, 0.12);
-	color: #e2e8f0;
+	border-radius: var(--radius-pill);
+	border: 1px solid var(--border-interactive-subtle);
+	background: var(--surface-interactive-subtle);
+	color: var(--text-neutral-soft);
 	font-size: 0.78rem;
 	cursor: pointer;
 }

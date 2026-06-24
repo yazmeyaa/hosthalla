@@ -27,7 +27,7 @@ css host_actions_menu_trigger() {
 	list-style: none;
 	width: 40px;
 	height: 34px;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-sm);
 	border: 1px solid var(--border);
 	background: transparent;
 	color: var(--text);
@@ -41,16 +41,16 @@ css host_actions_menu_trigger() {
 css host_actions_menu_panel() {
 	position: absolute;
 	right: 0;
-	top: calc(100% + 6px);
+	top: calc(100% + var(--space-6));
 	z-index: 10;
 	min-width: 168px;
-	padding: 8px;
+	padding: var(--space-8);
 	border: 1px solid var(--border);
-	border-radius: 0.6rem;
-	background: rgba(17, 24, 39, 0.98);
-	box-shadow: 0 8px 20px rgba(2, 6, 23, 0.45);
+	border-radius: var(--radius-lg);
+	background: var(--surface-overlay);
+	box-shadow: var(--shadow-overlay);
 	display: grid;
-	gap: 6px;
+	gap: var(--space-6);
 }
 
 css host_ping_result() {
@@ -59,11 +59,11 @@ css host_ping_result() {
 }
 
 css host_ping_result_success() {
-	color: #86efac;
+	color: var(--text-success-soft);
 }
 
 css host_ping_result_error() {
-	color: #fca5a5;
+	color: var(--text-danger-soft);
 }
 
 css host_ping_all_status() {
