@@ -24,13 +24,23 @@ type PingResult struct {
 type Service struct {
 	hostRepository                 HostRepository
 	hostManagementMethodRepository HostManagementMethodRepository
+	hostSystemInfoRepository       HostSystemInfoRepository
+	hostMetricSnapshotRepository   HostMetricSnapshotRepository
 	logger                         *slog.Logger
 }
 
-func New(hostRepository HostRepository, hostManagementMethodRepository HostManagementMethodRepository, logger *slog.Logger) *Service {
+func New(
+	hostRepository HostRepository,
+	hostManagementMethodRepository HostManagementMethodRepository,
+	hostSystemInfoRepository HostSystemInfoRepository,
+	hostMetricSnapshotRepository HostMetricSnapshotRepository,
+	logger *slog.Logger,
+) *Service {
 	return &Service{
 		hostRepository:                 hostRepository,
 		hostManagementMethodRepository: hostManagementMethodRepository,
+		hostSystemInfoRepository:       hostSystemInfoRepository,
+		hostMetricSnapshotRepository:   hostMetricSnapshotRepository,
 		logger:                         logger,
 	}
 }
@@ -104,6 +114,46 @@ func (s *Service) ListHostManagementMethods(ctx context.Context, hostID HostID) 
 	}
 	s.logger.Debug("listed host management methods", slog.String("host_id", hostID.String()), slog.Int("count", len(methods)))
 	return methods, nil
+}
+
+func (s *Service) GetHostSystemInfoByHostID(ctx context.Context, hostID HostID) (HostSystemInfo, error) {
+	systemInfo, err := s.hostSystemInfoRepository.GetHostSystemInfoByHostID(ctx, hostID)
+	if err != nil {
+		s.logger.Error("failed to get host system info by host id", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
+		return HostSystemInfo{}, err
+	}
+	s.logger.Debug("loaded host system info", slog.String("host_id", hostID.String()))
+	return systemInfo, nil
+}
+
+func (s *Service) UpsertHostSystemInfo(ctx context.Context, data HostSystemInfo) (HostSystemInfo, error) {
+	systemInfo, err := s.hostSystemInfoRepository.UpsertHostSystemInfo(ctx, data)
+	if err != nil {
+		s.logger.Error("failed to upsert host system info", slog.String("host_id", data.HostID.String()), slog.String("error", err.Error()))
+		return HostSystemInfo{}, err
+	}
+	s.logger.Info("host system info upserted", slog.String("host_id", data.HostID.String()))
+	return systemInfo, nil
+}
+
+func (s *Service) ListHostMetricSnapshots(ctx context.Context, hostID HostID) ([]HostMetricSnapshot, error) {
+	snapshots, err := s.hostMetricSnapshotRepository.ListHostMetricSnapshots(ctx, hostID)
+	if err != nil {
+		s.logger.Error("failed to list host metric snapshots", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
+		return nil, err
+	}
+	s.logger.Debug("listed host metric snapshots", slog.String("host_id", hostID.String()), slog.Int("count", len(snapshots)))
+	return snapshots, nil
+}
+
+func (s *Service) CreateHostMetricSnapshot(ctx context.Context, data HostMetricSnapshot) (HostMetricSnapshot, error) {
+	createdSnapshot, err := s.hostMetricSnapshotRepository.CreateHostMetricSnapshot(ctx, data)
+	if err != nil {
+		s.logger.Error("failed to create host metric snapshot", slog.String("host_id", data.HostID.String()), slog.String("error", err.Error()))
+		return HostMetricSnapshot{}, err
+	}
+	s.logger.Info("host metric snapshot created", slog.String("host_id", data.HostID.String()), slog.String("timestamp", createdSnapshot.Timestamp.Format(time.RFC3339)))
+	return createdSnapshot, nil
 }
 
 type CreateSSHPasswordManagementMethodDTO struct {

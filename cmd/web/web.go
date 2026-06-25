@@ -68,6 +68,8 @@ func main() {
 	router := web.NewRouter(web.NewRouterParams{
 		HostRepository:                 hostRepositories.Host,
 		HostManagementMethodRepository: hostRepositories.HostManagementMethod,
+		HostSystemInfoRepository:       hostRepositories.HostSystemInfo,
+		HostMetricSnapshotRepository:   hostRepositories.HostMetricSnapshot,
 		AuthService:                    authService,
 		SessionRepository:              authentication_repository.NewSessionRepository(pool),
 		Logger:                         logger,

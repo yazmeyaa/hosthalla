@@ -50,3 +50,13 @@ type HostManagementMethodRepository interface {
 	ListHostManagementMethods(ctx context.Context, hostID HostID) ([]HostManagementMethod, error)
 	CreateHostManagementMethod(ctx context.Context, hostID HostID, data CreateHostManagementMethodDTO) (HostManagementMethod, error)
 }
+
+type HostSystemInfoRepository interface {
+	GetHostSystemInfoByHostID(ctx context.Context, hostID HostID) (HostSystemInfo, error)
+	UpsertHostSystemInfo(ctx context.Context, data HostSystemInfo) (HostSystemInfo, error)
+}
+
+type HostMetricSnapshotRepository interface {
+	ListHostMetricSnapshots(ctx context.Context, hostID HostID) ([]HostMetricSnapshot, error)
+	CreateHostMetricSnapshot(ctx context.Context, data HostMetricSnapshot) (HostMetricSnapshot, error)
+}

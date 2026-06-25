@@ -72,3 +72,46 @@ type HostNote struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+type HostSystemInfo struct {
+	HostID HostID
+
+	Hostname         string
+	OS               OSSystemInfo
+	TotalMemoryBytes uint64
+	CPU              CPUSystemInfo
+	GPUs             []GPUSystemInfo
+	TotalDiskBytes   uint64
+}
+
+type GPUSystemInfo struct {
+	Name string
+}
+
+type OSSystemInfo struct {
+	Name    string
+	Version string
+	Kernel  string
+}
+
+type CPUSystemInfo struct {
+	Name         string
+	Architecture string
+	Cores        uint
+	Frequency    float64
+	Threads      uint
+}
+
+type HostMetricSnapshot struct {
+	HostID    HostID
+	Timestamp time.Time
+	Metrics   []HostMetric
+}
+
+type HostMetric struct {
+	CPUUsagePercentage float64
+	MemoryUsageBytes   uint64
+	DiskUsageBytes     uint64
+	NetworkRxBytes     uint64
+	NetworkTxBytes     uint64
+}
