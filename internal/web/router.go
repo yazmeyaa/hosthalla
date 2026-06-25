@@ -5,27 +5,26 @@ import (
 	"net/http"
 
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
-	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage/postgres"
-	host_service "github.com/yazmeyaa/hosthalla/internal/host/service"
-	host_repository "github.com/yazmeyaa/hosthalla/internal/host/storage/postgres"
+	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage"
+	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/handlers"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
 )
 
 type NewRouterParams struct {
-	HostRepository                 *host_repository.HostRepositoryPostgresImpl
-	HostManagementMethodRepository *host_repository.HostManagementMethodRepositoryPostgresImpl
-	SessionRepository              *authentication_repository.SessionRepositoryPostgresImpl
+	HostRepository                 host.HostRepository
+	HostManagementMethodRepository host.HostManagementMethodRepository
+	SessionRepository              authentication_repository.SessionRepository
 	AuthService                    *auth_service.Service
 	Logger                         *slog.Logger
 }
 
 func NewRouter(params NewRouterParams) http.Handler {
-	hostService := host_service.New(params.HostRepository, params.HostManagementMethodRepository)
+	hostService := host.New(params.HostRepository, params.HostManagementMethodRepository, params.Logger)
 	indexHandler := handlers.NewIndexHandler(params.HostRepository, params.Logger, params.AuthService)
 	authHandler := handlers.NewAuthHandler(params.Logger, params.AuthService)
-	hostHandler := handlers.NewHostsHandler(hostService, params.AuthService)
-	administrationHandler := handlers.NewAdministrationHandler(params.AuthService)
+	hostHandler := handlers.NewHostsHandler(hostService, params.AuthService, params.Logger)
+	administrationHandler := handlers.NewAdministrationHandler(params.AuthService, params.Logger)
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(indexHandler.Index)))
@@ -42,5 +41,5 @@ func NewRouter(params NewRouterParams) http.Handler {
 	mux.Handle("POST /administration/api-tokens/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.CreateAPIToken)))
 	mux.Handle("POST /administration/api-tokens/{id}/revoke", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.RevokeAPIToken)))
 
-	return mux
+	return middlewares.RequestLoggingMiddleware(params.Logger, mux)
 }

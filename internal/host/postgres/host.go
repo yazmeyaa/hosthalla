@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/host"
-	"github.com/yazmeyaa/hosthalla/internal/host/storage"
 )
 
 const hostSelectColumns = "h.id, h.name, h.description, coalesce(array_agg(t.name order by t.name) filter (where t.id is not null), '{}'::text[]) as tags, h.ip, h.created_at, h.updated_at"
@@ -56,8 +55,7 @@ type HostRepositoryPostgresImpl struct {
 	pool *pgxpool.Pool
 }
 
-// CreateHost implements storage.HostRepository.
-func (h HostRepositoryPostgresImpl) CreateHost(ctx context.Context, data storage.CreateHostDTO) (host.Host, error) {
+func (h HostRepositoryPostgresImpl) CreateHost(ctx context.Context, data host.CreateHostDTO) (host.Host, error) {
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {
 		return host.Host{}, err
@@ -85,7 +83,6 @@ func (h HostRepositoryPostgresImpl) CreateHost(ctx context.Context, data storage
 	return result, nil
 }
 
-// DeleteHost implements storage.HostRepository.
 func (h HostRepositoryPostgresImpl) DeleteHost(ctx context.Context, hostID host.HostID) error {
 	const deleteHostQuery = "delete from host where id = $1"
 	tag, err := h.pool.Exec(ctx, deleteHostQuery, uuid.UUID(hostID))
@@ -98,13 +95,11 @@ func (h HostRepositoryPostgresImpl) DeleteHost(ctx context.Context, hostID host.
 	return nil
 }
 
-// GetHostByID implements storage.HostRepository.
 func (h HostRepositoryPostgresImpl) GetHostByID(ctx context.Context, hostID host.HostID) (host.Host, error) {
 	return getHostByID(ctx, h.pool, hostID)
 }
 
-// ListHosts implements storage.HostRepository.
-func (h HostRepositoryPostgresImpl) ListHosts(ctx context.Context, filter storage.ListHostsFilter) ([]host.Host, error) {
+func (h HostRepositoryPostgresImpl) ListHosts(ctx context.Context, filter host.ListHostsFilter) ([]host.Host, error) {
 	query := "select " + hostSelectColumns + `
 from host h
 left join host_tag ht on ht.host_id = h.id
@@ -145,7 +140,6 @@ where h.id in (
 	return hosts, nil
 }
 
-// ListTags implements storage.HostRepository.
 func (h HostRepositoryPostgresImpl) ListTags(ctx context.Context) ([]host.Tag, error) {
 	const query = "select id, name, created_at, updated_at from tag order by name asc"
 	rows, err := h.pool.Query(ctx, query)
@@ -168,8 +162,7 @@ func (h HostRepositoryPostgresImpl) ListTags(ctx context.Context) ([]host.Tag, e
 	return tags, nil
 }
 
-// UpdateHost implements storage.HostRepository.
-func (h HostRepositoryPostgresImpl) UpdateHost(ctx context.Context, host *host.Host) error {
+func (h HostRepositoryPostgresImpl) UpdateHost(ctx context.Context, targetHost *host.Host) error {
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -177,15 +170,15 @@ func (h HostRepositoryPostgresImpl) UpdateHost(ctx context.Context, host *host.H
 	defer tx.Rollback(ctx)
 
 	const updateHostQuery = "update host set name = $2, description = $3, ip = $4, updated_at = now() where id = $1 returning updated_at"
-	row := tx.QueryRow(ctx, updateHostQuery, uuid.UUID(host.ID), host.Name, host.Description, host.IP)
-	if err := row.Scan(&host.UpdatedAt); err != nil {
+	row := tx.QueryRow(ctx, updateHostQuery, uuid.UUID(targetHost.ID), targetHost.Name, targetHost.Description, targetHost.IP)
+	if err := row.Scan(&targetHost.UpdatedAt); err != nil {
 		if err == pgx.ErrNoRows {
-			return fmt.Errorf("host not found: %s", host.ID)
+			return fmt.Errorf("host not found: %s", targetHost.ID)
 		}
 		return err
 	}
 
-	if err := syncHostTags(ctx, tx, host.ID, host.Tags); err != nil {
+	if err := syncHostTags(ctx, tx, targetHost.ID, targetHost.Tags); err != nil {
 		return err
 	}
 
@@ -244,4 +237,4 @@ func NewHostRepository(pool *pgxpool.Pool) *HostRepositoryPostgresImpl {
 	return &HostRepositoryPostgresImpl{pool}
 }
 
-var _ storage.HostRepository = &HostRepositoryPostgresImpl{}
+var _ host.HostRepository = &HostRepositoryPostgresImpl{}

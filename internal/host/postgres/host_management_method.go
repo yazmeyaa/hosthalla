@@ -7,7 +7,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/host"
-	"github.com/yazmeyaa/hosthalla/internal/host/storage"
 )
 
 const hostManagementMethodSelectColumns = "id, host_id, type, username, port, secret, description, created_at, updated_at"
@@ -56,7 +55,7 @@ func (h HostManagementMethodRepositoryPostgresImpl) ListHostManagementMethods(ct
 	return methods, nil
 }
 
-func (h HostManagementMethodRepositoryPostgresImpl) CreateHostManagementMethod(ctx context.Context, hostID host.HostID, data storage.CreateHostManagementMethodDTO) (host.HostManagementMethod, error) {
+func (h HostManagementMethodRepositoryPostgresImpl) CreateHostManagementMethod(ctx context.Context, hostID host.HostID, data host.CreateHostManagementMethodDTO) (host.HostManagementMethod, error) {
 	const insertManagementMethodQuery = "insert into host_credential (id, host_id, type, username, port, secret, description) values ($1, $2, $3, $4, $5, $6, $7) returning id, host_id, type, username, port, secret, description, created_at, updated_at"
 	row := h.pool.QueryRow(
 		ctx,
@@ -76,4 +75,4 @@ func NewHostManagementMethodRepository(pool *pgxpool.Pool) *HostManagementMethod
 	return &HostManagementMethodRepositoryPostgresImpl{pool: pool}
 }
 
-var _ storage.HostManagementMethodRepository = &HostManagementMethodRepositoryPostgresImpl{}
+var _ host.HostManagementMethodRepository = &HostManagementMethodRepositoryPostgresImpl{}

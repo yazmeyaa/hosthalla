@@ -1,14 +1,20 @@
 package config
 
 import (
+	"fmt"
+	"log/slog"
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 )
+
+const DefaultLogLevel = "warning"
 
 type AppConfig struct {
 	WEB      WEBConfig      `yaml:"web"`
 	Database DatabaseConfig `yaml:"database"`
+	LogLevel string         `yaml:"log_level"`
 }
 type WEBConfig struct {
 	Port int    `yaml:"port"`
@@ -41,4 +47,29 @@ func (d DatabaseConfig) ConnectionString() string {
 		Host:   net.JoinHostPort(d.Host, strconv.Itoa(d.Port)),
 		Path:   d.Database,
 	}).String()
+}
+
+func (a *AppConfig) ApplyDefaults() {
+	if strings.TrimSpace(a.LogLevel) == "" {
+		a.LogLevel = DefaultLogLevel
+	}
+}
+
+func (a AppConfig) SlogLevel() (slog.Level, error) {
+	return ParseLogLevel(a.LogLevel)
+}
+
+func ParseLogLevel(raw string) (slog.Level, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "debug":
+		return slog.LevelDebug, nil
+	case "info":
+		return slog.LevelInfo, nil
+	case "warn", "warning":
+		return slog.LevelWarn, nil
+	case "error":
+		return slog.LevelError, nil
+	default:
+		return 0, fmt.Errorf("unsupported log_level %q: expected debug, info, warning, or error", raw)
+	}
 }

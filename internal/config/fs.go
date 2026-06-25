@@ -31,6 +31,7 @@ func (a *AppConfig) SaveToFS(fsys fs.FS) error {
 	if a == nil {
 		return errors.New("config is nil")
 	}
+	a.ApplyDefaults()
 
 	content, err := yaml.Marshal(a)
 	if err != nil {
@@ -62,6 +63,7 @@ func (a *AppConfig) LoadFromFS(fsys fs.FS) error {
 	if err := yaml.Unmarshal(content, a); err != nil {
 		return fmt.Errorf("unmarshal config file %q: %w", configFileName, err)
 	}
+	a.ApplyDefaults()
 
 	return nil
 }
@@ -70,6 +72,7 @@ func (a *AppConfig) SaveToPath(path string) error {
 	if a == nil {
 		return errors.New("config is nil")
 	}
+	a.ApplyDefaults()
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create config directory for %q: %w", path, err)
@@ -100,6 +103,7 @@ func (a *AppConfig) LoadFromPath(path string) error {
 					Host: "0.0.0.0",
 					Port: 8080,
 				},
+				LogLevel: DefaultLogLevel,
 			}
 
 			if saveErr := template.SaveToPath(path); saveErr != nil {
@@ -115,6 +119,7 @@ func (a *AppConfig) LoadFromPath(path string) error {
 	if err := yaml.Unmarshal(content, a); err != nil {
 		return fmt.Errorf("unmarshal config file %q: %w", path, err)
 	}
+	a.ApplyDefaults()
 
 	return nil
 }

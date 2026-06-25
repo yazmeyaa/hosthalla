@@ -12,32 +12,44 @@ import (
 	auth_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage"
 	auth_storage "github.com/yazmeyaa/hosthalla/internal/authentication/storage/postgres"
 	"github.com/yazmeyaa/hosthalla/internal/config"
-	"github.com/yazmeyaa/hosthalla/internal/logger"
+	app_logger "github.com/yazmeyaa/hosthalla/internal/logger"
 )
 
 func main() {
-	logger := logger.NewLogger(logger.LoggerParams{
+	bootstrapLogger := app_logger.NewLogger(app_logger.LoggerParams{
 		Output: os.Stdout,
-		Level:  slog.LevelInfo,
+		Level:  slog.LevelWarn,
 	})
 	flags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	configPath := flags.String("config", config.DefaultConfigPath, "path to config file")
 	if err := flags.Parse(os.Args[1:]); err != nil {
-		logger.Error("failed to parse command flags", slog.String("error", err.Error()))
+		bootstrapLogger.Error("failed to parse command flags", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
 	args := flags.Args()
 	if len(args) == 0 {
-		logger.Error("no arguments provided")
+		bootstrapLogger.Error("no arguments provided")
 		os.Exit(1)
 	}
 
 	cfg := config.AppConfig{}
 	if err := cfg.LoadFromPath(*configPath); err != nil {
-		logger.Error("failed to load config", slog.String("path", *configPath), slog.String("error", err.Error()))
+		bootstrapLogger.Error("failed to load config", slog.String("path", *configPath), slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	logLevel, err := cfg.SlogLevel()
+	if err != nil {
+		bootstrapLogger.Error("invalid config value", slog.String("field", "log_level"), slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	logger := app_logger.NewLogger(app_logger.LoggerParams{
+		Output: os.Stdout,
+		Level:  logLevel,
+	})
+	logger.Info("cli logger configured", slog.String("log_level", cfg.LogLevel))
 
 	pool, err := pgxpool.New(context.Background(), cfg.Database.ConnectionString())
 	if err != nil {
@@ -45,8 +57,10 @@ func main() {
 		os.Exit(1)
 	}
 	defer pool.Close()
+	logger.Info("database connection pool initialized")
 
 	command := args[0]
+	logger.Info("running cli command", slog.String("command", command))
 	switch command {
 	case "create-user":
 		createUser(logger, pool, args[1:])

@@ -19,7 +19,6 @@ func NewAuthHandler(l *slog.Logger, svc *auth_service.Service) *AuthHandler {
 
 func (h *AuthHandler) Auth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	h.l.Debug("rendering auth page")
 	auth_page.AuthPage().Render(ctx, w)
 }
 
