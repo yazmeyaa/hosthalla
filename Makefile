@@ -7,7 +7,15 @@ DATABASE_URL := postgres://hosthalla:hosthalla@localhost:5432/hosthalla?sslmode=
 DATABASE_URL_DOCKER := postgres://hosthalla:hosthalla@postgres:5432/hosthalla?sslmode=disable
 MIGRATE_IMAGE := migrate/migrate:v4.18.2
 
-.PHONY: dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down templ-generate build-web
+VERSION_VERSION := $(shell git describe --tags --always --dirty)
+VERSION_COMMIT := $(shell git rev-parse --short HEAD)
+VERSION_BUILD_AT := $(shell date -u +%FT%TZ)
+LDFLAGS := -ldflags "\
+	-X github.com/yazmeyaa/hosthalla/internal/version.Version=$(VERSION_VERSION) \
+	-X github.com/yazmeyaa/hosthalla/internal/version.Commit=$(VERSION_COMMIT) \
+	-X github.com/yazmeyaa/hosthalla/internal/version.BuildAt=$(VERSION_BUILD_AT)"
+
+.PHONY: dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down templ-generate build-web dev-run-web dev-web
 
 # Start dev infrastructure and wait until services are healthy.
 dev: dev-up
@@ -53,10 +61,15 @@ templ-generate:
 
 build-web:
 	go build \
-	-ldflags "\
+	$(LDFLAGS) \
 	-s -w \
-	-X github.com/yazmeyaa/hosthalla/internal/version.Version=$(shell git describe --tags --always --dirty) \
-	-X github.com/yazmeyaa/hosthalla/internal/version.Commit=$(shell git rev-parse --short HEAD) \
-	-X github.com/yazmeyaa/hosthalla/internal/version.BuildAt=$(shell date -u +%FT%TZ)" \
 	-o dist/web \
 	cmd/web/web.go
+
+dev-run-web:
+	go run \
+	$(LDFLAGS) \
+		cmd/web/web.go
+
+
+dev-web: templ-generate dev-run-web

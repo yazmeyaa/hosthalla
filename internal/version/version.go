@@ -2,7 +2,6 @@ package version
 
 import (
 	"fmt"
-	"log"
 )
 
 var (
@@ -12,8 +11,5 @@ var (
 )
 
 func VersionString() string {
-	log.Println("Version: ", Version)
-	log.Println("Commit: ", Commit)
-	log.Println("BuildAt: ", BuildAt)
-	return fmt.Sprintf("%s-%s-%s", Version, Commit, BuildAt)
+	return fmt.Sprintf("%s+%s", Version, Commit)
 }

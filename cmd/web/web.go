@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
@@ -13,6 +17,7 @@ import (
 	"github.com/yazmeyaa/hosthalla/internal/config"
 	host_repository "github.com/yazmeyaa/hosthalla/internal/host/postgres"
 	app_logger "github.com/yazmeyaa/hosthalla/internal/logger"
+	"github.com/yazmeyaa/hosthalla/internal/version"
 	"github.com/yazmeyaa/hosthalla/internal/web"
 )
 
@@ -75,9 +80,44 @@ func main() {
 		Logger:                         logger,
 	})
 	listenAddress := cfg.WEB.ListenAddress()
-	logger.Info("starting web server", slog.String("listen_address", listenAddress))
-	if err := http.ListenAndServe(listenAddress, router); err != nil {
-		logger.Error("failed to start web server", slog.String("error", err.Error()))
+	server := &http.Server{
+		Addr:    listenAddress,
+		Handler: router,
+	}
+	logger.Info(
+		"starting web server",
+		slog.String("listen_address", listenAddress),
+		slog.String("version", version.VersionString()),
+	)
+
+	errCh := make(chan error, 1)
+	go func() {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+		close(errCh)
+	}()
+
+	shutdownSignalCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			logger.Error("web server stopped unexpectedly", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	case <-shutdownSignalCtx.Done():
+		logger.Info("shutdown signal received, shutting down web server")
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("failed to gracefully shut down web server", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	logger.Info("web server stopped gracefully")
 }
