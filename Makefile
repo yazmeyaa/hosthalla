@@ -7,7 +7,7 @@ DATABASE_URL := postgres://hosthalla:hosthalla@localhost:5432/hosthalla?sslmode=
 DATABASE_URL_DOCKER := postgres://hosthalla:hosthalla@postgres:5432/hosthalla?sslmode=disable
 MIGRATE_IMAGE := migrate/migrate:v4.18.2
 
-.PHONY: dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down templ-generate
+.PHONY: dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down templ-generate build-web
 
 # Start dev infrastructure and wait until services are healthy.
 dev: dev-up
@@ -51,3 +51,12 @@ migrate-down: dev-up
 templ-generate:
 	go tool templ generate
 
+build-web:
+	go build \
+	-ldflags "\
+	-s -w \
+	-X github.com/yazmeyaa/hosthalla/internal/version.Version=$(shell git describe --tags --always --dirty) \
+	-X github.com/yazmeyaa/hosthalla/internal/version.Commit=$(shell git rev-parse --short HEAD) \
+	-X github.com/yazmeyaa/hosthalla/internal/version.BuildAt=$(shell date -u +%FT%TZ)" \
+	-o dist/web \
+	cmd/web/web.go
