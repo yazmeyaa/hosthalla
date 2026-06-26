@@ -10,10 +10,13 @@ MIGRATE_IMAGE := migrate/migrate:v4.18.2
 VERSION_VERSION := $(shell git describe --tags --always --dirty)
 VERSION_COMMIT := $(shell git rev-parse --short HEAD)
 VERSION_BUILD_AT := $(shell date -u +%FT%TZ)
-LDFLAGS := -ldflags "\
+VERSION_LDFLAGS := \
 	-X github.com/yazmeyaa/hosthalla/internal/version.Version=$(VERSION_VERSION) \
 	-X github.com/yazmeyaa/hosthalla/internal/version.Commit=$(VERSION_COMMIT) \
-	-X github.com/yazmeyaa/hosthalla/internal/version.BuildAt=$(VERSION_BUILD_AT)"
+	-X github.com/yazmeyaa/hosthalla/internal/version.BuildAt=$(VERSION_BUILD_AT)
+
+LDFLAGS := -ldflags "$(VERSION_LDFLAGS)"
+LDFLAGS_BUILD := -ldflags "-s -w $(VERSION_LDFLAGS)"
 
 .PHONY: dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down templ-generate build-web dev-run-web dev-web
 
@@ -61,8 +64,7 @@ templ-generate:
 
 build-web:
 	go build \
-	$(LDFLAGS) \
-	-s -w \
+	$(LDFLAGS_BUILD) \
 	-o dist/web \
 	cmd/web/web.go
 
