@@ -13,6 +13,7 @@ import (
 const configFileName = "config.yaml"
 
 var DefaultConfigPath = resolveDefaultConfigPath()
+var ErrConfigAlreadyExists = errors.New("config file already exists")
 
 type writableFS interface {
 	WriteFile(name string, data []byte, perm fs.FileMode) error
@@ -31,11 +32,10 @@ func (a *AppConfig) SaveToFS(fsys fs.FS) error {
 	if a == nil {
 		return errors.New("config is nil")
 	}
-	a.ApplyDefaults()
 
-	content, err := yaml.Marshal(a)
+	content, err := a.ToYAML()
 	if err != nil {
-		return fmt.Errorf("marshal config to yaml: %w", err)
+		return err
 	}
 
 	writer, ok := fsys.(writableFS)
@@ -72,15 +72,14 @@ func (a *AppConfig) SaveToPath(path string) error {
 	if a == nil {
 		return errors.New("config is nil")
 	}
-	a.ApplyDefaults()
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create config directory for %q: %w", path, err)
 	}
 
-	content, err := yaml.Marshal(a)
+	content, err := a.ToYAML()
 	if err != nil {
-		return fmt.Errorf("marshal config to yaml: %w", err)
+		return err
 	}
 
 	if err := os.WriteFile(path, content, 0o644); err != nil {
@@ -97,22 +96,6 @@ func (a *AppConfig) LoadFromPath(path string) error {
 
 	content, err := os.ReadFile(path)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			template := AppConfig{
-				WEB: WEBConfig{
-					Host: "0.0.0.0",
-					Port: 8080,
-				},
-				LogLevel: DefaultLogLevel,
-			}
-
-			if saveErr := template.SaveToPath(path); saveErr != nil {
-				return fmt.Errorf("config file %q not found and template creation failed: %w", path, saveErr)
-			}
-
-			return fmt.Errorf("config file %q not found: created template, fill it and restart", path)
-		}
-
 		return fmt.Errorf("read config file %q: %w", path, err)
 	}
 
@@ -122,4 +105,50 @@ func (a *AppConfig) LoadFromPath(path string) error {
 	a.ApplyDefaults()
 
 	return nil
+}
+
+func ReadYAMLFromPath(path string) ([]byte, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read config file %q: %w", path, err)
+	}
+
+	return content, nil
+}
+
+func GenerateDefaultConfig(path string, overwrite bool) error {
+	if path == "" {
+		return errors.New("config path is empty")
+	}
+
+	if !overwrite {
+		exists, err := ConfigExists(path)
+		if err != nil {
+			return err
+		}
+
+		if exists {
+			return fmt.Errorf("%w: %q", ErrConfigAlreadyExists, path)
+		}
+	}
+
+	cfg := NewDefaultAppConfig()
+	if err := cfg.SaveToPath(path); err != nil {
+		return fmt.Errorf("create default config file %q: %w", path, err)
+	}
+
+	return nil
+}
+
+func ConfigExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+
+	return false, fmt.Errorf("check config file %q: %w", path, err)
 }

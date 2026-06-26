@@ -11,6 +11,7 @@ import (
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	auth_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage"
 	auth_storage "github.com/yazmeyaa/hosthalla/internal/authentication/storage/postgres"
+	app_cli "github.com/yazmeyaa/hosthalla/internal/cli"
 	"github.com/yazmeyaa/hosthalla/internal/config"
 	app_logger "github.com/yazmeyaa/hosthalla/internal/logger"
 )
@@ -31,6 +32,12 @@ func main() {
 	if len(args) == 0 {
 		bootstrapLogger.Error("no arguments provided")
 		os.Exit(1)
+	}
+
+	command := args[0]
+	if command == "config" {
+		app_cli.ProcessConfigCommand(args[1:])
+		return
 	}
 
 	cfg := config.AppConfig{}
@@ -59,7 +66,6 @@ func main() {
 	defer pool.Close()
 	logger.Info("database connection pool initialized")
 
-	command := args[0]
 	logger.Info("running cli command", slog.String("command", command))
 	switch command {
 	case "create-user":

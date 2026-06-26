@@ -65,7 +65,7 @@ templ-generate:
 build-web:
 	go build \
 	$(LDFLAGS_BUILD) \
-	-o dist/web \
+	-o dist/hosthalla \
 	cmd/web/web.go
 
 dev-run-web:

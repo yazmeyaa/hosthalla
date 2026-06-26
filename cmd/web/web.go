@@ -83,6 +83,7 @@ func main() {
 	})
 	apiRouter := api.NewRouter(
 		agent_repository.NewAgentRepository(pool),
+		agent_repository.NewAgentConfigRepository(pool),
 		hostRepositories.Host,
 		authentication_repository.NewAPITokenRepository(pool),
 		logger,

@@ -14,16 +14,23 @@ import (
 
 func NewRouter(
 	agentRepository agent.Repository,
+	agentConfigRepository agent.AgentConfigRepository,
 	hostRepository host.HostRepository,
 	apiTokenRepository authentication_storage.APITokenRepository,
 	logger *slog.Logger,
 ) http.Handler {
 	mux := http.NewServeMux()
 	hostsHandler := handlers.NewHostsHandler(agentRepository, hostRepository, logger)
+	agentsHandler := handlers.NewAgentsHandler(agentRepository, agentConfigRepository, logger)
 
 	mux.Handle(
 		"POST /hosts/{host_id}/register-agent",
 		middlewares.APITokenAuthMiddleware(apiTokenRepository, http.HandlerFunc(hostsHandler.RegisterAgent)),
+	)
+
+	mux.Handle(
+		"POST /api/v1/heartbeat",
+		middlewares.APITokenAuthMiddleware(apiTokenRepository, http.HandlerFunc(agentsHandler.HandleHeartbeat)),
 	)
 	return web_middlewares.RequestLoggingMiddleware(logger, mux)
 }

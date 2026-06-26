@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"go.yaml.in/yaml/v4"
 )
 
 const DefaultLogLevel = "warning"
@@ -27,6 +29,23 @@ type DatabaseConfig struct {
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 	Database string `yaml:"database"`
+}
+
+func NewDefaultAppConfig() AppConfig {
+	return AppConfig{
+		WEB: WEBConfig{
+			Host: "0.0.0.0",
+			Port: 8080,
+		},
+		Database: DatabaseConfig{
+			Host:     "localhost",
+			Port:     5432,
+			User:     "hosthalla",
+			Password: "hosthalla",
+			Database: "hosthalla",
+		},
+		LogLevel: DefaultLogLevel,
+	}
 }
 
 func (w WEBConfig) ListenAddress() string {
@@ -57,6 +76,21 @@ func (a *AppConfig) ApplyDefaults() {
 
 func (a AppConfig) SlogLevel() (slog.Level, error) {
 	return ParseLogLevel(a.LogLevel)
+}
+
+func (a *AppConfig) ToYAML() ([]byte, error) {
+	if a == nil {
+		return nil, fmt.Errorf("config is nil")
+	}
+
+	a.ApplyDefaults()
+
+	content, err := yaml.Marshal(a)
+	if err != nil {
+		return nil, fmt.Errorf("marshal config to yaml: %w", err)
+	}
+
+	return content, nil
 }
 
 func ParseLogLevel(raw string) (slog.Level, error) {
