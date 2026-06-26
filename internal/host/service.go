@@ -10,10 +10,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type PingResult struct {
-	HostID       HostID
+	HostID       uuid.UUID
 	IP           string
 	Reachable    bool
 	Duration     time.Duration
@@ -66,7 +68,7 @@ func (s *Service) ListTags(ctx context.Context) ([]Tag, error) {
 	return tags, nil
 }
 
-func (s *Service) GetHostByID(ctx context.Context, hostID HostID) (Host, error) {
+func (s *Service) GetHostByID(ctx context.Context, hostID uuid.UUID) (Host, error) {
 	result, err := s.hostRepository.GetHostByID(ctx, hostID)
 	if err != nil {
 		s.logger.Error("failed to get host by id", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
@@ -97,7 +99,7 @@ func (s *Service) UpdateHost(ctx context.Context, target *Host) error {
 	return nil
 }
 
-func (s *Service) DeleteHost(ctx context.Context, hostID HostID) error {
+func (s *Service) DeleteHost(ctx context.Context, hostID uuid.UUID) error {
 	if err := s.hostRepository.DeleteHost(ctx, hostID); err != nil {
 		s.logger.Error("failed to delete host", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
 		return err
@@ -106,7 +108,7 @@ func (s *Service) DeleteHost(ctx context.Context, hostID HostID) error {
 	return nil
 }
 
-func (s *Service) ListHostManagementMethods(ctx context.Context, hostID HostID) ([]HostManagementMethod, error) {
+func (s *Service) ListHostManagementMethods(ctx context.Context, hostID uuid.UUID) ([]HostManagementMethod, error) {
 	methods, err := s.hostManagementMethodRepository.ListHostManagementMethods(ctx, hostID)
 	if err != nil {
 		s.logger.Error("failed to list host management methods", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
@@ -116,7 +118,7 @@ func (s *Service) ListHostManagementMethods(ctx context.Context, hostID HostID) 
 	return methods, nil
 }
 
-func (s *Service) GetHostSystemInfoByHostID(ctx context.Context, hostID HostID) (HostSystemInfo, error) {
+func (s *Service) GetHostSystemInfoByHostID(ctx context.Context, hostID uuid.UUID) (HostSystemInfo, error) {
 	systemInfo, err := s.hostSystemInfoRepository.GetHostSystemInfoByHostID(ctx, hostID)
 	if err != nil {
 		s.logger.Error("failed to get host system info by host id", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
@@ -136,7 +138,7 @@ func (s *Service) UpsertHostSystemInfo(ctx context.Context, data HostSystemInfo)
 	return systemInfo, nil
 }
 
-func (s *Service) ListHostMetricSnapshots(ctx context.Context, hostID HostID) ([]HostMetricSnapshot, error) {
+func (s *Service) ListHostMetricSnapshots(ctx context.Context, hostID uuid.UUID) ([]HostMetricSnapshot, error) {
 	snapshots, err := s.hostMetricSnapshotRepository.ListHostMetricSnapshots(ctx, hostID)
 	if err != nil {
 		s.logger.Error("failed to list host metric snapshots", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
@@ -163,7 +165,7 @@ type CreateSSHPasswordManagementMethodDTO struct {
 	Description string
 }
 
-func (s *Service) CreateSSHPasswordManagementMethod(ctx context.Context, hostID HostID, data CreateSSHPasswordManagementMethodDTO) (HostManagementMethod, error) {
+func (s *Service) CreateSSHPasswordManagementMethod(ctx context.Context, hostID uuid.UUID, data CreateSSHPasswordManagementMethodDTO) (HostManagementMethod, error) {
 	username := strings.TrimSpace(data.Username)
 	password := strings.TrimSpace(data.Password)
 	if username == "" {
@@ -198,7 +200,7 @@ type CreateSSHKeyManagementMethodDTO struct {
 	Description string
 }
 
-func (s *Service) CreateSSHKeyManagementMethod(ctx context.Context, hostID HostID, data CreateSSHKeyManagementMethodDTO) (HostManagementMethod, error) {
+func (s *Service) CreateSSHKeyManagementMethod(ctx context.Context, hostID uuid.UUID, data CreateSSHKeyManagementMethodDTO) (HostManagementMethod, error) {
 	username := strings.TrimSpace(data.Username)
 	publicKey := strings.TrimSpace(data.PublicKey)
 	privateKey := strings.TrimSpace(data.PrivateKey)
@@ -242,7 +244,7 @@ func (s *Service) CreateSSHKeyManagementMethod(ctx context.Context, hostID HostI
 	return method, nil
 }
 
-func (s *Service) PingHost(ctx context.Context, hostID HostID) (PingResult, error) {
+func (s *Service) PingHost(ctx context.Context, hostID uuid.UUID) (PingResult, error) {
 	targetHost, err := s.hostRepository.GetHostByID(ctx, hostID)
 	if err != nil {
 		s.logger.Error("failed to load host before ping", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))

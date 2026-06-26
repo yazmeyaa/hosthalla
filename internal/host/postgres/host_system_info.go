@@ -33,7 +33,7 @@ type HostSystemInfoRepositoryPostgresImpl struct {
 	pool *pgxpool.Pool
 }
 
-func (h HostSystemInfoRepositoryPostgresImpl) GetHostSystemInfoByHostID(ctx context.Context, hostID host.HostID) (host.HostSystemInfo, error) {
+func (h HostSystemInfoRepositoryPostgresImpl) GetHostSystemInfoByHostID(ctx context.Context, hostID uuid.UUID) (host.HostSystemInfo, error) {
 	return getHostSystemInfoByHostID(ctx, h.pool, hostID)
 }
 
@@ -118,7 +118,7 @@ values ($1, $2, $3)`
 	return result, nil
 }
 
-func getHostSystemInfoByHostID(ctx context.Context, q hostSystemInfoQueryer, hostID host.HostID) (host.HostSystemInfo, error) {
+func getHostSystemInfoByHostID(ctx context.Context, q hostSystemInfoQueryer, hostID uuid.UUID) (host.HostSystemInfo, error) {
 	query := "select " + hostSystemInfoSelectColumns + " from host_system_info where host_id = $1"
 	row := q.QueryRow(ctx, query, uuid.UUID(hostID))
 	result, err := scanHostSystemInfo(row)

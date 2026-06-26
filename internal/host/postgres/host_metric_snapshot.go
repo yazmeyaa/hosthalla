@@ -19,7 +19,7 @@ type HostMetricSnapshotRepositoryPostgresImpl struct {
 	pool *pgxpool.Pool
 }
 
-func (h HostMetricSnapshotRepositoryPostgresImpl) ListHostMetricSnapshots(ctx context.Context, hostID host.HostID) ([]host.HostMetricSnapshot, error) {
+func (h HostMetricSnapshotRepositoryPostgresImpl) ListHostMetricSnapshots(ctx context.Context, hostID uuid.UUID) ([]host.HostMetricSnapshot, error) {
 	const listSnapshotsQuery = `
 select id, host_id, timestamp
 from host_metric_snapshot

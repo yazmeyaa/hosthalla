@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	agent_repository "github.com/yazmeyaa/hosthalla/internal/agent/postgres"
+	"github.com/yazmeyaa/hosthalla/internal/api"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage/postgres"
 	"github.com/yazmeyaa/hosthalla/internal/config"
@@ -79,10 +81,19 @@ func main() {
 		SessionRepository:              authentication_repository.NewSessionRepository(pool),
 		Logger:                         logger,
 	})
+	apiRouter := api.NewRouter(
+		agent_repository.NewAgentRepository(pool),
+		hostRepositories.Host,
+		authentication_repository.NewAPITokenRepository(pool),
+		logger,
+	)
+	rootRouter := http.NewServeMux()
+	rootRouter.Handle("/api/v1/", http.StripPrefix("/api/v1", apiRouter))
+	rootRouter.Handle("/", router)
 	listenAddress := cfg.WEB.ListenAddress()
 	server := &http.Server{
 		Addr:    listenAddress,
-		Handler: router,
+		Handler: rootRouter,
 	}
 	logger.Info(
 		"starting web server",

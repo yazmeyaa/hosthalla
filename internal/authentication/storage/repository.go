@@ -52,6 +52,7 @@ type SessionRepository interface {
 type APITokenRepository interface {
 	CreateAPIToken(ctx context.Context, data CreateAPITokenDTO) (authentication.APIToken, error)
 	GetAPITokenByID(ctx context.Context, id string) (authentication.APIToken, error)
+	GetAPITokenByHash(ctx context.Context, hash string) (authentication.APIToken, error)
 	ListAPITokensByProfileID(ctx context.Context, profileID string) ([]authentication.APIToken, error)
 	RevokeAPIToken(ctx context.Context, id string) error
 }

@@ -321,10 +321,10 @@ func hostTagsSubmitted(r *http.Request) bool {
 	return hasTag || hasTags
 }
 
-func parseHostID(rawHostID string) (host.HostID, error) {
+func parseHostID(rawHostID string) (uuid.UUID, error) {
 	hostUUID, err := uuid.Parse(rawHostID)
 	if err != nil {
-		return host.HostID{}, err
+		return uuid.UUID{}, err
 	}
-	return host.HostID(hostUUID), nil
+	return hostUUID, nil
 }

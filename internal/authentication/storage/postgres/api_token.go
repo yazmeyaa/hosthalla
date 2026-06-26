@@ -15,6 +15,7 @@ const (
 
 	insertAPITokenQuery           = "insert into api_token (profile_id, name, prefix, hash, scopes, expires_at) values ($1, $2, $3, $4, $5, $6) returning " + apiTokenSelectColumns
 	getAPITokenByIDQuery          = "select " + apiTokenSelectColumns + " from api_token where id = $1"
+	getAPITokenByHashQuery        = "select " + apiTokenSelectColumns + " from api_token where hash = $1"
 	listAPITokensByProfileIDQuery = "select " + apiTokenSelectColumns + " from api_token where profile_id = $1 order by created_at desc"
 	revokeAPITokenQuery           = "update api_token set revoked_at = now() where id = $1 and revoked_at is null"
 )
@@ -49,6 +50,11 @@ func (r *APITokenRepositoryPostgresImpl) CreateAPIToken(ctx context.Context, dat
 
 func (r *APITokenRepositoryPostgresImpl) GetAPITokenByID(ctx context.Context, id string) (authentication.APIToken, error) {
 	row := r.pool.QueryRow(ctx, getAPITokenByIDQuery, id)
+	return scanAPIToken(row)
+}
+
+func (r *APITokenRepositoryPostgresImpl) GetAPITokenByHash(ctx context.Context, hash string) (authentication.APIToken, error) {
+	row := r.pool.QueryRow(ctx, getAPITokenByHashQuery, hash)
 	return scanAPIToken(row)
 }
 

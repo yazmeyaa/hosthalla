@@ -63,7 +63,7 @@ func (h HostRepositoryPostgresImpl) CreateHost(ctx context.Context, data host.Cr
 	defer tx.Rollback(ctx)
 
 	const insertHostQuery = "insert into host (name, description, ip) values ($1, $2, $3) returning id"
-	var hostID host.HostID
+	var hostID uuid.UUID
 	if err := tx.QueryRow(ctx, insertHostQuery, data.Name, data.Description, data.IP).Scan(&hostID); err != nil {
 		return host.Host{}, err
 	}
@@ -83,7 +83,7 @@ func (h HostRepositoryPostgresImpl) CreateHost(ctx context.Context, data host.Cr
 	return result, nil
 }
 
-func (h HostRepositoryPostgresImpl) DeleteHost(ctx context.Context, hostID host.HostID) error {
+func (h HostRepositoryPostgresImpl) DeleteHost(ctx context.Context, hostID uuid.UUID) error {
 	const deleteHostQuery = "delete from host where id = $1"
 	tag, err := h.pool.Exec(ctx, deleteHostQuery, uuid.UUID(hostID))
 	if err != nil {
@@ -95,7 +95,7 @@ func (h HostRepositoryPostgresImpl) DeleteHost(ctx context.Context, hostID host.
 	return nil
 }
 
-func (h HostRepositoryPostgresImpl) GetHostByID(ctx context.Context, hostID host.HostID) (host.Host, error) {
+func (h HostRepositoryPostgresImpl) GetHostByID(ctx context.Context, hostID uuid.UUID) (host.Host, error) {
 	return getHostByID(ctx, h.pool, hostID)
 }
 
@@ -188,7 +188,7 @@ func (h HostRepositoryPostgresImpl) UpdateHost(ctx context.Context, targetHost *
 	return nil
 }
 
-func getHostByID(ctx context.Context, q hostQueryer, hostID host.HostID) (host.Host, error) {
+func getHostByID(ctx context.Context, q hostQueryer, hostID uuid.UUID) (host.Host, error) {
 	query := "select " + hostSelectColumns + `
 from host h
 left join host_tag ht on ht.host_id = h.id
@@ -202,7 +202,7 @@ group by ` + hostGroupByColumns
 func syncHostTags(ctx context.Context, tx interface {
 	hostQueryer
 	hostExecer
-}, hostID host.HostID, tags []string) error {
+}, hostID uuid.UUID, tags []string) error {
 	if _, err := tx.Exec(ctx, "delete from host_tag where host_id = $1", uuid.UUID(hostID)); err != nil {
 		return err
 	}

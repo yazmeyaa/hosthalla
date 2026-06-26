@@ -31,7 +31,7 @@ type HostNoteRepositoryPostgresImpl struct {
 	pool *pgxpool.Pool
 }
 
-func (h HostNoteRepositoryPostgresImpl) CreateHostNote(ctx context.Context, hostID host.HostID, data host.CreateHostNoteDTO) (host.HostNote, error) {
+func (h HostNoteRepositoryPostgresImpl) CreateHostNote(ctx context.Context, hostID uuid.UUID, data host.CreateHostNoteDTO) (host.HostNote, error) {
 	const insertHostNoteQuery = "insert into host_note (host_id, title, body) values ($1, $2, $3) returning id, host_id, title, body, created_at, updated_at"
 	row := h.pool.QueryRow(ctx, insertHostNoteQuery, uuid.UUID(hostID), data.Title, data.Body)
 	return scanHostNote(row)
@@ -55,7 +55,7 @@ func (h HostNoteRepositoryPostgresImpl) GetHostNodeByID(ctx context.Context, hos
 	return scanHostNote(row)
 }
 
-func (h HostNoteRepositoryPostgresImpl) ListHostNotes(ctx context.Context, hostID host.HostID) ([]host.HostNote, error) {
+func (h HostNoteRepositoryPostgresImpl) ListHostNotes(ctx context.Context, hostID uuid.UUID) ([]host.HostNote, error) {
 	query := "select " + hostNoteSelectColumns + " from host_note where host_id = $1 order by created_at desc"
 	rows, err := h.pool.Query(ctx, query, uuid.UUID(hostID))
 	if err != nil {

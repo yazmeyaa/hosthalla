@@ -19,13 +19,16 @@ func (id HostID) String() string {
 }
 
 type Host struct {
-	ID          HostID
+	ID          uuid.UUID
 	Name        string
 	Description string
 	Tags        []string
 	IP          netip.Addr
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+
+	MonitoringAgentID uuid.UUID
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type Tag struct {
@@ -66,7 +69,7 @@ type HostManagementMethod struct {
 
 type HostNote struct {
 	ID        uuid.UUID
-	HostID    HostID
+	HostID    uuid.UUID
 	Title     string
 	Body      string
 	CreatedAt time.Time
@@ -74,7 +77,7 @@ type HostNote struct {
 }
 
 type HostSystemInfo struct {
-	HostID HostID
+	HostID uuid.UUID
 
 	Hostname         string
 	OS               OSSystemInfo

@@ -4,14 +4,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/yazmeyaa/hosthalla/internal/host"
 )
 
-type AgentID uuid.UUID
-
 type Agent struct {
-	ID     AgentID
-	HostID host.HostID
+	ID     uuid.UUID
+	HostID uuid.UUID
 
 	Version string
 

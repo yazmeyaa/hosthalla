@@ -1,0 +1,21 @@
+package agent
+
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type CreateAgentDTO struct {
+	HostID  uuid.UUID
+	Version string
+}
+
+type Repository interface {
+	Create(ctx context.Context, data CreateAgentDTO) (Agent, error)
+	GetByID(ctx context.Context, id uuid.UUID) (Agent, error)
+	Update(ctx context.Context, agent *Agent) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	UpdateLastSeenAt(ctx context.Context, id uuid.UUID, lastSeenAt time.Time) error
+}

@@ -33,7 +33,7 @@ type HostManagementMethodRepositoryPostgresImpl struct {
 	pool *pgxpool.Pool
 }
 
-func (h HostManagementMethodRepositoryPostgresImpl) ListHostManagementMethods(ctx context.Context, hostID host.HostID) ([]host.HostManagementMethod, error) {
+func (h HostManagementMethodRepositoryPostgresImpl) ListHostManagementMethods(ctx context.Context, hostID uuid.UUID) ([]host.HostManagementMethod, error) {
 	query := "select " + hostManagementMethodSelectColumns + " from host_credential where host_id = $1 order by created_at asc"
 	rows, err := h.pool.Query(ctx, query, uuid.UUID(hostID))
 	if err != nil {
@@ -55,7 +55,7 @@ func (h HostManagementMethodRepositoryPostgresImpl) ListHostManagementMethods(ct
 	return methods, nil
 }
 
-func (h HostManagementMethodRepositoryPostgresImpl) CreateHostManagementMethod(ctx context.Context, hostID host.HostID, data host.CreateHostManagementMethodDTO) (host.HostManagementMethod, error) {
+func (h HostManagementMethodRepositoryPostgresImpl) CreateHostManagementMethod(ctx context.Context, hostID uuid.UUID, data host.CreateHostManagementMethodDTO) (host.HostManagementMethod, error) {
 	const insertManagementMethodQuery = "insert into host_credential (id, host_id, type, username, port, secret, description) values ($1, $2, $3, $4, $5, $6, $7) returning id, host_id, type, username, port, secret, description, created_at, updated_at"
 	row := h.pool.QueryRow(
 		ctx,
