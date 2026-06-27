@@ -57,6 +57,78 @@ templ HostDialogScripts() {
 
 		window.copyHostManagementMethodDetails = copyHostManagementMethodDetails;
 
+		async function generateHostAgentRegistrationCommand(hostID, statusElementID, commandElementID) {
+			const statusElement = document.getElementById(statusElementID);
+			const commandElement = document.getElementById(commandElementID);
+			if (!(commandElement instanceof HTMLTextAreaElement)) {
+				return;
+			}
+
+			if (statusElement instanceof HTMLElement) {
+				statusElement.textContent = "Generating registration command...";
+			}
+			commandElement.value = "";
+
+			try {
+				const response = await fetch("/hosts/" + encodeURIComponent(hostID) + "/agent/register-command", {
+					method: "POST",
+					headers: {
+						"Accept": "application/json",
+					},
+				});
+
+				if (!response.ok) {
+					const text = (await response.text()).trim();
+					throw new Error(text || ("Request failed with status " + response.status));
+				}
+
+				const payload = await response.json();
+				const command = typeof payload.command === "string" ? payload.command.trim() : "";
+				if (command === "") {
+					throw new Error("Server returned empty command");
+				}
+
+				commandElement.value = command;
+				if (statusElement instanceof HTMLElement) {
+					statusElement.textContent = "Command is ready. Keep token secure; it will not be shown again.";
+				}
+			} catch (error) {
+				if (statusElement instanceof HTMLElement) {
+					statusElement.textContent = error instanceof Error ? error.message : "Failed to generate command";
+				}
+			}
+		}
+
+		window.generateHostAgentRegistrationCommand = generateHostAgentRegistrationCommand;
+
+		async function copyHostAgentRegistrationCommand(commandElementID, statusElementID) {
+			const commandElement = document.getElementById(commandElementID);
+			const statusElement = document.getElementById(statusElementID);
+			if (!(commandElement instanceof HTMLTextAreaElement)) {
+				return;
+			}
+			const command = commandElement.value.trim();
+			if (command === "") {
+				if (statusElement instanceof HTMLElement) {
+					statusElement.textContent = "Generate a command first.";
+				}
+				return;
+			}
+
+			try {
+				await writeToClipboard(command);
+				if (statusElement instanceof HTMLElement) {
+					statusElement.textContent = "Command copied to clipboard.";
+				}
+			} catch (error) {
+				if (statusElement instanceof HTMLElement) {
+					statusElement.textContent = "Failed to copy command.";
+				}
+			}
+		}
+
+		window.copyHostAgentRegistrationCommand = copyHostAgentRegistrationCommand;
+
 		function normalizeHostTag(rawTag) {
 			return String(rawTag || "").trim().replace(/^#+/, "").toLowerCase();
 		}

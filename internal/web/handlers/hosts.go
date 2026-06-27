@@ -1,24 +1,34 @@
 package handlers
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/netip"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
 	"github.com/yazmeyaa/hosthalla/ui/app/layout"
 	"github.com/yazmeyaa/hosthalla/ui/features/host_actions"
 	"github.com/yazmeyaa/hosthalla/ui/pages/hosts_page"
+	"github.com/yazmeyaa/hosthalla/ui/widgets/hosts_list"
 )
 
 type HostsHandler struct {
 	hostService    *host.Service
 	profileService *auth_service.Service
 	logger         *slog.Logger
+}
+
+type createAgentRegisterCommandResponse struct {
+	Command string `json:"command"`
 }
 
 func NewHostsHandler(hostService *host.Service, profileService *auth_service.Service, logger *slog.Logger) *HostsHandler {
@@ -36,6 +46,8 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hostManagementMethodsByHostID := make(map[string][]host.HostManagementMethod, len(hosts))
+	hostSystemInfoByHostID := make(map[string]host.HostSystemInfo, len(hosts))
+	hostLatestMetricsByHostID := make(map[string]hosts_list.HostLatestMetricsBadges, len(hosts))
 	for _, listedHost := range hosts {
 		methods, err := h.hostService.ListHostManagementMethods(r.Context(), listedHost.ID)
 		if err != nil {
@@ -44,6 +56,32 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hostManagementMethodsByHostID[listedHost.ID.String()] = methods
+
+		systemInfo, err := h.hostService.GetHostSystemInfoByHostID(r.Context(), listedHost.ID)
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				h.logger.Error("failed to get host system info in handler", slog.String("host_id", listedHost.ID.String()), slog.String("error", err.Error()))
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			hostSystemInfoByHostID[listedHost.ID.String()] = systemInfo
+		}
+
+		snapshots, err := h.hostService.ListHostMetricSnapshots(r.Context(), listedHost.ID)
+		if err != nil {
+			h.logger.Error("failed to list host metric snapshots in handler", slog.String("host_id", listedHost.ID.String()), slog.String("error", err.Error()))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if len(snapshots) == 0 || len(snapshots[0].Metrics) == 0 {
+			continue
+		}
+		if systemInfo, ok := hostSystemInfoByHostID[listedHost.ID.String()]; ok {
+			hostLatestMetricsByHostID[listedHost.ID.String()] = hosts_list.BuildHostLatestMetricsBadges(snapshots[0].Metrics[0], &systemInfo)
+		} else {
+			hostLatestMetricsByHostID[listedHost.ID.String()] = hosts_list.BuildHostLatestMetricsBadges(snapshots[0].Metrics[0], nil)
+		}
 	}
 
 	availableTags, err := h.hostService.ListTags(r.Context())
@@ -73,6 +111,8 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 		AvailableTags:                 availableTags,
 		SelectedTags:                  tags,
 		HostManagementMethodsByHostID: hostManagementMethodsByHostID,
+		HostSystemInfoByHostID:        hostSystemInfoByHostID,
+		HostLatestMetricsByHostID:     hostLatestMetricsByHostID,
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
 			GenericLayoutProps: layout.GenericLayoutProps{Title: "Hosts"},
 			Profile:            profile,
@@ -272,6 +312,56 @@ func (h *HostsHandler) CreateHostManagementMethod(w http.ResponseWriter, r *http
 	http.Redirect(w, r, "/hosts", http.StatusSeeOther)
 }
 
+func (h *HostsHandler) CreateAgentRegisterCommand(w http.ResponseWriter, r *http.Request) {
+	session, err := middlewares.GetSessionFromContext(r.Context())
+	if err != nil {
+		h.logger.Error("failed to get session for create agent register command", slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	hostID, err := parseHostID(r.PathValue("id"))
+	if err != nil {
+		h.logger.Warn("invalid host id in create agent register command", slog.String("host_id", r.PathValue("id")), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if _, err := h.hostService.GetHostByID(r.Context(), hostID); err != nil {
+		h.logger.Warn("host not found in create agent register command", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	tokenName := fmt.Sprintf("Agent token for host %s (%s)", hostID.String(), time.Now().UTC().Format(time.RFC3339))
+	createdToken, err := h.profileService.CreateAPIToken(r.Context(), auth_service.CreateAPITokenDTO{
+		ProfileID: session.ProfileID,
+		Name:      tokenName,
+		Scopes:    []string{"hosts:register"},
+		ExpiresIn: 0,
+	})
+	if err != nil {
+		h.logger.Error("failed to create api token for agent register command", slog.String("host_id", hostID.String()), slog.String("profile_id", session.ProfileID), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	serverURL := resolvePublicServerURL(r)
+	command := fmt.Sprintf(
+		"hosthalla agent register --host=%s --host-id=%s --token=%s",
+		serverURL,
+		hostID.String(),
+		createdToken.PlainToken,
+	)
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(createAgentRegisterCommandResponse{Command: command}); err != nil {
+		h.logger.Error("failed to encode create agent register command response", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
 func parseHostForm(r *http.Request) (host.CreateHostDTO, error) {
 	if err := r.ParseForm(); err != nil {
 		return host.CreateHostDTO{}, err
@@ -327,4 +417,26 @@ func parseHostID(rawHostID string) (uuid.UUID, error) {
 		return uuid.UUID{}, err
 	}
 	return hostUUID, nil
+}
+
+func resolvePublicServerURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+
+	if forwardedProto := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")); forwardedProto != "" {
+		scheme = strings.Split(forwardedProto, ",")[0]
+	}
+
+	host := strings.TrimSpace(r.Host)
+	if forwardedHost := strings.TrimSpace(r.Header.Get("X-Forwarded-Host")); forwardedHost != "" {
+		host = strings.Split(forwardedHost, ",")[0]
+	}
+
+	if host == "" {
+		host = "localhost"
+	}
+
+	return scheme + "://" + host
 }

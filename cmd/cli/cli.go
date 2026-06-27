@@ -39,6 +39,10 @@ func main() {
 		app_cli.ProcessConfigCommand(args[1:])
 		return
 	}
+	if command == "agent" {
+		app_cli.ProcessAgentCommand(args[1:])
+		return
+	}
 
 	cfg := config.AppConfig{}
 	if err := cfg.LoadFromPath(*configPath); err != nil {

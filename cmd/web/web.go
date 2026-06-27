@@ -85,6 +85,8 @@ func main() {
 		agent_repository.NewAgentRepository(pool),
 		agent_repository.NewAgentConfigRepository(pool),
 		hostRepositories.Host,
+		hostRepositories.HostSystemInfo,
+		hostRepositories.HostMetricSnapshot,
 		authentication_repository.NewAPITokenRepository(pool),
 		logger,
 	)

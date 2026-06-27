@@ -1,6 +1,9 @@
 package host_dialog
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/ui/entities/host_details"
 	"github.com/yazmeyaa/hosthalla/ui/entities/host_management_method"
@@ -9,11 +12,60 @@ import (
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
 )
 
-templ HostDetailsDialog(host host.Host, methods []host.HostManagementMethod, detailsDialogID string, addManagementMethodDialogID string) {
+templ HostDetailsDialog(
+	host host.Host,
+	methods []host.HostManagementMethod,
+	systemInfo *host.HostSystemInfo,
+	detailsDialogID string,
+	addManagementMethodDialogID string,
+) {
 	@modal.Modal(modal.ModalProps{ID: detailsDialogID, AriaLabel: "Host Details"}) {
 		@modal.Content() {
+			{{
+				agentRegisterStatusID := "host-agent-register-status-" + host.ID.String()
+				agentRegisterCommandID := "host-agent-register-command-" + host.ID.String()
+			}}
 			@modal.Title("Host Details")
 			@host_details.HostDetailsSummary(host)
+			<div class={ host_system_info_section() }>
+				<h3 class={ host_system_info_title() }>System Info</h3>
+				if systemInfo == nil {
+					<p class={ host_system_info_empty() }>System info is not available yet.</p>
+				} else {
+					<div class={ host_system_info_grid() }>
+						<div class={ host_system_info_item() }>
+							<span class={ host_system_info_label() }>Hostname</span>
+							<span class={ host_system_info_value() }>{ systemInfo.Hostname }</span>
+						</div>
+						<div class={ host_system_info_item() }>
+							<span class={ host_system_info_label() }>OS</span>
+							<span class={ host_system_info_value() }>{ systemInfo.OS.Name + " " + systemInfo.OS.Version }</span>
+						</div>
+						<div class={ host_system_info_item() }>
+							<span class={ host_system_info_label() }>Kernel</span>
+							<span class={ host_system_info_value() }>{ systemInfo.OS.Kernel }</span>
+						</div>
+						<div class={ host_system_info_item() }>
+							<span class={ host_system_info_label() }>CPU</span>
+							<span class={ host_system_info_value() }>
+								{ systemInfo.CPU.Name + " (" + systemInfo.CPU.Architecture + ", " + fmt.Sprintf("%dC/%dT", systemInfo.CPU.Cores, systemInfo.CPU.Threads) + ", " + formatCPUFrequency(systemInfo.CPU.Frequency) + ")" }
+							</span>
+						</div>
+						<div class={ host_system_info_item() }>
+							<span class={ host_system_info_label() }>Memory</span>
+							<span class={ host_system_info_value() }>{ formatSystemBytes(systemInfo.TotalMemoryBytes) }</span>
+						</div>
+						<div class={ host_system_info_item() }>
+							<span class={ host_system_info_label() }>Disk</span>
+							<span class={ host_system_info_value() }>{ formatSystemBytes(systemInfo.TotalDiskBytes) }</span>
+						</div>
+						<div class={ host_system_info_item(), host_system_info_item_full_width() }>
+							<span class={ host_system_info_label() }>GPU</span>
+							<span class={ host_system_info_value() }>{ formatGPUNames(systemInfo.GPUs) }</span>
+						</div>
+					</div>
+				}
+			</div>
 			<div class={ host_tags_section() }>
 				<h3 class={ host_tags_title() }>Tags</h3>
 				if len(host.Tags) == 0 {
@@ -51,6 +103,44 @@ templ HostDetailsDialog(host host.Host, methods []host.HostManagementMethod, det
 					</div>
 				}
 			</div>
+			<div class={ host_agent_registration_section() }>
+				<h3 class={ host_agent_registration_title() }>Monitoring Agent</h3>
+				<p class={ host_agent_registration_description() }>
+					Create a non-expiring API token and generate a ready-to-run registration command.
+				</p>
+				<div class={ host_agent_registration_actions() }>
+					@button.Button(button.ButtonProps{
+						Type: "button",
+						OnClick: templ.JSFuncCall(
+							"generateHostAgentRegistrationCommand",
+							host.ID.String(),
+							agentRegisterStatusID,
+							agentRegisterCommandID,
+						),
+					}) {
+						Register Agent
+					}
+					@button.Button(button.ButtonProps{
+						Type: "button",
+						Variant: "secondary",
+						OnClick: templ.JSFuncCall(
+							"copyHostAgentRegistrationCommand",
+							agentRegisterCommandID,
+							agentRegisterStatusID,
+						),
+					}) {
+						Copy Command
+					}
+				</div>
+				<p id={ agentRegisterStatusID } class={ host_agent_registration_status() }></p>
+				<textarea
+					id={ agentRegisterCommandID }
+					class={ host_agent_registration_command() }
+					readonly
+					rows="3"
+					placeholder="Generated command will appear here."
+				></textarea>
+			</div>
 			@modal.Actions() {
 				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", detailsDialogID)}) {
 					Close
@@ -61,4 +151,48 @@ templ HostDetailsDialog(host host.Host, methods []host.HostManagementMethod, det
 			}
 		}
 	}
+}
+
+func formatSystemBytes(bytes uint64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+
+	div, exp := uint64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+
+	suffix := [...]string{"KB", "MB", "GB", "TB", "PB", "EB"}
+	return fmt.Sprintf("%.1f %s", float64(bytes)/float64(div), suffix[exp])
+}
+
+func formatCPUFrequency(mhz float64) string {
+	if mhz <= 0 {
+		return "n/a"
+	}
+	if mhz >= 1000 {
+		return fmt.Sprintf("%.2f GHz", mhz/1000)
+	}
+	return fmt.Sprintf("%.0f MHz", mhz)
+}
+
+func formatGPUNames(gpus []host.GPUSystemInfo) string {
+	if len(gpus) == 0 {
+		return "not detected"
+	}
+	names := make([]string, 0, len(gpus))
+	for _, gpu := range gpus {
+		name := strings.TrimSpace(gpu.Name)
+		if name == "" {
+			continue
+		}
+		names = append(names, name)
+	}
+	if len(names) == 0 {
+		return "not detected"
+	}
+	return strings.Join(names, ", ")
 }

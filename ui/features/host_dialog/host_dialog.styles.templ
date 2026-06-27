@@ -81,6 +81,55 @@ css host_tags_section() {
 	margin-bottom: 12px;
 }
 
+css host_system_info_section() {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+css host_system_info_title() {
+	margin: 0;
+	font-size: 1rem;
+}
+
+css host_system_info_empty() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+css host_system_info_grid() {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 8px;
+}
+
+css host_system_info_item() {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
+}
+
+css host_system_info_item_full_width() {
+	grid-column: 1 / -1;
+}
+
+css host_system_info_label() {
+	font-size: 0.78rem;
+	color: var(--muted);
+}
+
+css host_system_info_value() {
+	font-size: 0.9rem;
+	color: var(--text);
+	word-break: break-word;
+}
+
 css host_tags_title() {
 	margin: 0;
 	font-size: 1rem;
@@ -164,6 +213,49 @@ css host_management_method_details_empty_value() {
 
 css host_management_method_form() {
 	max-width: 100%;
+}
+
+css host_agent_registration_section() {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+css host_agent_registration_title() {
+	margin: 0;
+	font-size: 1rem;
+}
+
+css host_agent_registration_description() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+css host_agent_registration_actions() {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+css host_agent_registration_status() {
+	margin: 0;
+	min-height: 1.2em;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+css host_agent_registration_command() {
+	width: 100%;
+	font-family: var(--font-mono);
+	font-size: 0.85rem;
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
+	color: var(--text);
+	resize: vertical;
 }
 
 css host_management_method_select() {

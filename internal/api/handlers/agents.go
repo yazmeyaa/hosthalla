@@ -10,18 +10,26 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/yazmeyaa/hosthalla/internal/agent"
+	"github.com/yazmeyaa/hosthalla/internal/host"
 )
 
 type AgentsHandler struct {
 	agentRepository       agent.Repository
 	agentConfigRepository agent.AgentConfigRepository
+	hostMetricRepository  host.HostMetricSnapshotRepository
 	logger                *slog.Logger
 }
 
-func NewAgentsHandler(agentRepository agent.Repository, agentConfigRepository agent.AgentConfigRepository, logger *slog.Logger) *AgentsHandler {
+func NewAgentsHandler(
+	agentRepository agent.Repository,
+	agentConfigRepository agent.AgentConfigRepository,
+	hostMetricRepository host.HostMetricSnapshotRepository,
+	logger *slog.Logger,
+) *AgentsHandler {
 	return &AgentsHandler{
 		agentRepository:       agentRepository,
 		agentConfigRepository: agentConfigRepository,
+		hostMetricRepository:  hostMetricRepository,
 		logger:                logger,
 	}
 }
@@ -80,5 +88,48 @@ func (h *AgentsHandler) HandleHeartbeat(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (h *AgentsHandler) HandleMetrics(w http.ResponseWriter, r *http.Request) {}
-func (h *AgentsHandler) GetConfig(w http.ResponseWriter, r *http.Request)     {}
+func (h *AgentsHandler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	agentIDStr := r.Header.Get("Hosthalla-Agent-ID")
+	if agentIDStr == "" {
+		http.Error(w, "agent_id is required", http.StatusBadRequest)
+		return
+	}
+
+	agentID, err := uuid.Parse(agentIDStr)
+	if err != nil {
+		http.Error(w, "failed to parse agent_id", http.StatusBadRequest)
+		return
+	}
+
+	currentAgent, err := h.agentRepository.GetByID(ctx, agentID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "agent not found", http.StatusNotFound)
+			return
+		}
+		h.logger.Error("failed to get agent", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	var metric host.HostMetric
+	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	_, err = h.hostMetricRepository.CreateHostMetricSnapshot(ctx, host.HostMetricSnapshot{
+		HostID:    host.HostID(currentAgent.HostID),
+		Timestamp: time.Now().UTC(),
+		Metrics:   []host.HostMetric{metric},
+	})
+	if err != nil {
+		h.logger.Error("failed to save host metric snapshot", "error", err, "host_id", currentAgent.HostID.String())
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+func (h *AgentsHandler) GetConfig(w http.ResponseWriter, r *http.Request) {}

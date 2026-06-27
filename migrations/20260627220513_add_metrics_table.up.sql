@@ -1,0 +1,4 @@
+-- no-op migration:
+-- host metrics storage already exists in:
+-- - host_metric_snapshot
+-- - host_metric

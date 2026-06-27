@@ -17,6 +17,8 @@ type HostsPageProps struct {
 	AvailableTags                 []host.Tag
 	SelectedTags                  []string
 	HostManagementMethodsByHostID map[string][]host.HostManagementMethod
+	HostSystemInfoByHostID        map[string]host.HostSystemInfo
+	HostLatestMetricsByHostID     map[string]hosts_list.HostLatestMetricsBadges
 	AuthLayoutProps               layout.AuthenticatedLayoutProps
 }
 
@@ -63,7 +65,7 @@ templ HostsPage(props HostsPageProps) {
 			</div>
 		}
 		<div id="hosts-ping-all-status" class={ hosts_page_ping_all_status_slot() }></div>
-		@hosts_list.HostsList(props.Hosts, props.HostManagementMethodsByHostID, props.AvailableTags)
+		@hosts_list.HostsList(props.Hosts, props.HostManagementMethodsByHostID, props.HostSystemInfoByHostID, props.HostLatestMetricsByHostID, props.AvailableTags)
 		@host_dialog.CreateHostDialog(props.AvailableTags)
 		@host_actions.HostActionsScripts()
 		@host_dialog.HostDialogScripts()

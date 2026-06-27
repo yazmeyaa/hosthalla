@@ -5,28 +5,65 @@ import (
 	"github.com/yazmeyaa/hosthalla/ui/entities/host_details"
 	"github.com/yazmeyaa/hosthalla/ui/features/host_actions"
 	"github.com/yazmeyaa/hosthalla/ui/features/host_dialog"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/icons"
 )
 
-templ HostsList(hosts []host.Host, hostManagementMethodsByHostID map[string][]host.HostManagementMethod, availableTags []host.Tag) {
+templ HostsList(
+	hosts []host.Host,
+	hostManagementMethodsByHostID map[string][]host.HostManagementMethod,
+	hostSystemInfoByHostID map[string]host.HostSystemInfo,
+	hostLatestMetricsByHostID map[string]HostLatestMetricsBadges,
+	availableTags []host.Tag,
+) {
 	<ul class={ hosts_list() }>
-		for _, host := range hosts {
+		for _, listedHost := range hosts {
 			{{
-				updateDialogID := "update-host-dialog-" + host.ID.String()
-				detailsDialogID := "host-details-dialog-" + host.ID.String()
-				addManagementMethodDialogID := "add-host-management-method-dialog-" + host.ID.String()
-				hostManagementMethods := hostManagementMethodsByHostID[host.ID.String()]
+				updateDialogID := "update-host-dialog-" + listedHost.ID.String()
+				detailsDialogID := "host-details-dialog-" + listedHost.ID.String()
+				addManagementMethodDialogID := "add-host-management-method-dialog-" + listedHost.ID.String()
+				hostManagementMethods := hostManagementMethodsByHostID[listedHost.ID.String()]
+				var hostSystemInfo *host.HostSystemInfo
+				if value, ok := hostSystemInfoByHostID[listedHost.ID.String()]; ok {
+					hostSystemInfo = &value
+				}
 			}}
 			<li class={ host_list_item() }>
 				<div class={ host_list_item_card() }>
 					@card.Card() {
-						@host_details.HostDetails(host)
-						@host_actions.HostActions(host.ID.String(), updateDialogID, detailsDialogID)
+						@host_details.HostDetails(listedHost)
+						if metrics, ok := hostLatestMetricsByHostID[listedHost.ID.String()]; ok {
+							<div class={ host_latest_metrics() }>
+								@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+									<span class={ host_metric_badge_content() }>
+										@icons.CPUIcon()
+										{ metrics.CPU }
+									</span>
+								}
+								@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+									<span class={ host_metric_badge_content() }>
+										@icons.RAMIcon()
+										{ metrics.MemoryUsed }
+										if metrics.MemoryTotal != "" {
+											{ "/" + metrics.MemoryTotal }
+										}
+									</span>
+								}
+								@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+									<span class={ host_metric_badge_content() }>
+										@icons.HardDriveIcon()
+										{ metrics.Disk }
+									</span>
+								}
+							</div>
+						}
+						@host_actions.HostActions(listedHost.ID.String(), updateDialogID, detailsDialogID)
 					}
 				</div>
-				@host_dialog.UpdateHostDialog(host, availableTags)
-				@host_dialog.HostDetailsDialog(host, hostManagementMethods, detailsDialogID, addManagementMethodDialogID)
-				@host_dialog.AddHostManagementMethodDialog(host, addManagementMethodDialogID)
+				@host_dialog.UpdateHostDialog(listedHost, availableTags)
+				@host_dialog.HostDetailsDialog(listedHost, hostManagementMethods, hostSystemInfo, detailsDialogID, addManagementMethodDialogID)
+				@host_dialog.AddHostManagementMethodDialog(listedHost, addManagementMethodDialogID)
 			</li>
 		}
 	</ul>

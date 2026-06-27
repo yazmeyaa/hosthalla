@@ -11,7 +11,7 @@ type LoggerParams struct {
 }
 
 func NewLogger(params LoggerParams) *slog.Logger {
-	logger := slog.New(slog.NewJSONHandler(params.Output, &slog.HandlerOptions{Level: params.Level}))
+	logger := slog.New(slog.NewTextHandler(params.Output, &slog.HandlerOptions{Level: params.Level}))
 	logger = logger.With(
 		slog.String("service", "hosthalla"),
 	)
