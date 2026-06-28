@@ -1,0 +1,48 @@
+version: 2
+
+project_name: hosthalla
+
+builds:
+  - id: hosthalla
+    main: ./cmd/web
+    binary: hosthalla
+
+    goos:
+      - linux
+      - windows
+      - darwin
+
+    goarch:
+      - amd64
+      - arm64
+
+    ldflags: &ldflags
+      - -s -w
+      - -X github.com/yazmeyaa/hosthalla/internal/version.Version={{ .Version }}
+      - -X github.com/yazmeyaa/hosthalla/internal/version.Commit={{ .Commit }}
+      - -X github.com/yazmeyaa/hosthalla/internal/version.BuildAt={{ .Date }}
+
+  - id: hosthalla-cli
+    main: ./cmd/cli
+    binary: hosthalla-cli
+
+    goos:
+      - linux
+      - windows
+      - darwin
+
+    goarch:
+      - amd64
+      - arm64
+
+    ldflags: *ldflags
+
+archives:
+  - formats: [tar.gz]
+
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: checksums.txt
