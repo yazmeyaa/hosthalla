@@ -6,6 +6,9 @@ COMPOSE := docker compose -p $(COMPOSE_PROJECT) -f $(COMPOSE_FILE)
 DATABASE_URL := postgres://hosthalla:hosthalla@localhost:5432/hosthalla?sslmode=disable
 DATABASE_URL_DOCKER := postgres://hosthalla:hosthalla@postgres:5432/hosthalla?sslmode=disable
 MIGRATE_IMAGE := migrate/migrate:v4.18.2
+DIST_DIR := dist
+WEB_BINARY := $(DIST_DIR)/hosthalla-web
+CLI_BINARY := $(DIST_DIR)/hosthalla-cli
 
 VERSION_VERSION := $(shell git describe --tags --always --dirty)
 VERSION_COMMIT := $(shell git rev-parse --short HEAD)
@@ -18,30 +21,36 @@ VERSION_LDFLAGS := \
 LDFLAGS := -ldflags "$(VERSION_LDFLAGS)"
 LDFLAGS_BUILD := -ldflags "-s -w $(VERSION_LDFLAGS)"
 
-.PHONY: dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down templ-generate build-web dev-run-web dev-web
+.DEFAULT_GOAL := help
+
+.PHONY: help dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down templ-generate build build-cli build-web dev-run-web dev-web
 
 # Start dev infrastructure and wait until services are healthy.
-dev: dev-up
+dev: dev-up ## Start development infrastructure.
 
-dev-up:
+help: ## Show available make targets.
+	@echo "Available targets:"
+	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9][^:]*:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+dev-up: ## Start dev infrastructure and wait for health checks.
 	$(COMPOSE) up -d --wait
 	@echo "Dev environment is ready."
 	@echo "PostgreSQL: $(DATABASE_URL)"
 
-dev-down:
+dev-down: ## Stop dev infrastructure.
 	$(COMPOSE) down
 
-dev-logs:
+dev-logs: ## Stream infrastructure logs.
 	$(COMPOSE) logs -f
 
-dev-ps:
+dev-ps: ## Show infrastructure service status.
 	$(COMPOSE) ps
 
 # Stop services and remove persisted volumes.
-dev-reset:
+dev-reset: ## Stop infra and remove persisted volumes.
 	$(COMPOSE) down -v
 
-migrate-up: dev-up
+migrate-up: dev-up ## Apply all pending migrations in docker network.
 	docker run --rm \
 		-v "$(CURDIR)/migrations:/migrations" \
 		--network $(COMPOSE_NETWORK) \
@@ -50,7 +59,7 @@ migrate-up: dev-up
 		-database "$(DATABASE_URL_DOCKER)" \
 		up
 
-migrate-down: dev-up
+migrate-down: dev-up ## Roll back one migration in docker network.
 	docker run --rm \
 		-v "$(CURDIR)/migrations:/migrations" \
 		--network $(COMPOSE_NETWORK) \
@@ -59,19 +68,29 @@ migrate-down: dev-up
 		-database "$(DATABASE_URL_DOCKER)" \
 		down 1
 
-templ-generate:
+templ-generate: ## Regenerate templ views.
 	go tool templ generate
 
-build-web: templ-generate
+build: build-cli build-web ## Build both CLI and WEB binaries locally.
+
+build-cli: ## Build CLI binary from cmd/cli.
+	mkdir -p $(DIST_DIR)
 	go build \
 	$(LDFLAGS_BUILD) \
-	-o dist/hosthalla \
-	cmd/web/web.go
+		-o $(CLI_BINARY) \
+		./cmd/cli
 
-dev-run-web:
+build-web: templ-generate ## Build WEB binary from cmd/web.
+	mkdir -p $(DIST_DIR)
+	go build \
+	$(LDFLAGS_BUILD) \
+		-o $(WEB_BINARY) \
+		./cmd/web
+
+dev-run-web: ## Run web server locally from source.
 	go run \
 	$(LDFLAGS) \
-		cmd/web/web.go
+		./cmd/web
 
 
-dev-web: templ-generate dev-run-web
+dev-web: templ-generate dev-run-web ## Regenerate templates and run web server.

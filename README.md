@@ -86,14 +86,26 @@ The UI is available at `http://localhost:8080`.
 ## Building
 
 ```bash
-make build-web
+make build
 ```
 
-Produces `dist/hosthalla` with version, commit, and build timestamp embedded via ldflags.
+Builds both binaries locally (no Docker Compose required):
+- `dist/hosthalla-cli`
+- `dist/hosthalla-web`
+
+Both binaries include version, commit, and build timestamp via ldflags.
 
 ## CLI Reference
 
 The CLI binary (`cmd/cli`) handles everything except serving the UI.
+
+### Help
+
+```bash
+go run ./cmd/cli help
+# or
+go run ./cmd/cli --help
+```
 
 ### Config commands
 
@@ -149,7 +161,10 @@ The dashboard then shows live CPU, memory, disk, and network metrics for the hos
 | `make migrate-up` | Apply all pending migrations |
 | `make migrate-down` | Roll back the last migration |
 | `make templ-generate` | Regenerate `*_templ.go` files |
-| `make build-web` | Build production binary to `dist/hosthalla` |
+| `make help` | Show available Make targets |
+| `make build` | Build CLI + WEB binaries |
+| `make build-cli` | Build CLI binary to `dist/hosthalla-cli` |
+| `make build-web` | Build WEB binary to `dist/hosthalla-web` |
 | `make dev-web` | Regenerate Templ files + run the web server |
 
 ## Project Structure
