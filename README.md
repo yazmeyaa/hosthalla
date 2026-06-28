@@ -21,67 +21,88 @@ Self-hosted infrastructure dashboard for managing hosts, SSH credentials, and mo
 
 ## Requirements
 
-- Go 1.26+
-- Docker + Docker Compose (for local PostgreSQL)
+- PostgreSQL 18+ (for running the app)
+- Go 1.26+ (only if you build from source)
 
-## Development Setup
+## Install Script
 
-### 1. Start the database
+```sh
+#!/usr/bin/env bash
+set -euo pipefail
 
-```bash
-make dev-up
+REPO="yazmeyaa/hosthalla"
+ARCHIVE_PATTERN="linux_amd64"
+
+URL=$(curl -s https://api.github.com/repos/$REPO/releases/latest \
+  | jq -r --arg pattern "$ARCHIVE_PATTERN" '.assets[] | select(.name | test($pattern)) | .browser_download_url' \
+  | head -n 1)
+
+if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+  echo "Could not find release asset for pattern: $ARCHIVE_PATTERN" >&2
+  exit 1
+fi
+
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+curl -L -o "$TMP/pkg.tar.gz" "$URL"
+tar -xzf "$TMP/pkg.tar.gz" -C "$TMP"
+
+for bin in hosthalla hosthalla-cli hosthalla-web; do
+  if [ -f "$TMP/$bin" ]; then
+    sudo install -m 0755 "$TMP/$bin" "/usr/local/bin/$bin"
+  fi
+done
 ```
 
-This starts a PostgreSQL 18 container and waits until it is healthy.
-Connection string: `postgres://hosthalla:hosthalla@localhost:5432/hosthalla`
+## Quick Start (Binaries)
 
-### 2. Apply migrations
+### 1. Install binaries
 
-```bash
-make migrate-up
+Run the install script above, or download assets from the latest release and place binaries in your `PATH`.
+
+### 2. Generate app config
+
+```sh
+hosthalla-cli config generate
 ```
 
-### 3. Generate the config file
+Default path: `~/.hosthalla/config.yaml`.
 
-```bash
-go run ./cmd/cli config generate
-```
+### 3. Fill the config
 
-The default config is written to `~/.hosthalla/config.yaml`.
-Use `--path` to write it elsewhere.
-
-### 4. Edit the config
-
-```yaml
+```yml
 web:
   host: 0.0.0.0
   port: 8080
 database:
-  host: localhost
+  host: <postgres-host>
   port: 5432
-  user: hosthalla
-  password: hosthalla
-  database: hosthalla
+  user: <postgres-user>
+  password: <postgres-password>
+  database: <postgres-database>
 log_level: warning   # debug | info | warning | error
 ```
 
-### 5. Create the first user
+### 4. Apply migrations
 
-```bash
-go run ./cmd/cli create-user <username> <password>
+```sh
+hosthalla-cli database up
 ```
 
-Password must be at least 8 characters.
+### 5. Start Hosthalla
 
-### 6. Start the web server
-
-```bash
-make dev-web          # regenerates Templ files, then starts the server
-# or
-go run ./cmd/web
+```sh
+hosthalla
 ```
 
 The UI is available at `http://localhost:8080`.
+
+### 6. (Optional) Create first user from CLI
+
+```sh
+hosthalla-cli create-user <username> <password>
+```
 
 ## Building
 
@@ -89,7 +110,7 @@ The UI is available at `http://localhost:8080`.
 make build
 ```
 
-Builds both binaries locally (no Docker Compose required):
+Builds both binaries locally:
 - `dist/hosthalla-cli`
 - `dist/hosthalla-web`
 
@@ -101,41 +122,44 @@ The CLI binary (`cmd/cli`) handles everything except serving the UI.
 
 ### Help
 
-```bash
-go run ./cmd/cli help
+```sh
+hosthalla-cli help
 # or
-go run ./cmd/cli --help
+hosthalla-cli --help
 ```
 
 ### Config commands
 
-```bash
+```sh
 # Generate default config at ~/.hosthalla/config.yaml
-go run ./cmd/cli config generate [--path <file>] [--overwrite]
+hosthalla-cli config generate [--path <file>] [--overwrite]
 
 # Print the current config
-go run ./cmd/cli config show [--path <file>]
+hosthalla-cli config show [--path <file>]
 ```
 
 ### User management
 
-```bash
-go run ./cmd/cli create-user <username> <password>
+```sh
+hosthalla-cli create-user <username> <password>
 ```
 
 ### Agent commands
 
-```bash
+```sh
 # Register this machine as an agent for a host
 # (The recommended way is to use the "Register Agent" button in the UI,
 #  which generates the full command with a pre-filled token.)
-go run ./cmd/cli agent register \
+hosthalla-cli agent register \
   --host <server-url> \
   --host-id <uuid> \
   --token <hht_...>
 
 # Start the agent worker (heartbeat + metrics loop)
-go run ./cmd/cli agent run [--config <file>]
+hosthalla-cli agent run [--config <file>]
+
+# Apply all pending migrations
+hosthalla-cli database up
 ```
 
 Agent config is saved to `~/.hosthalla/agent.yaml` by default.
@@ -145,19 +169,25 @@ The agent sends a heartbeat every **5 seconds** and metrics every **30 seconds**
 
 1. Open the dashboard and navigate to a host.
 2. Click **Register Agent** — a shell command with a scoped API token is generated.
-3. Run that command on the target machine. It registers the agent and uploads system info.
-4. Run `hosthalla agent run` on the target machine (or set it up as a systemd service).
+3. Run `hosthalla-cli agent register ...` on the target machine.
+4. Run `hosthalla-cli agent run` on the target machine (or set it up as a systemd service).
 
 The dashboard then shows live CPU, memory, disk, and network metrics for the host.
+
+## Agent Quick Start
+
+```sh
+# 1) Register agent on target host
+hosthalla-cli agent register --host <server-url> --host-id <uuid> --token <hht_...>
+
+# 2) Start agent loop
+hosthalla-cli agent run
+```
 
 ## Make Targets
 
 | Target | Description |
 |---|---|
-| `make dev-up` | Start PostgreSQL container |
-| `make dev-down` | Stop PostgreSQL container |
-| `make dev-reset` | Stop and remove container + volumes |
-| `make dev-logs` | Follow container logs |
 | `make migrate-up` | Apply all pending migrations |
 | `make migrate-down` | Roll back the last migration |
 | `make templ-generate` | Regenerate `*_templ.go` files |
@@ -191,7 +221,7 @@ ui/             # Templ components (Feature-Sliced Design)
   pages/
   shared/ui/
   widgets/
-infra/dev/      # docker-compose.yaml for local PostgreSQL
+infra/dev/      # local development infrastructure files
 ```
 
 ## License
