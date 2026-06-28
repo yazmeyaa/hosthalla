@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"net"
@@ -16,6 +18,7 @@ const DefaultLogLevel = "warning"
 type AppConfig struct {
 	WEB      WEBConfig      `yaml:"web"`
 	Database DatabaseConfig `yaml:"database"`
+	Security SecurityConfig `yaml:"security"`
 	LogLevel string         `yaml:"log_level"`
 }
 type WEBConfig struct {
@@ -31,6 +34,10 @@ type DatabaseConfig struct {
 	Database string `yaml:"database"`
 }
 
+type SecurityConfig struct {
+	SecretEncryptionKey string `yaml:"secret_encryption_key"`
+}
+
 func NewDefaultAppConfig() AppConfig {
 	return AppConfig{
 		WEB: WEBConfig{
@@ -43,6 +50,9 @@ func NewDefaultAppConfig() AppConfig {
 			User:     "hosthalla",
 			Password: "hosthalla",
 			Database: "hosthalla",
+		},
+		Security: SecurityConfig{
+			SecretEncryptionKey: mustGenerateSecretEncryptionKey(),
 		},
 		LogLevel: DefaultLogLevel,
 	}
@@ -106,4 +116,27 @@ func ParseLogLevel(raw string) (slog.Level, error) {
 	default:
 		return 0, fmt.Errorf("unsupported log_level %q: expected debug, info, warning, or error", raw)
 	}
+}
+
+func (a AppConfig) SecretEncryptionKey() ([]byte, error) {
+	encoded := strings.TrimSpace(a.Security.SecretEncryptionKey)
+	if encoded == "" {
+		return nil, fmt.Errorf("security.secret_encryption_key is required")
+	}
+	value, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("decode security.secret_encryption_key: %w", err)
+	}
+	if len(value) != 32 {
+		return nil, fmt.Errorf("security.secret_encryption_key must decode to 32 bytes")
+	}
+	return value, nil
+}
+
+func mustGenerateSecretEncryptionKey() string {
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		panic(fmt.Sprintf("generate security.secret_encryption_key: %v", err))
+	}
+	return base64.StdEncoding.EncodeToString(key)
 }

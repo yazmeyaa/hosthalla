@@ -13,6 +13,10 @@ type IndexPageProps struct {
 
 templ IndexPage(props IndexPageProps) {
 	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{GenericLayoutProps: layout.GenericLayoutProps{Title: "Home"}, Profile: props.Profile}) {
-		<h1>Home Page</h1>
+		@IndexPageContent(props)
 	}
+}
+
+templ IndexPageContent(props IndexPageProps) {
+	<h1>Home Page</h1>
 }

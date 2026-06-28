@@ -3,6 +3,7 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	"github.com/yazmeyaa/hosthalla/ui/pages/auth_page"
@@ -60,7 +61,38 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
+		Secure:   isHTTPSRequest(r),
 	})
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	if cookie, err := r.Cookie("session_id"); err == nil && strings.TrimSpace(cookie.Value) != "" {
+		if err := h.svc.DeleteSession(r.Context(), cookie.Value); err != nil {
+			h.l.Warn("failed to delete session", slog.String("error", err.Error()))
+		}
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_id",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isHTTPSRequest(r),
+		MaxAge:   -1,
+	})
+	http.Redirect(w, r, "/auth", http.StatusSeeOther)
+}
+
+func isHTTPSRequest(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	forwardedProto := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto"))
+	if forwardedProto == "" {
+		return false
+	}
+	return strings.EqualFold(strings.Split(forwardedProto, ",")[0], "https")
 }

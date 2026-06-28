@@ -56,6 +56,10 @@ func APITokenAuthMiddleware(apiTokenRepository authentication_storage.APITokenRe
 			http.Error(w, "api token is expired", http.StatusUnauthorized)
 			return
 		}
+		if err := apiTokenRepository.UpdateLastUsedAt(r.Context(), apiToken.ID, time.Now().UTC()); err != nil {
+			http.Error(w, "failed to update api token activity", http.StatusInternalServerError)
+			return
+		}
 
 		ctx := context.WithValue(r.Context(), APITokenContextKey, apiToken)
 		next.ServeHTTP(w, r.WithContext(ctx))

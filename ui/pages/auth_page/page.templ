@@ -6,25 +6,27 @@ import "github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
 
 templ AuthPage() {
 	@layout.GenericLayout(layout.GenericLayoutProps{Title: "Auth"}) {
-		<section class={ auth_page_wrapper() }>
-			@card.Card() {
-				<div class={ auth_card_content() }>
-					<h1 class={ auth_title() }>Welcome Back</h1>
-					<p class={ auth_subtitle() }>Sign in to continue to Hosthalla.</p>
-					<form class={ auth_form() } method="post" action="/auth/login">
-						<div class={ auth_field() }>
-							<label class={ auth_label() } for="username">Username</label>
-							@input.Input(input.InputProps{Id: "username", Name: "username"})
-						</div>
-						<div class={ auth_field() }>
-							<label class={ auth_label() } for="password">Password</label>
-							@input.Input(input.InputProps{Id: "password", Type: "password", Name: "password"})
-						</div>
-						<button class={ auth_button() } type="submit">Sign In</button>
-					</form>
-					<p class={ auth_footer_text() }>Only authorized users can access this area.</p>
-				</div>
-			}
-		</section>
+		@layout.AppContent() {
+			<section class={ auth_page_wrapper() }>
+				@card.Card() {
+					<div class={ auth_card_content() }>
+						<h1 class={ auth_title() }>Welcome Back</h1>
+						<p class={ auth_subtitle() }>Sign in to continue to Hosthalla.</p>
+						<form class={ auth_form() } method="post" action="/auth/login">
+							<div class={ auth_field() }>
+								<label class={ auth_label() } for="username">Username</label>
+								@input.Input(input.InputProps{Id: "username", Name: "username"})
+							</div>
+							<div class={ auth_field() }>
+								<label class={ auth_label() } for="password">Password</label>
+								@input.Input(input.InputProps{Id: "password", Type: "password", Name: "password"})
+							</div>
+							<button class={ auth_button() } type="submit">Sign In</button>
+						</form>
+						<p class={ auth_footer_text() }>Only authorized users can access this area.</p>
+					</div>
+				}
+			</section>
+		}
 	}
 }

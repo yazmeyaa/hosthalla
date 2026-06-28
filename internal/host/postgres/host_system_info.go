@@ -37,6 +37,61 @@ func (h HostSystemInfoRepositoryPostgresImpl) GetHostSystemInfoByHostID(ctx cont
 	return getHostSystemInfoByHostID(ctx, h.pool, hostID)
 }
 
+func (h HostSystemInfoRepositoryPostgresImpl) ListHostSystemInfosByHostIDs(ctx context.Context, hostIDs []uuid.UUID) (map[uuid.UUID]host.HostSystemInfo, error) {
+	if len(hostIDs) == 0 {
+		return map[uuid.UUID]host.HostSystemInfo{}, nil
+	}
+
+	query := "select " + hostSystemInfoSelectColumns + " from host_system_info where host_id = any($1)"
+	rows, err := h.pool.Query(ctx, query, hostIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[uuid.UUID]host.HostSystemInfo, len(hostIDs))
+	for rows.Next() {
+		info, err := scanHostSystemInfo(rows)
+		if err != nil {
+			return nil, err
+		}
+		info.GPUs = make([]host.GPUSystemInfo, 0)
+		result[info.HostID] = info
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(result) == 0 {
+		return result, nil
+	}
+
+	gpuRows, err := h.pool.Query(ctx, "select host_id, name from host_system_info_gpu where host_id = any($1) order by host_id asc, position asc", hostIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer gpuRows.Close()
+
+	for gpuRows.Next() {
+		var (
+			hostID uuid.UUID
+			name   string
+		)
+		if err := gpuRows.Scan(&hostID, &name); err != nil {
+			return nil, err
+		}
+		info, ok := result[hostID]
+		if !ok {
+			continue
+		}
+		info.GPUs = append(info.GPUs, host.GPUSystemInfo{Name: name})
+		result[hostID] = info
+	}
+	if err := gpuRows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func (h HostSystemInfoRepositoryPostgresImpl) UpsertHostSystemInfo(ctx context.Context, data host.HostSystemInfo) (host.HostSystemInfo, error) {
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {

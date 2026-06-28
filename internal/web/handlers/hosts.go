@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
@@ -45,42 +44,50 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	hostIDs := make([]uuid.UUID, 0, len(hosts))
+	for _, listedHost := range hosts {
+		hostIDs = append(hostIDs, listedHost.ID)
+	}
+
+	hostManagementMethodsByUUID, err := h.hostService.ListHostManagementMethodsByHostIDs(r.Context(), hostIDs)
+	if err != nil {
+		h.logger.Error("failed to list host management methods by host ids in handler", slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	hostSystemInfoByUUID, err := h.hostService.ListHostSystemInfosByHostIDs(r.Context(), hostIDs)
+	if err != nil {
+		h.logger.Error("failed to list host system infos by host ids in handler", slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	latestSnapshotsByUUID, err := h.hostService.ListLatestHostMetricSnapshotsByHostIDs(r.Context(), hostIDs)
+	if err != nil {
+		h.logger.Error("failed to list latest host metrics by host ids in handler", slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	hostManagementMethodsByHostID := make(map[string][]host.HostManagementMethod, len(hosts))
 	hostSystemInfoByHostID := make(map[string]host.HostSystemInfo, len(hosts))
 	hostLatestMetricsByHostID := make(map[string]hosts_list.HostLatestMetricsBadges, len(hosts))
 	for _, listedHost := range hosts {
-		methods, err := h.hostService.ListHostManagementMethods(r.Context(), listedHost.ID)
-		if err != nil {
-			h.logger.Error("failed to list host management methods in handler", slog.String("host_id", listedHost.ID.String()), slog.String("error", err.Error()))
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		hostIDStr := listedHost.ID.String()
+		if methods, ok := hostManagementMethodsByUUID[listedHost.ID]; ok {
+			hostManagementMethodsByHostID[hostIDStr] = methods
 		}
-		hostManagementMethodsByHostID[listedHost.ID.String()] = methods
-
-		systemInfo, err := h.hostService.GetHostSystemInfoByHostID(r.Context(), listedHost.ID)
-		if err != nil {
-			if !errors.Is(err, pgx.ErrNoRows) {
-				h.logger.Error("failed to get host system info in handler", slog.String("host_id", listedHost.ID.String()), slog.String("error", err.Error()))
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			hostSystemInfoByHostID[listedHost.ID.String()] = systemInfo
+		systemInfo, hasSystemInfo := hostSystemInfoByUUID[listedHost.ID]
+		if hasSystemInfo {
+			hostSystemInfoByHostID[hostIDStr] = systemInfo
 		}
-
-		snapshots, err := h.hostService.ListHostMetricSnapshots(r.Context(), listedHost.ID)
-		if err != nil {
-			h.logger.Error("failed to list host metric snapshots in handler", slog.String("host_id", listedHost.ID.String()), slog.String("error", err.Error()))
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if len(snapshots) == 0 || len(snapshots[0].Metrics) == 0 {
+		latestSnapshot, hasSnapshot := latestSnapshotsByUUID[listedHost.ID]
+		if !hasSnapshot || len(latestSnapshot.Metrics) == 0 {
 			continue
 		}
-		if systemInfo, ok := hostSystemInfoByHostID[listedHost.ID.String()]; ok {
-			hostLatestMetricsByHostID[listedHost.ID.String()] = hosts_list.BuildHostLatestMetricsBadges(snapshots[0].Metrics[0], &systemInfo)
+		if hasSystemInfo {
+			hostLatestMetricsByHostID[hostIDStr] = hosts_list.BuildHostLatestMetricsBadges(latestSnapshot.Metrics[0], &systemInfo)
 		} else {
-			hostLatestMetricsByHostID[listedHost.ID.String()] = hosts_list.BuildHostLatestMetricsBadges(snapshots[0].Metrics[0], nil)
+			hostLatestMetricsByHostID[hostIDStr] = hosts_list.BuildHostLatestMetricsBadges(latestSnapshot.Metrics[0], nil)
 		}
 	}
 
@@ -106,7 +113,7 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 	}
 	h.logger.Debug("rendering hosts page", slog.Int("hosts", len(hosts)), slog.Int("available_tags", len(availableTags)), slog.String("profile_id", profile.ID))
 
-	hosts_page.HostsPage(hosts_page.HostsPageProps{
+	pageProps := hosts_page.HostsPageProps{
 		Hosts:                         hosts,
 		AvailableTags:                 availableTags,
 		SelectedTags:                  tags,
@@ -117,7 +124,13 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 			GenericLayoutProps: layout.GenericLayoutProps{Title: "Hosts"},
 			Profile:            profile,
 		},
-	}).Render(r.Context(), w)
+	}
+	if isHTMXBoostedNavigationRequest(r) {
+		layout.AppContent().Render(templ.WithChildren(r.Context(), hosts_page.HostsPageContent(pageProps)), w)
+		return
+	}
+
+	hosts_page.HostsPage(pageProps).Render(r.Context(), w)
 }
 
 func (h *HostsHandler) CreateHost(w http.ResponseWriter, r *http.Request) {

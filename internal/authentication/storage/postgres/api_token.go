@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,6 +19,7 @@ const (
 	getAPITokenByHashQuery        = "select " + apiTokenSelectColumns + " from api_token where hash = $1"
 	listAPITokensByProfileIDQuery = "select " + apiTokenSelectColumns + " from api_token where profile_id = $1 order by created_at desc"
 	revokeAPITokenQuery           = "update api_token set revoked_at = now() where id = $1 and revoked_at is null"
+	updateLastUsedAtQuery         = "update api_token set last_used_at = $2 where id = $1"
 )
 
 func scanAPIToken(row pgx.Row) (authentication.APIToken, error) {
@@ -86,6 +88,17 @@ func (r *APITokenRepositoryPostgresImpl) RevokeAPIToken(ctx context.Context, id 
 	}
 	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("api token not found or already revoked: %s", id)
+	}
+	return nil
+}
+
+func (r *APITokenRepositoryPostgresImpl) UpdateLastUsedAt(ctx context.Context, id string, lastUsedAt time.Time) error {
+	tag, err := r.pool.Exec(ctx, updateLastUsedAtQuery, id, lastUsedAt)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("api token not found: %s", id)
 	}
 	return nil
 }

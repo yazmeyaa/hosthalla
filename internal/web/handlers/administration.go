@@ -8,8 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
+	"github.com/yazmeyaa/hosthalla/ui/app/layout"
 	"github.com/yazmeyaa/hosthalla/ui/pages/administration_page"
 )
 
@@ -45,10 +47,16 @@ func (h *AdministrationHandler) Administration(w http.ResponseWriter, r *http.Re
 	}
 	h.logger.Debug("rendering administration page", slog.String("profile_id", profile.ID), slog.Int("api_tokens_count", len(apiTokens)))
 
-	administration_page.AdministrationPage(administration_page.AdministrationPageProps{
+	pageProps := administration_page.AdministrationPageProps{
 		Profile:   profile,
 		APITokens: apiTokens,
-	}).Render(r.Context(), w)
+	}
+	if isHTMXBoostedNavigationRequest(r) {
+		layout.AppContent().Render(templ.WithChildren(r.Context(), administration_page.AdministrationPageContent(pageProps)), w)
+		return
+	}
+
+	administration_page.AdministrationPage(pageProps).Render(r.Context(), w)
 }
 
 func (h *AdministrationHandler) CreateAPIToken(w http.ResponseWriter, r *http.Request) {

@@ -19,94 +19,98 @@ type AdministrationPageProps struct {
 
 templ AdministrationPage(props AdministrationPageProps) {
 	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{GenericLayoutProps: layout.GenericLayoutProps{Title: "Administration"}, Profile: props.Profile}) {
-		<div class={ administration_page_header() }>
-			<h1 class={ administration_page_title() }>Administration</h1>
-			<p class={ administration_page_subtitle() }>Manage API tokens for host registration agent.</p>
-		</div>
-		if props.CreatedAPIToken != "" {
-			<div class={ administration_token_banner() }>
-				<strong>New token created.</strong>
-				<p>Save it now, it will not be shown again:</p>
-				<code>{ props.CreatedAPIToken }</code>
-			</div>
-		}
-		<div class={ administration_page_grid() }>
-			@card.Card() {
-				<div class={ administration_page_section() }>
-					<h2 class={ administration_page_section_title() }>Create API token</h2>
-					<form class={ administration_token_form() } method="post" action="/administration/api-tokens/create">
-						<div class={ administration_form_field() }>
-							<label for="token-name">Name</label>
-							@input.Input(input.InputProps{Id: "token-name", Name: "name", Placeholder: "Production hosts registration", Required: true})
-						</div>
-						<div class={ administration_form_field() }>
-							<label>Scopes</label>
-							<div class={ administration_scopes_list() }>
-								for _, scope := range availableAPITokenScopes() {
-									<label class={ administration_scope_checkbox_label() }>
-										<input type="checkbox" name="scope" value={ scope } checked/>
-										<span>{ scope }</span>
-									</label>
-								}
-							</div>
-							<p class={ administration_form_hint() }>Scopes are predefined and granted via checkboxes.</p>
-						</div>
-						<div class={ administration_form_field() }>
-							<label for="expires-in-days">Expires in (days)</label>
-							@input.Input(input.InputProps{Id: "expires-in-days", Type: "number", Name: "expiresInDays", Placeholder: "0 means never"})
-						</div>
-						@button.Button(button.ButtonProps{Type: "submit"}) {
-							Create token
-						}
-					</form>
-				</div>
-			}
-			@card.Card() {
-				<div class={ administration_page_section() }>
-					<h2 class={ administration_page_section_title() }>Issued tokens</h2>
-					if len(props.APITokens) == 0 {
-						<p class={ administration_empty_state() }>No API tokens yet.</p>
-					} else {
-						<div class={ administration_tokens_list() }>
-							for _, token := range props.APITokens {
-								<div class={ administration_token_row(), templ.KV(administration_token_row_revoked(), token.RevokedAt != nil) }>
-									<div class={ administration_token_info() }>
-										<p class={ administration_token_name() }>{ token.Name }</p>
-										<p class={ administration_token_meta() }>
-											Prefix: <code>{ token.Prefix }</code>
-										</p>
-										<p class={ administration_token_meta() }>
-											Scopes: <code>{ strings.Join(token.Scopes, ", ") }</code>
-										</p>
-										<p class={ administration_token_meta() }>
-											Created: { token.CreatedAt.Format(time.RFC3339) }
-										</p>
-										if token.ExpiresAt != nil {
-											<p class={ administration_token_meta() }>
-												Expires: { token.ExpiresAt.Format(time.RFC3339) }
-											</p>
-										}
-										if token.RevokedAt != nil {
-											<p class={ administration_token_meta() }>
-												Revoked: { token.RevokedAt.Format(time.RFC3339) }
-											</p>
-										}
-									</div>
-									if token.RevokedAt == nil {
-										<form method="post" action={ "/administration/api-tokens/" + token.ID + "/revoke" }>
-											@button.Button(button.ButtonProps{Type: "submit", Variant: "danger"}) {
-												Revoke
-											}
-										</form>
-									}
-								</div>
-							}
-						</div>
-					}
-				</div>
-			}
+		@AdministrationPageContent(props)
+	}
+}
+
+templ AdministrationPageContent(props AdministrationPageProps) {
+	<div class={ administration_page_header() }>
+		<h1 class={ administration_page_title() }>Administration</h1>
+		<p class={ administration_page_subtitle() }>Manage API tokens for host registration agent.</p>
+	</div>
+	if props.CreatedAPIToken != "" {
+		<div class={ administration_token_banner() }>
+			<strong>New token created.</strong>
+			<p>Save it now, it will not be shown again:</p>
+			<code>{ props.CreatedAPIToken }</code>
 		</div>
 	}
+	<div class={ administration_page_grid() }>
+		@card.Card() {
+			<div class={ administration_page_section() }>
+				<h2 class={ administration_page_section_title() }>Create API token</h2>
+				<form class={ administration_token_form() } method="post" action="/administration/api-tokens/create">
+					<div class={ administration_form_field() }>
+						<label for="token-name">Name</label>
+						@input.Input(input.InputProps{Id: "token-name", Name: "name", Placeholder: "Production hosts registration", Required: true})
+					</div>
+					<div class={ administration_form_field() }>
+						<label>Scopes</label>
+						<div class={ administration_scopes_list() }>
+							for _, scope := range availableAPITokenScopes() {
+								<label class={ administration_scope_checkbox_label() }>
+									<input type="checkbox" name="scope" value={ scope } checked/>
+									<span>{ scope }</span>
+								</label>
+							}
+						</div>
+						<p class={ administration_form_hint() }>Scopes are predefined and granted via checkboxes.</p>
+					</div>
+					<div class={ administration_form_field() }>
+						<label for="expires-in-days">Expires in (days)</label>
+						@input.Input(input.InputProps{Id: "expires-in-days", Type: "number", Name: "expiresInDays", Placeholder: "0 means never"})
+					</div>
+					@button.Button(button.ButtonProps{Type: "submit"}) {
+						Create token
+					}
+				</form>
+			</div>
+		}
+		@card.Card() {
+			<div class={ administration_page_section() }>
+				<h2 class={ administration_page_section_title() }>Issued tokens</h2>
+				if len(props.APITokens) == 0 {
+					<p class={ administration_empty_state() }>No API tokens yet.</p>
+				} else {
+					<div class={ administration_tokens_list() }>
+						for _, token := range props.APITokens {
+							<div class={ administration_token_row(), templ.KV(administration_token_row_revoked(), token.RevokedAt != nil) }>
+								<div class={ administration_token_info() }>
+									<p class={ administration_token_name() }>{ token.Name }</p>
+									<p class={ administration_token_meta() }>
+										Prefix: <code>{ token.Prefix }</code>
+									</p>
+									<p class={ administration_token_meta() }>
+										Scopes: <code>{ strings.Join(token.Scopes, ", ") }</code>
+									</p>
+									<p class={ administration_token_meta() }>
+										Created: { token.CreatedAt.Format(time.RFC3339) }
+									</p>
+									if token.ExpiresAt != nil {
+										<p class={ administration_token_meta() }>
+											Expires: { token.ExpiresAt.Format(time.RFC3339) }
+										</p>
+									}
+									if token.RevokedAt != nil {
+										<p class={ administration_token_meta() }>
+											Revoked: { token.RevokedAt.Format(time.RFC3339) }
+										</p>
+									}
+								</div>
+								if token.RevokedAt == nil {
+									<form method="post" action={ "/administration/api-tokens/" + token.ID + "/revoke" }>
+										@button.Button(button.ButtonProps{Type: "submit", Variant: "danger"}) {
+											Revoke
+										}
+									</form>
+								}
+							</div>
+						}
+					</div>
+				}
+			</div>
+		}
+	</div>
 }
 
 func availableAPITokenScopes() []string {

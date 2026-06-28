@@ -1,6 +1,7 @@
 package layout
 
 import "github.com/yazmeyaa/hosthalla/internal/authentication"
+import "github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 
 type AuthenticatedLayoutProps struct {
 	GenericLayoutProps
@@ -15,7 +16,13 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 					<h1 class={ authenticated_title() }>Hosthalla</h1>
 					<p class={ authenticated_subtitle() }>Infrastructure dashboard</p>
 				</div>
-				<nav>
+				<nav
+					hx-boost="true"
+					hx-target="#app-content"
+					hx-select="#app-content"
+					hx-swap="outerHTML show:none"
+					hx-push-url="true"
+				>
 					<ul class={ authenticated_nav_list() }>
 						<li><a class={ authenticated_nav_link() } href="/">Home</a></li>
 						<li><a class={ authenticated_nav_link() } href="/hosts">Hosts</a></li>
@@ -24,9 +31,16 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 				</nav>
 				<div class={ authenticated_profile() }>
 					<p class={ authenticated_profile_text() }>Logged in as <span>{ props.Profile.Username }</span></p>
+					<form method="post" action="/auth/logout">
+						@button.Button(button.ButtonProps{Type: "submit", Variant: "secondary"}) {
+							Log out
+						}
+					</form>
 				</div>
 			</header>
-			{ children... }
+			@AppContent() {
+				{ children... }
+			}
 		</div>
 	}
 }
