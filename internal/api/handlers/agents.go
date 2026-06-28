@@ -58,20 +58,20 @@ func (h *AgentsHandler) HandleHeartbeat(w http.ResponseWriter, r *http.Request) 
 			http.Error(w, "agent not found", http.StatusNotFound)
 			return
 		}
-		h.logger.Error("failed to get agent", "error", err)
+		h.logger.Error("failed to get agent", slog.String("error", err.Error()))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	if err := h.agentRepository.UpdateLastSeenAt(ctx, agentID, time.Now()); err != nil {
-		h.logger.Error("failed to update last seen at", "error", err)
+		h.logger.Error("failed to update last seen at", slog.String("error", err.Error()))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	config, err := h.agentConfigRepository.GetByAgentID(ctx, agentID)
 	if err != nil {
-		h.logger.Error("failed to get agent config", "error", err)
+		h.logger.Error("failed to get agent config", slog.String("error", err.Error()))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -82,7 +82,7 @@ func (h *AgentsHandler) HandleHeartbeat(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		h.logger.Error("failed to encode response", "error", err)
+		h.logger.Error("failed to encode response", slog.String("error", err.Error()))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -108,7 +108,7 @@ func (h *AgentsHandler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "agent not found", http.StatusNotFound)
 			return
 		}
-		h.logger.Error("failed to get agent", "error", err)
+		h.logger.Error("failed to get agent", slog.String("error", err.Error()))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -125,7 +125,7 @@ func (h *AgentsHandler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 		Metrics:   []host.HostMetric{metric},
 	})
 	if err != nil {
-		h.logger.Error("failed to save host metric snapshot", "error", err, "host_id", currentAgent.HostID.String())
+		h.logger.Error("failed to save host metric snapshot", slog.String("error", err.Error()), slog.String("host_id", currentAgent.HostID.String()))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}

@@ -111,7 +111,6 @@ func createUser(logger *slog.Logger, pool *pgxpool.Pool, args []string) {
 	logger.Info("user created",
 		slog.String("user_id", user.ID),
 		slog.String("username", user.Username),
-		slog.String("password", password),
 		slog.String("created_at", user.CreatedAt.Format(time.RFC3339)),
 		slog.String("updated_at", user.UpdatedAt.Format(time.RFC3339)),
 	)

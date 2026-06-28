@@ -25,7 +25,7 @@ func (h *AuthHandler) Auth(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
-	h.l.Info("logging in", slog.String("username", username))
+	h.l.Debug("logging in", slog.String("username", username))
 
 	valid, err := h.svc.ValidatePassword(r.Context(), username, password)
 	if err != nil {

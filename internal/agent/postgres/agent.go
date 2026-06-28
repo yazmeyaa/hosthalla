@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -52,7 +53,7 @@ func (r *AgentRepositoryPostgresImpl) GetByID(ctx context.Context, id uuid.UUID)
 func (r *AgentRepositoryPostgresImpl) Update(ctx context.Context, value *agent.Agent) error {
 	row := r.pool.QueryRow(ctx, updateAgentQuery, value.ID, value.HostID, value.Version)
 	if err := row.Scan(&value.CreatedAt, &value.LastSeenAt); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("agent not found: %s", value.ID)
 		}
 		return err

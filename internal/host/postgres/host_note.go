@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -49,7 +50,7 @@ func (h HostNoteRepositoryPostgresImpl) DeleteHostNote(ctx context.Context, host
 	return nil
 }
 
-func (h HostNoteRepositoryPostgresImpl) GetHostNodeByID(ctx context.Context, hostNoteID host.HostNoteID) (host.HostNote, error) {
+func (h HostNoteRepositoryPostgresImpl) GetHostNoteByID(ctx context.Context, hostNoteID host.HostNoteID) (host.HostNote, error) {
 	query := "select " + hostNoteSelectColumns + " from host_note where id = $1"
 	row := h.pool.QueryRow(ctx, query, uuid.UUID(hostNoteID))
 	return scanHostNote(row)
@@ -81,7 +82,7 @@ func (h HostNoteRepositoryPostgresImpl) UpdateHostNote(ctx context.Context, host
 	const updateHostNoteQuery = "update host_note set title = $2, body = $3, updated_at = now() where id = $1 returning updated_at"
 	row := h.pool.QueryRow(ctx, updateHostNoteQuery, hostNote.ID, hostNote.Title, hostNote.Body)
 	if err := row.Scan(&hostNote.UpdatedAt); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("host note not found: %s", hostNote.ID)
 		}
 		return err

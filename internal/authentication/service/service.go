@@ -148,10 +148,10 @@ func (s *Service) DeleteUser(ctx context.Context, profileID string) error {
 	return s.profileRepository.DeleteProfile(ctx, profileID)
 }
 
-func (s *Service) SetPassword(ctx context.Context, data SetPasswordDTO) (authentication.PasswordAuthentincation, error) {
+func (s *Service) SetPassword(ctx context.Context, data SetPasswordDTO) (authentication.PasswordAuthentication, error) {
 	passwordHash, err := HashPassword(data.Password)
 	if err != nil {
-		return authentication.PasswordAuthentincation{}, err
+		return authentication.PasswordAuthentication{}, err
 	}
 
 	return s.passwordAuthenticationRepository.CreatePasswordAuthentication(ctx, storage.CreatePasswordAuthenticationDTO{

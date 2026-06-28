@@ -38,9 +38,9 @@ type ProfileRepository interface {
 }
 
 type PasswordAuthenticationRepository interface {
-	CreatePasswordAuthentication(ctx context.Context, data CreatePasswordAuthenticationDTO) (authentication.PasswordAuthentincation, error)
-	GetPasswordAuthenticationByID(ctx context.Context, id string) (authentication.PasswordAuthentincation, error)
-	GetPasswordAuthenticationByUsername(ctx context.Context, username string) (authentication.PasswordAuthentincation, error)
+	CreatePasswordAuthentication(ctx context.Context, data CreatePasswordAuthenticationDTO) (authentication.PasswordAuthentication, error)
+	GetPasswordAuthenticationByID(ctx context.Context, id string) (authentication.PasswordAuthentication, error)
+	GetPasswordAuthenticationByUsername(ctx context.Context, username string) (authentication.PasswordAuthentication, error)
 }
 
 type SessionRepository interface {

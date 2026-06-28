@@ -59,7 +59,18 @@ type AgentConfigRepositoryPostgresImpl struct {
 }
 
 func (r *AgentConfigRepositoryPostgresImpl) Create(ctx context.Context, data agent.CreateAgentConfigDTO) (agent.AgentConfig, error) {
-	config := agent.NewAgentConfig()
+	defaults := agent.NewAgentConfig()
+
+	heartbeatInterval := data.Heartbeat.Interval
+	if heartbeatInterval == 0 {
+		heartbeatInterval = defaults.Heartbeat.Interval
+	}
+
+	metricsInterval := data.Metrics.Interval
+	if metricsInterval == 0 {
+		metricsInterval = defaults.Metrics.Interval
+	}
+
 	version := data.Version
 	if version == 0 {
 		version = 1
@@ -69,8 +80,8 @@ func (r *AgentConfigRepositoryPostgresImpl) Create(ctx context.Context, data age
 		ctx,
 		insertAgentConfigQuery,
 		data.AgentID,
-		int(config.Heartbeat.Interval/time.Second),
-		int(config.Metrics.Interval/time.Second),
+		int(heartbeatInterval/time.Second),
+		int(metricsInterval/time.Second),
 		version,
 	)
 

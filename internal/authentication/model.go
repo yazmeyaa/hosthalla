@@ -9,7 +9,7 @@ type Profile struct {
 	UpdatedAt time.Time
 }
 
-type PasswordAuthentincation struct {
+type PasswordAuthentication struct {
 	PasswordHash string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time

@@ -24,14 +24,14 @@ const (
 		limit 1`
 )
 
-func scanPasswordAuthentication(row pgx.Row) (authentication.PasswordAuthentincation, error) {
-	var auth authentication.PasswordAuthentincation
+func scanPasswordAuthentication(row pgx.Row) (authentication.PasswordAuthentication, error) {
+	var auth authentication.PasswordAuthentication
 	if err := row.Scan(
 		&auth.PasswordHash,
 		&auth.CreatedAt,
 		&auth.UpdatedAt,
 	); err != nil {
-		return authentication.PasswordAuthentincation{}, err
+		return authentication.PasswordAuthentication{}, err
 	}
 	return auth, nil
 }
@@ -40,20 +40,17 @@ type PasswordAuthenticationRepositoryPostgresImpl struct {
 	pool *pgxpool.Pool
 }
 
-// CreatePasswordAuthentication implements storage.PasswordAuthenticationRepository.
-func (p *PasswordAuthenticationRepositoryPostgresImpl) CreatePasswordAuthentication(ctx context.Context, data storage.CreatePasswordAuthenticationDTO) (authentication.PasswordAuthentincation, error) {
+func (p *PasswordAuthenticationRepositoryPostgresImpl) CreatePasswordAuthentication(ctx context.Context, data storage.CreatePasswordAuthenticationDTO) (authentication.PasswordAuthentication, error) {
 	row := p.pool.QueryRow(ctx, insertPasswordAuthenticationQuery, data.ProfileID, data.PasswordHash)
 	return scanPasswordAuthentication(row)
 }
 
-// GetPasswordAuthenticationByID implements storage.PasswordAuthenticationRepository.
-func (p *PasswordAuthenticationRepositoryPostgresImpl) GetPasswordAuthenticationByID(ctx context.Context, id string) (authentication.PasswordAuthentincation, error) {
+func (p *PasswordAuthenticationRepositoryPostgresImpl) GetPasswordAuthenticationByID(ctx context.Context, id string) (authentication.PasswordAuthentication, error) {
 	row := p.pool.QueryRow(ctx, getPasswordAuthenticationByIDQuery, id)
 	return scanPasswordAuthentication(row)
 }
 
-// GetPasswordAuthenticationByUsername implements storage.PasswordAuthenticationRepository.
-func (p *PasswordAuthenticationRepositoryPostgresImpl) GetPasswordAuthenticationByUsername(ctx context.Context, username string) (authentication.PasswordAuthentincation, error) {
+func (p *PasswordAuthenticationRepositoryPostgresImpl) GetPasswordAuthenticationByUsername(ctx context.Context, username string) (authentication.PasswordAuthentication, error) {
 	row := p.pool.QueryRow(ctx, getPasswordAuthenticationByUsernameQuery, username)
 	return scanPasswordAuthentication(row)
 }

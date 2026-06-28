@@ -42,7 +42,7 @@ type HostRepository interface {
 
 type HostNoteRepository interface {
 	ListHostNotes(ctx context.Context, hostID uuid.UUID) ([]HostNote, error)
-	GetHostNodeByID(ctx context.Context, hostNoteID HostNoteID) (HostNote, error)
+	GetHostNoteByID(ctx context.Context, hostNoteID HostNoteID) (HostNote, error)
 	CreateHostNote(ctx context.Context, hostID uuid.UUID, data CreateHostNoteDTO) (HostNote, error)
 	DeleteHostNote(ctx context.Context, hostNoteID HostNoteID) error
 	UpdateHostNote(ctx context.Context, hostNote *HostNote) error

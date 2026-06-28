@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -172,7 +173,7 @@ func (h HostRepositoryPostgresImpl) UpdateHost(ctx context.Context, targetHost *
 	const updateHostQuery = "update host set name = $2, description = $3, ip = $4, updated_at = now() where id = $1 returning updated_at"
 	row := tx.QueryRow(ctx, updateHostQuery, uuid.UUID(targetHost.ID), targetHost.Name, targetHost.Description, targetHost.IP)
 	if err := row.Scan(&targetHost.UpdatedAt); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("host not found: %s", targetHost.ID)
 		}
 		return err
