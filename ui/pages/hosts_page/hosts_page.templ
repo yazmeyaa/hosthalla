@@ -24,53 +24,57 @@ type HostsPageProps struct {
 
 templ HostsPage(props HostsPageProps) {
 	@layout.AuthenticatedLayout(props.AuthLayoutProps) {
-		<div class={ hosts_page_header() }>
-			<h1 class={ hosts_page_title() }>Hosts Page</h1>
-			<div class={ hosts_page_actions() }>
-				<form
-					class={ hosts_page_ping_all_form() }
-					method="post"
-					action="/hosts/ping-all"
-					hx-post="/hosts/ping-all"
-					hx-target="#hosts-ping-all-status"
-					hx-swap="outerHTML"
-				>
-					@button.Button(button.ButtonProps{Type: "submit", Variant: "secondary"}) {
-						Ping All
+		@HostsPageContent(props)
+	}
+}
+
+templ HostsPageContent(props HostsPageProps) {
+	<div class={ hosts_page_header() }>
+		<h1 class={ hosts_page_title() }>Hosts Page</h1>
+		<div class={ hosts_page_actions() }>
+			<form
+				class={ hosts_page_ping_all_form() }
+				method="post"
+				action="/hosts/ping-all"
+				hx-post="/hosts/ping-all"
+				hx-target="#hosts-ping-all-status"
+				hx-swap="outerHTML"
+			>
+				@button.Button(button.ButtonProps{Type: "submit", Variant: "secondary"}) {
+					Ping All
+				}
+			</form>
+			@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "create-host-dialog")}) {
+				+ Add Host
+			}
+		</div>
+	</div>
+	if len(props.AvailableTags) > 0 {
+		<div class={ hosts_page_tag_filter() }>
+			<span class={ hosts_page_tag_filter_label() }>Filter by tags</span>
+			<div class={ hosts_page_tag_filter_list() }>
+				for _, tag := range props.AvailableTags {
+					<a
+						class={ hosts_page_tag_filter_chip(), templ.KV(hosts_page_tag_filter_chip_selected(), hostTagSelected(tag.Name, props.SelectedTags)) }
+						href={ hostTagFilterHref(tag.Name, props.SelectedTags) }
+					>
+						{ "#" + tag.Name }
+					</a>
+				}
+				if len(props.SelectedTags) > 0 {
+					@button.Link(button.LinkProps{Href: "/hosts", Variant: "secondary"}) {
+						Clear
 					}
-				</form>
-				@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "create-host-dialog")}) {
-					+ Add Host
 				}
 			</div>
 		</div>
-		if len(props.AvailableTags) > 0 {
-			<div class={ hosts_page_tag_filter() }>
-				<span class={ hosts_page_tag_filter_label() }>Filter by tags</span>
-				<div class={ hosts_page_tag_filter_list() }>
-					for _, tag := range props.AvailableTags {
-						<a
-							class={ hosts_page_tag_filter_chip(), templ.KV(hosts_page_tag_filter_chip_selected(), hostTagSelected(tag.Name, props.SelectedTags)) }
-							href={ hostTagFilterHref(tag.Name, props.SelectedTags) }
-						>
-							{ "#" + tag.Name }
-						</a>
-					}
-					if len(props.SelectedTags) > 0 {
-						@button.Link(button.LinkProps{Href: "/hosts", Variant: "secondary"}) {
-							Clear
-						}
-					}
-				</div>
-			</div>
-		}
-		<div id="hosts-ping-all-status" class={ hosts_page_ping_all_status_slot() }></div>
-		@hosts_list.HostsList(props.Hosts, props.HostManagementMethodsByHostID, props.HostSystemInfoByHostID, props.HostLatestMetricsByHostID, props.AvailableTags)
-		@host_dialog.CreateHostDialog(props.AvailableTags)
-		@host_actions.HostActionsScripts()
-		@host_dialog.HostDialogScripts()
-		@host_details.HostDetailsScripts()
 	}
+	<div id="hosts-ping-all-status" class={ hosts_page_ping_all_status_slot() }></div>
+	@hosts_list.HostsList(props.Hosts, props.HostManagementMethodsByHostID, props.HostSystemInfoByHostID, props.HostLatestMetricsByHostID, props.AvailableTags)
+	@host_dialog.CreateHostDialog(props.AvailableTags)
+	@host_actions.HostActionsScripts()
+	@host_dialog.HostDialogScripts()
+	@host_details.HostDetailsScripts()
 }
 
 func hostTagSelected(tag string, selectedTags []string) bool {

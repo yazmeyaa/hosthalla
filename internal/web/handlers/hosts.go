@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
@@ -106,7 +107,7 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 	}
 	h.logger.Debug("rendering hosts page", slog.Int("hosts", len(hosts)), slog.Int("available_tags", len(availableTags)), slog.String("profile_id", profile.ID))
 
-	hosts_page.HostsPage(hosts_page.HostsPageProps{
+	pageProps := hosts_page.HostsPageProps{
 		Hosts:                         hosts,
 		AvailableTags:                 availableTags,
 		SelectedTags:                  tags,
@@ -117,7 +118,13 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 			GenericLayoutProps: layout.GenericLayoutProps{Title: "Hosts"},
 			Profile:            profile,
 		},
-	}).Render(r.Context(), w)
+	}
+	if isHTMXBoostedNavigationRequest(r) {
+		layout.AppContent().Render(templ.WithChildren(r.Context(), hosts_page.HostsPageContent(pageProps)), w)
+		return
+	}
+
+	hosts_page.HostsPage(pageProps).Render(r.Context(), w)
 }
 
 func (h *HostsHandler) CreateHost(w http.ResponseWriter, r *http.Request) {

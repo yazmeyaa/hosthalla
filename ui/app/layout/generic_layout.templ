@@ -13,13 +13,11 @@ templ GenericLayout(props GenericLayoutProps) {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>Hosthalla - { props.Title }</title>
-			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+			<script src="/assets/htmx.min.js"></script>
 			@layout_styles()
 		</head>
 		<body class={ generic_layout_styles() }>
-			<main class={ generic_layout_main() }>
-				{ children... }
-			</main>
+			{ children... }
 			<footer class={ generic_layout_footer() }>
 				<div class={ generic_layout_footer_inner() }>
 					<span class={ generic_layout_footer_brand() }>Hosthalla</span>
@@ -30,4 +28,10 @@ templ GenericLayout(props GenericLayoutProps) {
 			</footer>
 		</body>
 	</html>
+}
+
+templ AppContent() {
+	<main id="app-content" class={ generic_layout_main() }>
+		{ children... }
+	</main>
 }

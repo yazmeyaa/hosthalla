@@ -4,9 +4,11 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/a-h/templ"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
+	"github.com/yazmeyaa/hosthalla/ui/app/layout"
 	"github.com/yazmeyaa/hosthalla/ui/pages/index_page"
 )
 
@@ -46,5 +48,11 @@ func (h *IndexHandler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 	h.l.Debug("rendering index page", slog.String("profile_id", profile.ID))
 
-	index_page.IndexPage(index_page.IndexPageProps{Profile: profile}).Render(ctx, w)
+	pageProps := index_page.IndexPageProps{Profile: profile}
+	if isHTMXBoostedNavigationRequest(r) {
+		layout.AppContent().Render(templ.WithChildren(ctx, index_page.IndexPageContent(pageProps)), w)
+		return
+	}
+
+	index_page.IndexPage(pageProps).Render(ctx, w)
 }

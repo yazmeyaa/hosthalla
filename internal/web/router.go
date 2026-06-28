@@ -9,6 +9,7 @@ import (
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/handlers"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
+	ui_assets "github.com/yazmeyaa/hosthalla/ui/assets"
 )
 
 type NewRouterParams struct {
@@ -35,6 +36,7 @@ func NewRouter(params NewRouterParams) http.Handler {
 	administrationHandler := handlers.NewAdministrationHandler(params.AuthService, params.Logger)
 
 	mux := http.NewServeMux()
+	mux.Handle("GET /assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(ui_assets.Files))))
 	mux.Handle("GET /", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(indexHandler.Index)))
 	mux.HandleFunc("GET /auth", authHandler.Auth)
 	mux.HandleFunc("POST /auth/login", authHandler.Login)
