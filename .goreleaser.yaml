@@ -2,6 +2,10 @@ version: 2
 
 project_name: hosthalla
 
+before:
+  hooks:
+    - go tool templ generate
+
 builds:
   - id: hosthalla
     main: ./cmd/web

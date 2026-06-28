@@ -62,7 +62,7 @@ migrate-down: dev-up
 templ-generate:
 	go tool templ generate
 
-build-web:
+build-web: templ-generate
 	go build \
 	$(LDFLAGS_BUILD) \
 	-o dist/hosthalla \
