@@ -124,6 +124,21 @@ func (s *Service) ListHostManagementMethods(ctx context.Context, hostID uuid.UUI
 	return methods, nil
 }
 
+func (s *Service) ListHostManagementMethodsByHostIDs(ctx context.Context, hostIDs []uuid.UUID) (map[uuid.UUID][]HostManagementMethod, error) {
+	methodsByHostID, err := s.hostManagementMethodRepository.ListHostManagementMethodsByHostIDs(ctx, hostIDs)
+	if err != nil {
+		s.logger.Error("failed to list host management methods by host ids", slog.String("error", err.Error()))
+		return nil, err
+	}
+	for hostID, methods := range methodsByHostID {
+		for idx := range methods {
+			methods[idx].Secret = nil
+		}
+		methodsByHostID[hostID] = methods
+	}
+	return methodsByHostID, nil
+}
+
 func (s *Service) GetHostSystemInfoByHostID(ctx context.Context, hostID uuid.UUID) (HostSystemInfo, error) {
 	systemInfo, err := s.hostSystemInfoRepository.GetHostSystemInfoByHostID(ctx, hostID)
 	if err != nil {
@@ -132,6 +147,15 @@ func (s *Service) GetHostSystemInfoByHostID(ctx context.Context, hostID uuid.UUI
 	}
 	s.logger.Debug("loaded host system info", slog.String("host_id", hostID.String()))
 	return systemInfo, nil
+}
+
+func (s *Service) ListHostSystemInfosByHostIDs(ctx context.Context, hostIDs []uuid.UUID) (map[uuid.UUID]HostSystemInfo, error) {
+	result, err := s.hostSystemInfoRepository.ListHostSystemInfosByHostIDs(ctx, hostIDs)
+	if err != nil {
+		s.logger.Error("failed to list host system infos by host ids", slog.String("error", err.Error()))
+		return nil, err
+	}
+	return result, nil
 }
 
 func (s *Service) UpsertHostSystemInfo(ctx context.Context, data HostSystemInfo) (HostSystemInfo, error) {
@@ -152,6 +176,15 @@ func (s *Service) ListHostMetricSnapshots(ctx context.Context, hostID uuid.UUID)
 	}
 	s.logger.Debug("listed host metric snapshots", slog.String("host_id", hostID.String()), slog.Int("count", len(snapshots)))
 	return snapshots, nil
+}
+
+func (s *Service) ListLatestHostMetricSnapshotsByHostIDs(ctx context.Context, hostIDs []uuid.UUID) (map[uuid.UUID]HostMetricSnapshot, error) {
+	result, err := s.hostMetricSnapshotRepository.ListLatestHostMetricSnapshotsByHostIDs(ctx, hostIDs)
+	if err != nil {
+		s.logger.Error("failed to list latest host metric snapshots by host ids", slog.String("error", err.Error()))
+		return nil, err
+	}
+	return result, nil
 }
 
 func (s *Service) CreateHostMetricSnapshot(ctx context.Context, data HostMetricSnapshot) (HostMetricSnapshot, error) {

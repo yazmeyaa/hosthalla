@@ -19,6 +19,8 @@ type HostMetricSnapshotRepositoryPostgresImpl struct {
 	pool *pgxpool.Pool
 }
 
+const maxSnapshotsPerHost = 500
+
 func (h HostMetricSnapshotRepositoryPostgresImpl) ListHostMetricSnapshots(ctx context.Context, hostID uuid.UUID) ([]host.HostMetricSnapshot, error) {
 	const listSnapshotsQuery = `
 select id, host_id, timestamp
@@ -55,6 +57,113 @@ order by timestamp desc`
 	}
 
 	return snapshots, nil
+}
+
+func (h HostMetricSnapshotRepositoryPostgresImpl) ListLatestHostMetricSnapshotsByHostIDs(ctx context.Context, hostIDs []uuid.UUID) (map[uuid.UUID]host.HostMetricSnapshot, error) {
+	if len(hostIDs) == 0 {
+		return map[uuid.UUID]host.HostMetricSnapshot{}, nil
+	}
+
+	rows, err := h.pool.Query(ctx, `
+select distinct on (host_id) id, host_id, timestamp
+from host_metric_snapshot
+where host_id = any($1)
+order by host_id asc, timestamp desc`, hostIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[uuid.UUID]host.HostMetricSnapshot, len(hostIDs))
+	snapshotIDs := make([]int64, 0, len(hostIDs))
+	snapshotHostIDs := make(map[int64]uuid.UUID, len(hostIDs))
+	for rows.Next() {
+		var (
+			snapshotID int64
+			snapshot   host.HostMetricSnapshot
+		)
+		if err := rows.Scan(&snapshotID, &snapshot.HostID, &snapshot.Timestamp); err != nil {
+			return nil, err
+		}
+		hostID := uuid.UUID(snapshot.HostID)
+		result[hostID] = snapshot
+		snapshotIDs = append(snapshotIDs, snapshotID)
+		snapshotHostIDs[snapshotID] = hostID
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(snapshotIDs) == 0 {
+		return result, nil
+	}
+
+	metricRows, err := h.pool.Query(ctx, `
+select snapshot_id,
+       cpu_usage_percentage,
+       memory_usage_bytes,
+       disk_usage_bytes,
+       network_rx_bytes,
+       network_tx_bytes
+from host_metric
+where snapshot_id = any($1)
+order by snapshot_id asc, position asc`, snapshotIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer metricRows.Close()
+
+	type hostMetricRow struct {
+		Metric           host.HostMetric
+		MemoryUsageBytes int64
+		DiskUsageBytes   int64
+		NetworkRxBytes   int64
+		NetworkTxBytes   int64
+		SnapshotID       int64
+		CPUUsagePercent  float64
+	}
+	for metricRows.Next() {
+		var row hostMetricRow
+		if err := metricRows.Scan(
+			&row.SnapshotID,
+			&row.CPUUsagePercent,
+			&row.MemoryUsageBytes,
+			&row.DiskUsageBytes,
+			&row.NetworkRxBytes,
+			&row.NetworkTxBytes,
+		); err != nil {
+			return nil, err
+		}
+		hostID, ok := snapshotHostIDs[row.SnapshotID]
+		if !ok {
+			continue
+		}
+		snapshot := result[hostID]
+		metric := host.HostMetric{CPUUsagePercentage: row.CPUUsagePercent}
+
+		metric.MemoryUsageBytes, err = nonNegativeMetricInt64ToUint64(row.MemoryUsageBytes, "memory_usage_bytes")
+		if err != nil {
+			return nil, err
+		}
+		metric.DiskUsageBytes, err = nonNegativeMetricInt64ToUint64(row.DiskUsageBytes, "disk_usage_bytes")
+		if err != nil {
+			return nil, err
+		}
+		metric.NetworkRxBytes, err = nonNegativeMetricInt64ToUint64(row.NetworkRxBytes, "network_rx_bytes")
+		if err != nil {
+			return nil, err
+		}
+		metric.NetworkTxBytes, err = nonNegativeMetricInt64ToUint64(row.NetworkTxBytes, "network_tx_bytes")
+		if err != nil {
+			return nil, err
+		}
+
+		snapshot.Metrics = append(snapshot.Metrics, metric)
+		result[hostID] = snapshot
+	}
+	if err := metricRows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (h HostMetricSnapshotRepositoryPostgresImpl) CreateHostMetricSnapshot(ctx context.Context, data host.HostMetricSnapshot) (host.HostMetricSnapshot, error) {
@@ -98,6 +207,19 @@ values ($1, $2, $3, $4, $5, $6, $7)`
 		); err != nil {
 			return host.HostMetricSnapshot{}, err
 		}
+	}
+
+	if _, err := tx.Exec(ctx, `
+delete from host_metric_snapshot
+where host_id = $1
+  and id not in (
+      select id
+      from host_metric_snapshot
+      where host_id = $1
+      order by timestamp desc
+      limit $2
+  )`, uuid.UUID(data.HostID), maxSnapshotsPerHost); err != nil {
+		return host.HostMetricSnapshot{}, err
 	}
 
 	createdSnapshot, err := getHostMetricSnapshotByID(ctx, tx, snapshotID)
