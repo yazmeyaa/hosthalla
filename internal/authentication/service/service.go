@@ -187,6 +187,10 @@ func (s *Service) GetSessionByProfileID(ctx context.Context, profileID string) (
 	return s.sessionRepository.GetSessionByProfileID(ctx, profileID)
 }
 
+func (s *Service) DeleteSession(ctx context.Context, id string) error {
+	return s.sessionRepository.DeleteSession(ctx, strings.TrimSpace(id))
+}
+
 func (s *Service) CreateAPIToken(ctx context.Context, data CreateAPITokenDTO) (CreateAPITokenResult, error) {
 	profileID := strings.TrimSpace(data.ProfileID)
 	if profileID == "" {

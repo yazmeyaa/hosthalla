@@ -47,6 +47,7 @@ type SessionRepository interface {
 	CreateSession(ctx context.Context, data CreateSessionDTO) (authentication.Session, error)
 	GetSessionByID(ctx context.Context, id string) (authentication.Session, error)
 	GetSessionByProfileID(ctx context.Context, profileID string) (authentication.Session, error)
+	DeleteSession(ctx context.Context, id string) error
 }
 
 type APITokenRepository interface {
@@ -55,4 +56,5 @@ type APITokenRepository interface {
 	GetAPITokenByHash(ctx context.Context, hash string) (authentication.APIToken, error)
 	ListAPITokensByProfileID(ctx context.Context, profileID string) ([]authentication.APIToken, error)
 	RevokeAPIToken(ctx context.Context, id string) error
+	UpdateLastUsedAt(ctx context.Context, id string, lastUsedAt time.Time) error
 }

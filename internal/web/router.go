@@ -40,6 +40,7 @@ func NewRouter(params NewRouterParams) http.Handler {
 	mux.Handle("GET /", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(indexHandler.Index)))
 	mux.HandleFunc("GET /auth", authHandler.Auth)
 	mux.HandleFunc("POST /auth/login", authHandler.Login)
+	mux.Handle("POST /auth/logout", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(authHandler.Logout)))
 	mux.Handle("GET /hosts", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.ListHosts)))
 	mux.Handle("POST /hosts/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateHost)))
 	mux.Handle("POST /hosts/{id}/update", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.UpdateHost)))
@@ -52,5 +53,6 @@ func NewRouter(params NewRouterParams) http.Handler {
 	mux.Handle("POST /administration/api-tokens/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.CreateAPIToken)))
 	mux.Handle("POST /administration/api-tokens/{id}/revoke", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.RevokeAPIToken)))
 
-	return middlewares.RequestLoggingMiddleware(params.Logger, mux)
+	csrfProtection := http.NewCrossOriginProtection()
+	return csrfProtection.Handler(middlewares.RequestLoggingMiddleware(params.Logger, mux))
 }
