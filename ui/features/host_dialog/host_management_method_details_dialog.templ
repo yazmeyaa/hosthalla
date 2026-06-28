@@ -27,13 +27,7 @@ templ HostManagementMethodDetailsDialog(hostIP string, method host.HostManagemen
 			descriptionValue = "Not provided"
 		}
 
-		passwordValue := "N/A"
-		if method.Type == host.HostManagementMethodTypeSSHPassword {
-			passwordValue = string(method.Secret)
-			if passwordValue == "" {
-				passwordValue = "Not provided"
-			}
-		}
+		passwordValue := "Hidden for security reasons"
 
 		authenticationTypeLabel := hostManagementMethodDetailsTypeLabel(method.Type)
 	}}

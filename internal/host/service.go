@@ -28,6 +28,7 @@ type Service struct {
 	hostManagementMethodRepository HostManagementMethodRepository
 	hostSystemInfoRepository       HostSystemInfoRepository
 	hostMetricSnapshotRepository   HostMetricSnapshotRepository
+	secretCipher                   SecretCipher
 	logger                         *slog.Logger
 }
 
@@ -36,6 +37,7 @@ func New(
 	hostManagementMethodRepository HostManagementMethodRepository,
 	hostSystemInfoRepository HostSystemInfoRepository,
 	hostMetricSnapshotRepository HostMetricSnapshotRepository,
+	secretCipher SecretCipher,
 	logger *slog.Logger,
 ) *Service {
 	return &Service{
@@ -43,6 +45,7 @@ func New(
 		hostManagementMethodRepository: hostManagementMethodRepository,
 		hostSystemInfoRepository:       hostSystemInfoRepository,
 		hostMetricSnapshotRepository:   hostMetricSnapshotRepository,
+		secretCipher:                   secretCipher,
 		logger:                         logger,
 	}
 }
@@ -115,6 +118,9 @@ func (s *Service) ListHostManagementMethods(ctx context.Context, hostID uuid.UUI
 		return nil, err
 	}
 	s.logger.Debug("listed host management methods", slog.String("host_id", hostID.String()), slog.Int("count", len(methods)))
+	for idx := range methods {
+		methods[idx].Secret = nil
+	}
 	return methods, nil
 }
 
@@ -177,11 +183,16 @@ func (s *Service) CreateSSHPasswordManagementMethod(ctx context.Context, hostID 
 		return HostManagementMethod{}, errors.New("password is required")
 	}
 
+	encryptedSecret, err := s.secretCipher.Encrypt([]byte(password))
+	if err != nil {
+		s.logger.Error("failed to encrypt ssh password secret", slog.String("host_id", hostID.String()), slog.String("username", username), slog.String("error", err.Error()))
+		return HostManagementMethod{}, fmt.Errorf("failed to encrypt secret: %w", err)
+	}
 	method, err := s.hostManagementMethodRepository.CreateHostManagementMethod(ctx, hostID, CreateHostManagementMethodDTO{
 		Type:        HostManagementMethodTypeSSHPassword,
 		Username:    username,
 		Port:        normalizePort(data.Port),
-		Secret:      []byte(password),
+		Secret:      encryptedSecret,
 		Description: strings.TrimSpace(data.Description),
 	})
 	if err != nil {
@@ -229,11 +240,17 @@ func (s *Service) CreateSSHKeyManagementMethod(ctx context.Context, hostID uuid.
 		return HostManagementMethod{}, fmt.Errorf("failed to prepare ssh key secret: %w", err)
 	}
 
+	encryptedSecret, err := s.secretCipher.Encrypt(secretRaw)
+	if err != nil {
+		s.logger.Error("failed to encrypt ssh key secret", slog.String("host_id", hostID.String()), slog.String("username", username), slog.String("error", err.Error()))
+		return HostManagementMethod{}, fmt.Errorf("failed to encrypt secret: %w", err)
+	}
+
 	method, err := s.hostManagementMethodRepository.CreateHostManagementMethod(ctx, hostID, CreateHostManagementMethodDTO{
 		Type:        HostManagementMethodTypeSSHKey,
 		Username:    username,
 		Port:        normalizePort(data.Port),
-		Secret:      secretRaw,
+		Secret:      encryptedSecret,
 		Description: strings.TrimSpace(data.Description),
 	})
 	if err != nil {

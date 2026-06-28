@@ -17,6 +17,7 @@ type NewRouterParams struct {
 	HostManagementMethodRepository host.HostManagementMethodRepository
 	HostSystemInfoRepository       host.HostSystemInfoRepository
 	HostMetricSnapshotRepository   host.HostMetricSnapshotRepository
+	SecretCipher                   host.SecretCipher
 	SessionRepository              authentication_repository.SessionRepository
 	AuthService                    *auth_service.Service
 	Logger                         *slog.Logger
@@ -28,6 +29,7 @@ func NewRouter(params NewRouterParams) http.Handler {
 		params.HostManagementMethodRepository,
 		params.HostSystemInfoRepository,
 		params.HostMetricSnapshotRepository,
+		params.SecretCipher,
 		params.Logger,
 	)
 	indexHandler := handlers.NewIndexHandler(params.HostRepository, params.Logger, params.AuthService)

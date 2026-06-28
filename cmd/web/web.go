@@ -17,6 +17,7 @@ import (
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage/postgres"
 	"github.com/yazmeyaa/hosthalla/internal/config"
+	"github.com/yazmeyaa/hosthalla/internal/host"
 	host_repository "github.com/yazmeyaa/hosthalla/internal/host/postgres"
 	app_logger "github.com/yazmeyaa/hosthalla/internal/logger"
 	"github.com/yazmeyaa/hosthalla/internal/version"
@@ -66,6 +67,16 @@ func main() {
 	logger.Info("database connection pool initialized")
 
 	hostRepositories := host_repository.NewRepositories(pool)
+	secretEncryptionKey, err := cfg.SecretEncryptionKey()
+	if err != nil {
+		logger.Error("invalid secret encryption key", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	secretCipher, err := host.NewAESGCMSecretCipher(secretEncryptionKey)
+	if err != nil {
+		logger.Error("failed to initialize secret cipher", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 	authService := auth_service.New(auth_service.NewParams{
 		ProfileRepository:                authentication_repository.NewProfileRepository(pool),
 		PasswordAuthenticationRepository: authentication_repository.NewPasswordAuthenticationRepository(pool),
@@ -77,6 +88,7 @@ func main() {
 		HostManagementMethodRepository: hostRepositories.HostManagementMethod,
 		HostSystemInfoRepository:       hostRepositories.HostSystemInfo,
 		HostMetricSnapshotRepository:   hostRepositories.HostMetricSnapshot,
+		SecretCipher:                   secretCipher,
 		AuthService:                    authService,
 		SessionRepository:              authentication_repository.NewSessionRepository(pool),
 		Logger:                         logger,
