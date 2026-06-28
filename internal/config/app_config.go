@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"log/slog"
@@ -13,7 +14,6 @@ import (
 )
 
 const DefaultLogLevel = "warning"
-const defaultSecretEncryptionKey = "L6jVQ4qYxCdDpkJSf4HjpdS8t9Et0sQwp8l6zV8S8vQ="
 
 type AppConfig struct {
 	WEB      WEBConfig      `yaml:"web"`
@@ -52,7 +52,7 @@ func NewDefaultAppConfig() AppConfig {
 			Database: "hosthalla",
 		},
 		Security: SecurityConfig{
-			SecretEncryptionKey: defaultSecretEncryptionKey,
+			SecretEncryptionKey: mustGenerateSecretEncryptionKey(),
 		},
 		LogLevel: DefaultLogLevel,
 	}
@@ -81,9 +81,6 @@ func (d DatabaseConfig) ConnectionString() string {
 func (a *AppConfig) ApplyDefaults() {
 	if strings.TrimSpace(a.LogLevel) == "" {
 		a.LogLevel = DefaultLogLevel
-	}
-	if strings.TrimSpace(a.Security.SecretEncryptionKey) == "" {
-		a.Security.SecretEncryptionKey = defaultSecretEncryptionKey
 	}
 }
 
@@ -134,4 +131,12 @@ func (a AppConfig) SecretEncryptionKey() ([]byte, error) {
 		return nil, fmt.Errorf("security.secret_encryption_key must decode to 32 bytes")
 	}
 	return value, nil
+}
+
+func mustGenerateSecretEncryptionKey() string {
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		panic(fmt.Sprintf("generate security.secret_encryption_key: %v", err))
+	}
+	return base64.StdEncoding.EncodeToString(key)
 }
