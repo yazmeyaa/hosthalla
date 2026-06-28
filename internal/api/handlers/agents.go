@@ -38,6 +38,12 @@ type HeartbeatResponse struct {
 	Version int `json:"version"`
 }
 
+type ConfigResponse struct {
+	Version                  int `json:"version"`
+	HeartbeatIntervalSeconds int `json:"heartbeatIntervalSeconds"`
+	MetricsIntervalSeconds   int `json:"metricsIntervalSeconds"`
+}
+
 func (h *AgentsHandler) HandleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	agentIDStr := r.Header.Get("Hosthalla-Agent-ID")
@@ -132,4 +138,46 @@ func (h *AgentsHandler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 }
-func (h *AgentsHandler) GetConfig(w http.ResponseWriter, r *http.Request) {}
+
+func (h *AgentsHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	agentIDStr := r.Header.Get("Hosthalla-Agent-ID")
+	if agentIDStr == "" {
+		http.Error(w, "agent_id is required", http.StatusBadRequest)
+		return
+	}
+
+	agentID, err := uuid.Parse(agentIDStr)
+	if err != nil {
+		http.Error(w, "failed to parse agent_id", http.StatusBadRequest)
+		return
+	}
+	if _, err := h.agentRepository.GetByID(ctx, agentID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "agent not found", http.StatusNotFound)
+			return
+		}
+		h.logger.Error("failed to get agent", slog.String("error", err.Error()))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	config, err := h.agentConfigRepository.GetByAgentID(ctx, agentID)
+	if err != nil {
+		h.logger.Error("failed to get agent config", slog.String("error", err.Error()))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	response := ConfigResponse{
+		Version:                  config.Version,
+		HeartbeatIntervalSeconds: int(config.Heartbeat.Interval / time.Second),
+		MetricsIntervalSeconds:   int(config.Metrics.Interval / time.Second),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("failed to encode response", slog.String("error", err.Error()))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+}

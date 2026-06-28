@@ -17,6 +17,7 @@ const (
 
 	insertAgentQuery           = "insert into agent (host_id, version) values ($1, $2) returning " + agentSelectColumns
 	getAgentByIDQuery          = "select " + agentSelectColumns + " from agent where id = $1"
+	getAgentByHostIDQuery      = "select " + agentSelectColumns + " from agent where host_id = $1"
 	updateAgentQuery           = "update agent set host_id = $2, version = $3 where id = $1 returning created_at, last_seen_at"
 	deleteAgentQuery           = "delete from agent where id = $1"
 	updateAgentLastSeenAtQuery = "update agent set last_seen_at = $2 where id = $1"
@@ -47,6 +48,11 @@ func (r *AgentRepositoryPostgresImpl) Create(ctx context.Context, data agent.Cre
 
 func (r *AgentRepositoryPostgresImpl) GetByID(ctx context.Context, id uuid.UUID) (agent.Agent, error) {
 	row := r.pool.QueryRow(ctx, getAgentByIDQuery, id)
+	return scanAgent(row)
+}
+
+func (r *AgentRepositoryPostgresImpl) GetByHostID(ctx context.Context, hostID uuid.UUID) (agent.Agent, error) {
+	row := r.pool.QueryRow(ctx, getAgentByHostIDQuery, hostID)
 	return scanAgent(row)
 }
 

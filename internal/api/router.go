@@ -42,5 +42,9 @@ func NewRouter(
 		"POST /metrics",
 		middlewares.APITokenAuthMiddleware(apiTokenRepository, http.HandlerFunc(agentsHandler.HandleMetrics)),
 	)
+	mux.Handle(
+		"GET /config",
+		middlewares.APITokenAuthMiddleware(apiTokenRepository, http.HandlerFunc(agentsHandler.GetConfig)),
+	)
 	return web_middlewares.RequestLoggingMiddleware(logger, mux)
 }

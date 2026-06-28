@@ -14,11 +14,6 @@ type CreateHostDTO struct {
 	IP          netip.Addr
 }
 
-type CreateHostNoteDTO struct {
-	Title string
-	Body  string
-}
-
 type CreateHostManagementMethodDTO struct {
 	Type        HostManagementMethodType
 	Username    string
@@ -38,14 +33,6 @@ type HostRepository interface {
 	DeleteHost(ctx context.Context, hostID uuid.UUID) error
 	UpdateHost(ctx context.Context, host *Host) error
 	CreateHost(ctx context.Context, data CreateHostDTO) (Host, error)
-}
-
-type HostNoteRepository interface {
-	ListHostNotes(ctx context.Context, hostID uuid.UUID) ([]HostNote, error)
-	GetHostNoteByID(ctx context.Context, hostNoteID HostNoteID) (HostNote, error)
-	CreateHostNote(ctx context.Context, hostID uuid.UUID, data CreateHostNoteDTO) (HostNote, error)
-	DeleteHostNote(ctx context.Context, hostNoteID HostNoteID) error
-	UpdateHostNote(ctx context.Context, hostNote *HostNote) error
 }
 
 type HostManagementMethodRepository interface {

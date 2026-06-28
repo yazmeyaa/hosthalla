@@ -81,19 +81,46 @@ func (h *HostsHandler) RegisterAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	agent, err := h.agentRepository.Create(ctx, agent.CreateAgentDTO{
-		HostID:  hostID,
-		Version: version,
-	})
+	currentAgent, err := h.agentRepository.GetByHostID(ctx, hostID)
+	switch {
+	case err == nil:
+		currentAgent.Version = version
+		if err := h.agentRepository.Update(ctx, &currentAgent); err != nil {
+			h.logger.Error("failed to update existing agent", slog.String("error", err.Error()), slog.String("host_id", hostID.String()))
+			h.writeErrorResponse(w, http.StatusInternalServerError, "failed to update agent")
+			return
+		}
+	case errors.Is(err, pgx.ErrNoRows):
+		currentAgent, err = h.agentRepository.Create(ctx, agent.CreateAgentDTO{
+			HostID:  hostID,
+			Version: version,
+		})
+		if err != nil {
+			h.logger.Error("failed to create agent", slog.String("error", err.Error()))
+			h.writeErrorResponse(w, http.StatusInternalServerError, "failed to create agent")
+			return
+		}
+	default:
+		h.logger.Error("failed to get existing agent by host id", slog.String("error", err.Error()), slog.String("host_id", hostID.String()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to resolve host agent")
+		return
+	}
 
+	targetHost, err := h.hostRepository.GetHostByID(ctx, hostID)
 	if err != nil {
-		h.logger.Error("failed to create agent", slog.String("error", err.Error()))
-		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to create agent")
+		h.logger.Error("failed to load host for monitoring agent update", slog.String("error", err.Error()), slog.String("host_id", hostID.String()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to update host monitoring agent")
+		return
+	}
+	targetHost.MonitoringAgentID = currentAgent.ID
+	if err := h.hostRepository.UpdateHost(ctx, &targetHost); err != nil {
+		h.logger.Error("failed to persist host monitoring agent", slog.String("error", err.Error()), slog.String("host_id", hostID.String()), slog.String("agent_id", currentAgent.ID.String()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to update host monitoring agent")
 		return
 	}
 
 	response := AgentRegistrationSuccessResponse{
-		AgentID: agent.ID,
+		AgentID: currentAgent.ID,
 		HostID:  hostID,
 		Version: version,
 	}

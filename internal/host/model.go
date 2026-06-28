@@ -8,7 +8,6 @@ import (
 )
 
 type HostID uuid.UUID
-type HostNoteID uuid.UUID
 
 func NewHostID() HostID {
 	id := uuid.New()
@@ -65,15 +64,6 @@ type HostManagementMethod struct {
 	Description string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-}
-
-type HostNote struct {
-	ID        uuid.UUID
-	HostID    uuid.UUID
-	Title     string
-	Body      string
-	CreatedAt time.Time
-	UpdatedAt time.Time
 }
 
 type HostSystemInfo struct {
