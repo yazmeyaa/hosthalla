@@ -46,23 +46,6 @@ func newDBCommand() *cliapp.Command {
 	}
 }
 
-func newDatabaseAliasCommand() *cliapp.Command {
-	return &cliapp.Command{
-		Name:  "database",
-		Usage: "hosthalla [--config <file>] database up",
-		Short: "Legacy alias for db commands.",
-		Children: []*cliapp.Command{
-			{
-				Name:        "up",
-				Usage:       "hosthalla [--config <file>] database up",
-				Short:       "Legacy alias for db migrate.",
-				NeedsConfig: true,
-				Run:         runDBMigrate,
-			},
-		},
-	}
-}
-
 func newDBMigrateCommand(usage string) *cliapp.Command {
 	return &cliapp.Command{
 		Name:        "migrate",

@@ -26,21 +26,6 @@ builds:
       - -X github.com/yazmeyaa/hosthalla/internal/version.Commit={{ .Commit }}
       - -X github.com/yazmeyaa/hosthalla/internal/version.BuildAt={{ .Date }}
 
-  - id: hosthalla-cli
-    main: ./cmd/cli
-    binary: hosthalla-cli
-
-    goos:
-      - linux
-      - windows
-      - darwin
-
-    goarch:
-      - amd64
-      - arm64
-
-    ldflags: *ldflags
-
 archives:
   - formats: [tar.gz]
 

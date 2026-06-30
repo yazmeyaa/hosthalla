@@ -13,7 +13,6 @@ type RunFunc func(ctx context.Context, env *Env, args []string) error
 
 type Command struct {
 	Name        string
-	Aliases     []string
 	Usage       string
 	Short       string
 	Children    []*Command
@@ -38,11 +37,6 @@ func (c *Command) matches(name string) bool {
 	}
 	if c.Name == name {
 		return true
-	}
-	for _, alias := range c.Aliases {
-		if alias == name {
-			return true
-		}
 	}
 	return false
 }

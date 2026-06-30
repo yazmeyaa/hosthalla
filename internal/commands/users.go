@@ -47,17 +47,6 @@ func newUsersCommand() *cliapp.Command {
 	}
 }
 
-func newCreateUserAliasCommand() *cliapp.Command {
-	return &cliapp.Command{
-		Name:        "create-user",
-		Usage:       "hosthalla [--config <file>] create-user <username> <password>",
-		Short:       "Legacy alias for users create.",
-		NeedsConfig: true,
-		NeedsDB:     true,
-		Run:         runUsersCreate,
-	}
-}
-
 func newUsersCreateCommand(usage string) *cliapp.Command {
 	return &cliapp.Command{
 		Name:        "create",

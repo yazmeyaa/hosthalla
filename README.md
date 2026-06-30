@@ -55,11 +55,11 @@ for bin in hosthalla; do
 done
 ```
 
-## Quick Start (Binaries)
+## Quick Start
 
-### 1. Install binaries
+### 1. Install binary
 
-Run the install script above, or download assets from the latest release and place binaries in your `PATH`.
+Run the install script above, or download the latest release asset and place `hosthalla` in your `PATH`.
 
 ### 2. Generate app config
 
@@ -110,15 +110,16 @@ hosthalla users create <username> <password>
 make build
 ```
 
-Builds binaries locally:
+Builds the binary locally:
 - `dist/hosthalla`
 
 Release binaries include version, commit, and build timestamp via ldflags.
 
 ## CLI Reference
 
-The primary binary (`cmd/hosthalla`) exposes the server, local agent, and
-administration commands through one command tree.
+The `hosthalla` binary exposes the server, local agent, and administration
+commands through one explicit command tree. Legacy command aliases are not
+supported.
 
 ### Help
 
@@ -147,6 +148,13 @@ hosthalla config validate [--path <file>]
 hosthalla users create <username> <password>
 ```
 
+### Database commands
+
+```sh
+# Apply all pending migrations
+hosthalla db migrate
+```
+
 ### Agent commands
 
 ```sh
@@ -160,9 +168,6 @@ hosthalla agent register \
 
 # Start the agent worker (heartbeat + metrics loop)
 hosthalla agent run [--config <file>]
-
-# Apply all pending migrations
-hosthalla db migrate
 ```
 
 Agent config is saved to `~/.hosthalla/agent.yaml` by default.
