@@ -258,7 +258,6 @@ func (h *HostsHandler) PingAllHosts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.logger.Info("ping all hosts request completed", slog.Int("count", len(pageResults)))
 }
 
 func (h *HostsHandler) CreateHostManagementMethod(w http.ResponseWriter, r *http.Request) {

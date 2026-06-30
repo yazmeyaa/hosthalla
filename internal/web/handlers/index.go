@@ -13,19 +13,19 @@ import (
 )
 
 type IndexHandler struct {
-	r host.HostRepository
+	s *host.Service
 	l *slog.Logger
 	a *auth_service.Service
 }
 
-func NewIndexHandler(r host.HostRepository, l *slog.Logger, a *auth_service.Service) *IndexHandler {
-	return &IndexHandler{r, l, a}
+func NewIndexHandler(s *host.Service, l *slog.Logger, a *auth_service.Service) *IndexHandler {
+	return &IndexHandler{s, l, a}
 }
 
 func (h *IndexHandler) Index(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	h.l.Debug("handling index page request")
-	hosts, err := h.r.ListHosts(ctx, host.ListHostsFilter{})
+	hosts, err := h.s.ListHosts(ctx, host.ListHostsFilter{})
 	if err != nil {
 		h.l.Error("failed to list hosts", slog.String("error", err.Error()))
 		http.Error(w, err.Error(), http.StatusInternalServerError)

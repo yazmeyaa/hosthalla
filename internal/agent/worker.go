@@ -8,19 +8,19 @@ import (
 )
 
 type Worker struct {
-	config  *AgentConfig
-	client  *Client
-	service *Service
-	logger  *slog.Logger
+	config       *AgentConfig
+	client       *Client
+	argusService *ArgusService
+	logger       *slog.Logger
 }
 
-func NewWorker(config *AgentConfig, service *Service, logger *slog.Logger) *Worker {
+func NewWorker(config *AgentConfig, argusService *ArgusService, logger *slog.Logger) *Worker {
 	logger = logger.With(slog.String("component", "worker"))
 	return &Worker{
-		config:  config,
-		client:  NewClient(config),
-		service: service,
-		logger:  logger,
+		config:       config,
+		client:       NewClient(config),
+		argusService: argusService,
+		logger:       logger,
 	}
 }
 
@@ -53,7 +53,7 @@ func (w *Worker) sendHeartbeat(ctx context.Context) error {
 }
 
 func (w *Worker) sendMetrics(ctx context.Context) error {
-	metric, err := w.service.GetMetrics(ctx)
+	metric, err := w.argusService.GetMetrics(ctx)
 	if err != nil {
 		return fmt.Errorf("collect metrics: %w", err)
 	}

@@ -12,11 +12,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/yazmeyaa/hosthalla/internal/agent"
 	agent_repository "github.com/yazmeyaa/hosthalla/internal/agent/postgres"
 	"github.com/yazmeyaa/hosthalla/internal/api"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage/postgres"
 	"github.com/yazmeyaa/hosthalla/internal/config"
+	"github.com/yazmeyaa/hosthalla/internal/events"
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	host_repository "github.com/yazmeyaa/hosthalla/internal/host/postgres"
 	app_logger "github.com/yazmeyaa/hosthalla/internal/logger"
@@ -26,6 +28,8 @@ import (
 
 func main() {
 	ctx := context.Background()
+
+	eventBus := events.NewInMemoryEventBus()
 
 	bootstrapLogger := app_logger.NewLogger(app_logger.LoggerParams{
 		Output: os.Stdout,
@@ -77,30 +81,48 @@ func main() {
 		logger.Error("failed to initialize secret cipher", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	sessionRepository := authentication_repository.NewSessionRepository(pool)
+	apiTokenRepository := authentication_repository.NewAPITokenRepository(pool)
+	profileRepository := authentication_repository.NewProfileRepository(pool)
+	passwordAuthenticationRepository := authentication_repository.NewPasswordAuthenticationRepository(pool)
+	agentConfigRepository := agent_repository.NewAgentConfigRepository(pool)
+	agentRepository := agent_repository.NewAgentRepository(pool)
+
 	authService := auth_service.New(auth_service.NewParams{
-		ProfileRepository:                authentication_repository.NewProfileRepository(pool),
-		PasswordAuthenticationRepository: authentication_repository.NewPasswordAuthenticationRepository(pool),
-		SessionRepository:                authentication_repository.NewSessionRepository(pool),
-		APITokenRepository:               authentication_repository.NewAPITokenRepository(pool),
+		ProfileRepository:                profileRepository,
+		PasswordAuthenticationRepository: passwordAuthenticationRepository,
+		SessionRepository:                sessionRepository,
+		APITokenRepository:               apiTokenRepository,
 	})
-	router := web.NewRouter(web.NewRouterParams{
+	hostService := host.NewService(host.NewServiceParams{
 		HostRepository:                 hostRepositories.Host,
 		HostManagementMethodRepository: hostRepositories.HostManagementMethod,
 		HostSystemInfoRepository:       hostRepositories.HostSystemInfo,
 		HostMetricSnapshotRepository:   hostRepositories.HostMetricSnapshot,
 		SecretCipher:                   secretCipher,
-		AuthService:                    authService,
-		SessionRepository:              authentication_repository.NewSessionRepository(pool),
 		Logger:                         logger,
+		EventBus:                       eventBus,
+	})
+	agentService := agent.NewService(agent.NewServiceParams{
+		AgentRepository:       agentRepository,
+		AgentConfigRepository: agentConfigRepository,
+		EventBus:              eventBus,
+		Logger:                logger,
+	})
+	router := web.NewRouter(web.NewRouterParams{
+		HostService:       hostService,
+		AuthService:       authService,
+		SessionRepository: sessionRepository,
+		Logger:            logger,
 	})
 	apiRouter := api.NewRouter(
-		agent_repository.NewAgentRepository(pool),
-		agent_repository.NewAgentConfigRepository(pool),
-		hostRepositories.Host,
-		hostRepositories.HostSystemInfo,
-		hostRepositories.HostMetricSnapshot,
-		authentication_repository.NewAPITokenRepository(pool),
-		logger,
+		api.RouterParams{
+			AgentService:       agentService,
+			HostService:        hostService,
+			APITokenRepository: apiTokenRepository,
+			Logger:             logger,
+		},
 	)
 	rootRouter := http.NewServeMux()
 	rootRouter.Handle("/api/v1/", http.StripPrefix("/api/v1", apiRouter))
@@ -146,4 +168,5 @@ func main() {
 	}
 
 	logger.Info("web server stopped gracefully")
+	os.Exit(0)
 }

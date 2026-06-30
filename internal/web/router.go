@@ -13,28 +13,16 @@ import (
 )
 
 type NewRouterParams struct {
-	HostRepository                 host.HostRepository
-	HostManagementMethodRepository host.HostManagementMethodRepository
-	HostSystemInfoRepository       host.HostSystemInfoRepository
-	HostMetricSnapshotRepository   host.HostMetricSnapshotRepository
-	SecretCipher                   host.SecretCipher
-	SessionRepository              authentication_repository.SessionRepository
-	AuthService                    *auth_service.Service
-	Logger                         *slog.Logger
+	HostService       *host.Service
+	SessionRepository authentication_repository.SessionRepository
+	AuthService       *auth_service.Service
+	Logger            *slog.Logger
 }
 
 func NewRouter(params NewRouterParams) http.Handler {
-	hostService := host.New(
-		params.HostRepository,
-		params.HostManagementMethodRepository,
-		params.HostSystemInfoRepository,
-		params.HostMetricSnapshotRepository,
-		params.SecretCipher,
-		params.Logger,
-	)
-	indexHandler := handlers.NewIndexHandler(params.HostRepository, params.Logger, params.AuthService)
+	indexHandler := handlers.NewIndexHandler(params.HostService, params.Logger, params.AuthService)
 	authHandler := handlers.NewAuthHandler(params.Logger, params.AuthService)
-	hostHandler := handlers.NewHostsHandler(hostService, params.AuthService, params.Logger)
+	hostHandler := handlers.NewHostsHandler(params.HostService, params.AuthService, params.Logger)
 	administrationHandler := handlers.NewAdministrationHandler(params.AuthService, params.Logger)
 
 	mux := http.NewServeMux()
