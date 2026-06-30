@@ -62,6 +62,10 @@ func main() {
 	logger.Info("web logger configured", slog.String("log_level", cfg.LogLevel))
 
 	pool, err := pgxpool.New(ctx, cfg.Database.ConnectionString())
+	if err := pool.Ping(ctx); err != nil {
+		logger.Error("failed to ping database", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 
 	if err != nil {
 		logger.Error("failed to connect to database", slog.String("error", err.Error()))

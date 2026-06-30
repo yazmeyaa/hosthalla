@@ -81,6 +81,10 @@ func main() {
 		logger.Error("failed to connect to database", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+	if err := pool.Ping(context.Background()); err != nil {
+		logger.Error("failed to ping database", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 	defer pool.Close()
 	logger.Info("database connection pool initialized")
 
