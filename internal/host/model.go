@@ -7,16 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type HostID uuid.UUID
-
-func NewHostID() HostID {
-	id := uuid.New()
-	return HostID(id)
-}
-func (id HostID) String() string {
-	return uuid.UUID(id).String()
-}
-
 type Host struct {
 	ID          uuid.UUID
 	Name        string
@@ -39,7 +29,7 @@ type Tag struct {
 
 type SSHPasswordCredential struct {
 	ID        uuid.UUID
-	HostID    HostID
+	HostID    uuid.UUID
 	User      string
 	Port      uint16
 	Password  string
@@ -56,7 +46,7 @@ const (
 
 type HostManagementMethod struct {
 	ID          uuid.UUID
-	HostID      HostID
+	HostID      uuid.UUID
 	Type        HostManagementMethodType
 	Username    string
 	Port        uint16
@@ -96,7 +86,7 @@ type CPUSystemInfo struct {
 }
 
 type HostMetricSnapshot struct {
-	HostID    HostID
+	HostID    uuid.UUID
 	Timestamp time.Time
 	Metrics   []HostMetric
 }

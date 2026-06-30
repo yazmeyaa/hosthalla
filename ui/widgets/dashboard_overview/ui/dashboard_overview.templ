@@ -1,0 +1,55 @@
+package dashboard_overview_ui
+
+import (
+	"strconv"
+
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
+)
+
+type DashboardOverviewProps struct {
+	TotalHosts          int
+	ReportingHosts      int
+	StaleHosts          int
+	WaitingHosts        int
+	MonitoredHosts      int
+	SystemInfoHosts     int
+	ManagementMethods   int
+	LatestMetricAtLabel string
+}
+
+templ DashboardOverview(props DashboardOverviewProps) {
+	<section class={ dashboard_overview() }>
+		@metricCard("Hosts", props.TotalHosts, "Registered inventory")
+		@metricCard("Reporting", props.ReportingHosts, "Fresh metrics")
+		@metricCard("Stale", props.StaleHosts, "Older than 2 minutes")
+		@metricCard("Waiting", props.WaitingHosts, "No metric snapshot")
+		@metricCard("Agents", props.MonitoredHosts, "Monitoring assigned")
+		@metricCard("Systems", props.SystemInfoHosts, "Hardware profile")
+		@metricCard("Access", props.ManagementMethods, "Management methods")
+		@textMetricCard("Latest metric", props.LatestMetricAtLabel, "Most recent snapshot")
+	</section>
+}
+
+templ metricCard(label string, value int, hint string) {
+	<div class={ dashboard_overview_card() }>
+		@card.Card() {
+			<span class={ dashboard_overview_label() }>{ label }</span>
+			<strong class={ dashboard_overview_value() }>{ formatInt(value) }</strong>
+			<span class={ dashboard_overview_hint() }>{ hint }</span>
+		}
+	</div>
+}
+
+templ textMetricCard(label string, value string, hint string) {
+	<div class={ dashboard_overview_card() }>
+		@card.Card() {
+			<span class={ dashboard_overview_label() }>{ label }</span>
+			<strong class={ dashboard_overview_value_text() }>{ value }</strong>
+			<span class={ dashboard_overview_hint() }>{ hint }</span>
+		}
+	</div>
+}
+
+func formatInt(value int) string {
+	return strconv.Itoa(value)
+}

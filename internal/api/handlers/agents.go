@@ -14,23 +14,24 @@ import (
 )
 
 type AgentsHandler struct {
-	agentRepository       agent.Repository
-	agentConfigRepository agent.AgentConfigRepository
-	hostMetricRepository  host.HostMetricSnapshotRepository
-	logger                *slog.Logger
+	agentService *agent.Service
+	hostService  *host.Service
+	logger       *slog.Logger
+}
+
+type AgentsHandlerParams struct {
+	AgentService *agent.Service
+	HostService  *host.Service
+	Logger       *slog.Logger
 }
 
 func NewAgentsHandler(
-	agentRepository agent.Repository,
-	agentConfigRepository agent.AgentConfigRepository,
-	hostMetricRepository host.HostMetricSnapshotRepository,
-	logger *slog.Logger,
+	params AgentsHandlerParams,
 ) *AgentsHandler {
 	return &AgentsHandler{
-		agentRepository:       agentRepository,
-		agentConfigRepository: agentConfigRepository,
-		hostMetricRepository:  hostMetricRepository,
-		logger:                logger,
+		agentService: params.AgentService,
+		hostService:  params.HostService,
+		logger:       params.Logger,
 	}
 }
 
@@ -58,7 +59,7 @@ func (h *AgentsHandler) HandleHeartbeat(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = h.agentRepository.GetByID(ctx, agentID)
+	currentAgent, err := h.agentService.GetByID(ctx, agentID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "agent not found", http.StatusNotFound)
@@ -69,13 +70,13 @@ func (h *AgentsHandler) HandleHeartbeat(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.agentRepository.UpdateLastSeenAt(ctx, agentID, time.Now()); err != nil {
+	if err := h.agentService.UpdateLastSeenAt(ctx, currentAgent, time.Now()); err != nil {
 		h.logger.Error("failed to update last seen at", slog.String("error", err.Error()))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	config, err := h.agentConfigRepository.GetByAgentID(ctx, agentID)
+	config, err := h.agentService.GetConfigByAgentID(ctx, agentID)
 	if err != nil {
 		h.logger.Error("failed to get agent config", slog.String("error", err.Error()))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -108,7 +109,7 @@ func (h *AgentsHandler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentAgent, err := h.agentRepository.GetByID(ctx, agentID)
+	currentAgent, err := h.agentService.GetByID(ctx, agentID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "agent not found", http.StatusNotFound)
@@ -125,8 +126,8 @@ func (h *AgentsHandler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.hostMetricRepository.CreateHostMetricSnapshot(ctx, host.HostMetricSnapshot{
-		HostID:    host.HostID(currentAgent.HostID),
+	_, err = h.hostService.CreateHostMetricSnapshot(ctx, host.HostMetricSnapshot{
+		HostID:    currentAgent.HostID,
 		Timestamp: time.Now().UTC(),
 		Metrics:   []host.HostMetric{metric},
 	})
@@ -152,7 +153,7 @@ func (h *AgentsHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to parse agent_id", http.StatusBadRequest)
 		return
 	}
-	if _, err := h.agentRepository.GetByID(ctx, agentID); err != nil {
+	if _, err := h.agentService.GetByID(ctx, agentID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "agent not found", http.StatusNotFound)
 			return
@@ -162,7 +163,7 @@ func (h *AgentsHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config, err := h.agentConfigRepository.GetByAgentID(ctx, agentID)
+	config, err := h.agentService.GetConfigByAgentID(ctx, agentID)
 	if err != nil {
 		h.logger.Error("failed to get agent config", slog.String("error", err.Error()))
 		http.Error(w, "internal server error", http.StatusInternalServerError)

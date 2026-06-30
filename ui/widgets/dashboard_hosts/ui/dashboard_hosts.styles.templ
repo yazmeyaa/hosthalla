@@ -1,0 +1,116 @@
+package dashboard_hosts_ui
+
+css dashboard_hosts() {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+css dashboard_hosts_header() {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+	padding-inline: 12px;
+}
+
+css dashboard_hosts_title() {
+	margin: 0;
+	font-size: 1.05rem;
+	line-height: 1.25;
+}
+
+css dashboard_hosts_count() {
+	color: var(--muted);
+	font-size: 0.84rem;
+}
+
+css dashboard_hosts_empty() {
+	margin: 0;
+	color: var(--muted);
+}
+
+css dashboard_hosts_list() {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	gap: 12px;
+}
+
+css dashboard_hosts_item() {
+	min-width: 0;
+	display: grid;
+}
+
+css dashboard_hosts_item_header() {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+css dashboard_hosts_identity() {
+	min-width: 0;
+}
+
+css dashboard_hosts_name() {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.25;
+	overflow-wrap: anywhere;
+}
+
+css dashboard_hosts_ip() {
+	margin: 4px 0 0;
+	color: var(--muted);
+	font-size: 0.84rem;
+}
+
+css dashboard_hosts_meta() {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 12px;
+	margin-top: 10px;
+	color: var(--muted);
+	font-size: 0.82rem;
+}
+
+css dashboard_hosts_metrics() {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px;
+	margin: 12px 0 0;
+	padding: 0;
+}
+
+css dashboard_hosts_metric() {
+	min-width: 0;
+	padding: 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--surface-overlay-muted);
+}
+
+css dashboard_hosts_metric_label() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.78rem;
+	line-height: 1.3;
+}
+
+css dashboard_hosts_metric_value() {
+	margin: 4px 0 0;
+	color: var(--text);
+	font-size: 0.84rem;
+	line-height: 1.35;
+	overflow-wrap: anywhere;
+}
+
+css dashboard_hosts_tags() {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 7px;
+	margin-top: 12px;
+}

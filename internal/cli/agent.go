@@ -135,8 +135,8 @@ func processAgentRunCommand(args []string) {
 	})
 	logger.Info("starting agent worker", "version", version.VersionString(), "config_path", *configPath)
 
-	service := agent.NewService(cfg, logger)
-	worker := agent.NewWorker(cfg, service, logger)
+	argusService := agent.NewArgusService(cfg, logger)
+	worker := agent.NewWorker(cfg, argusService, logger)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

@@ -1,0 +1,41 @@
+package dashboard_overview_ui
+
+css dashboard_overview() {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 12px;
+}
+
+css dashboard_overview_card() {
+	min-width: 0;
+	display: grid;
+}
+
+css dashboard_overview_label() {
+	display: block;
+	color: var(--muted);
+	font-size: 0.8rem;
+	line-height: 1.3;
+}
+
+css dashboard_overview_value() {
+	display: block;
+	margin-top: 7px;
+	font-size: 1.55rem;
+	line-height: 1;
+}
+
+css dashboard_overview_value_text() {
+	display: block;
+	margin-top: 8px;
+	font-size: 1rem;
+	line-height: 1.2;
+}
+
+css dashboard_overview_hint() {
+	display: block;
+	margin-top: 8px;
+	color: var(--muted);
+	font-size: 0.78rem;
+	line-height: 1.3;
+}

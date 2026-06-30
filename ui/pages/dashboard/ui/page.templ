@@ -1,0 +1,64 @@
+package dashboard_ui
+
+import (
+	"github.com/yazmeyaa/hosthalla/ui/app/layout"
+	dashboard_hosts "github.com/yazmeyaa/hosthalla/ui/widgets/dashboard_hosts"
+	dashboard_overview "github.com/yazmeyaa/hosthalla/ui/widgets/dashboard_overview"
+)
+
+type DashboardData struct {
+	GeneratedAtLabel string
+	Summary          DashboardSummary
+	Hosts            []DashboardHostRow
+}
+
+type DashboardSummary struct {
+	TotalHosts          int
+	ReportingHosts      int
+	StaleHosts          int
+	WaitingHosts        int
+	MonitoredHosts      int
+	SystemInfoHosts     int
+	ManagementMethods   int
+	LatestMetricAtLabel string
+}
+
+type DashboardHostRow = dashboard_hosts.HostRow
+
+type DashboardPageProps struct {
+	Data            DashboardData
+	AuthLayoutProps layout.AuthenticatedLayoutProps
+}
+
+templ DashboardPage(props DashboardPageProps) {
+	@layout.AuthenticatedLayout(props.AuthLayoutProps) {
+		@DashboardPageContent(props)
+	}
+}
+
+templ DashboardPageContent(props DashboardPageProps) {
+	<div class={ dashboard_page_shell() }>
+		<header class={ dashboard_page_header() }>
+			<div class={ dashboard_page_heading() }>
+				<h1 class={ dashboard_page_title() }>Dashboard</h1>
+				<p class={ dashboard_page_meta() }>Cached snapshot generated at { props.Data.GeneratedAtLabel }</p>
+			</div>
+			<a class={ dashboard_page_refresh_link() } href="/dashboard">Refresh</a>
+		</header>
+
+		@dashboard_overview.DashboardOverview(dashboard_overview.DashboardOverviewProps{
+			TotalHosts: props.Data.Summary.TotalHosts,
+			ReportingHosts: props.Data.Summary.ReportingHosts,
+			StaleHosts: props.Data.Summary.StaleHosts,
+			WaitingHosts: props.Data.Summary.WaitingHosts,
+			MonitoredHosts: props.Data.Summary.MonitoredHosts,
+			SystemInfoHosts: props.Data.Summary.SystemInfoHosts,
+			ManagementMethods: props.Data.Summary.ManagementMethods,
+			LatestMetricAtLabel: props.Data.Summary.LatestMetricAtLabel,
+		})
+
+		@dashboard_hosts.DashboardHosts(dashboard_hosts.DashboardHostsProps{
+			Hosts: props.Data.Hosts,
+		})
+	</div>
+}

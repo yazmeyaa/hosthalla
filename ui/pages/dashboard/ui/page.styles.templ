@@ -1,0 +1,47 @@
+package dashboard_ui
+
+css dashboard_page_shell() {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+css dashboard_page_header() {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding-inline: 12px;
+}
+
+css dashboard_page_heading() {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+css dashboard_page_title() {
+	margin: 0;
+}
+
+css dashboard_page_meta() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.86rem;
+}
+
+css dashboard_page_refresh_link() {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 34px;
+	padding: 0.45rem 0.7rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	color: var(--text);
+	background: transparent;
+	text-decoration: none;
+	font-size: 0.9rem;
+	font-weight: 600;
+	transition: background-color 150ms ease, border-color 150ms ease, transform 120ms ease;
+}

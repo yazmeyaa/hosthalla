@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/yazmeyaa/hosthalla/internal/events"
 )
 
 type PingResult struct {
@@ -30,23 +31,35 @@ type Service struct {
 	hostMetricSnapshotRepository   HostMetricSnapshotRepository
 	secretCipher                   SecretCipher
 	logger                         *slog.Logger
+	eventBus                       events.EventBus
 }
 
-func New(
-	hostRepository HostRepository,
-	hostManagementMethodRepository HostManagementMethodRepository,
-	hostSystemInfoRepository HostSystemInfoRepository,
-	hostMetricSnapshotRepository HostMetricSnapshotRepository,
-	secretCipher SecretCipher,
-	logger *slog.Logger,
+type NewServiceParams struct {
+	HostRepository                 HostRepository
+	HostManagementMethodRepository HostManagementMethodRepository
+	HostSystemInfoRepository       HostSystemInfoRepository
+	HostMetricSnapshotRepository   HostMetricSnapshotRepository
+	SecretCipher                   SecretCipher
+	Logger                         *slog.Logger
+	EventBus                       events.EventBus
+}
+
+func NewService(
+	params NewServiceParams,
 ) *Service {
+	eventBus := params.EventBus
+	if eventBus == nil {
+		eventBus = events.NewInMemoryEventBus()
+	}
+
 	return &Service{
-		hostRepository:                 hostRepository,
-		hostManagementMethodRepository: hostManagementMethodRepository,
-		hostSystemInfoRepository:       hostSystemInfoRepository,
-		hostMetricSnapshotRepository:   hostMetricSnapshotRepository,
-		secretCipher:                   secretCipher,
-		logger:                         logger,
+		hostRepository:                 params.HostRepository,
+		hostManagementMethodRepository: params.HostManagementMethodRepository,
+		hostSystemInfoRepository:       params.HostSystemInfoRepository,
+		hostMetricSnapshotRepository:   params.HostMetricSnapshotRepository,
+		secretCipher:                   params.SecretCipher,
+		logger:                         params.Logger,
+		eventBus:                       eventBus,
 	}
 }
 
@@ -89,6 +102,9 @@ func (s *Service) CreateHost(ctx context.Context, data CreateHostDTO) (Host, err
 		return Host{}, err
 	}
 	s.logger.Info("host created", slog.String("host_id", createdHost.ID.String()), slog.String("name", createdHost.Name))
+	if err := s.eventBus.Publish(ctx, CreateHostEvent{Host: createdHost}); err != nil {
+		s.logger.Error("failed to publish host created event", slog.String("host_id", createdHost.ID.String()), slog.String("error", err.Error()))
+	}
 	return createdHost, nil
 }
 
@@ -99,6 +115,24 @@ func (s *Service) UpdateHost(ctx context.Context, target *Host) error {
 		return err
 	}
 	s.logger.Info("host updated", slog.String("host_id", target.ID.String()), slog.String("name", target.Name))
+	if err := s.eventBus.Publish(ctx, UpdateHostEvent{Host: *target}); err != nil {
+		s.logger.Error("failed to publish host updated event", slog.String("host_id", target.ID.String()), slog.String("error", err.Error()))
+	}
+	return nil
+}
+
+func (s *Service) AssignMonitoringAgent(ctx context.Context, hostID uuid.UUID, agentID uuid.UUID) error {
+	targetHost, err := s.GetHostByID(ctx, hostID)
+	if err != nil {
+		return err
+	}
+	targetHost.MonitoringAgentID = agentID
+	if err := s.UpdateHost(ctx, &targetHost); err != nil {
+		return err
+	}
+	if err := s.eventBus.Publish(ctx, HostMonitoringAgentAssignedEvent{HostID: hostID, AgentID: agentID}); err != nil {
+		s.logger.Error("failed to publish host monitoring agent assigned event", slog.String("host_id", hostID.String()), slog.String("agent_id", agentID.String()), slog.String("error", err.Error()))
+	}
 	return nil
 }
 
@@ -108,6 +142,9 @@ func (s *Service) DeleteHost(ctx context.Context, hostID uuid.UUID) error {
 		return err
 	}
 	s.logger.Warn("host deleted", slog.String("host_id", hostID.String()))
+	if err := s.eventBus.Publish(ctx, DeleteHostEvent{HostID: hostID}); err != nil {
+		s.logger.Error("failed to publish host deleted event", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
+	}
 	return nil
 }
 
@@ -165,6 +202,9 @@ func (s *Service) UpsertHostSystemInfo(ctx context.Context, data HostSystemInfo)
 		return HostSystemInfo{}, err
 	}
 	s.logger.Info("host system info upserted", slog.String("host_id", data.HostID.String()))
+	if err := s.eventBus.Publish(ctx, HostSystemInfoUpdatedEvent{HostID: data.HostID, Info: systemInfo}); err != nil {
+		s.logger.Error("failed to publish host system info updated event", slog.String("host_id", data.HostID.String()), slog.String("error", err.Error()))
+	}
 	return systemInfo, nil
 }
 
@@ -194,6 +234,14 @@ func (s *Service) CreateHostMetricSnapshot(ctx context.Context, data HostMetricS
 		return HostMetricSnapshot{}, err
 	}
 	s.logger.Info("host metric snapshot created", slog.String("host_id", data.HostID.String()), slog.String("timestamp", createdSnapshot.Timestamp.Format(time.RFC3339)))
+	for _, metric := range createdSnapshot.Metrics {
+		if err := s.eventBus.Publish(ctx, HostMetricReceivedEvent{HostID: data.HostID, Metric: metric}); err != nil {
+			s.logger.Error("failed to publish host metric received event", slog.String("host_id", data.HostID.String()), slog.String("error", err.Error()))
+		}
+	}
+	if err := s.eventBus.Publish(ctx, HostMetricSnapshotCreatedEvent{HostID: data.HostID, Snapshot: createdSnapshot}); err != nil {
+		s.logger.Error("failed to publish host metric snapshot created event", slog.String("host_id", data.HostID.String()), slog.String("error", err.Error()))
+	}
 	return createdSnapshot, nil
 }
 
@@ -233,6 +281,7 @@ func (s *Service) CreateSSHPasswordManagementMethod(ctx context.Context, hostID 
 		return HostManagementMethod{}, err
 	}
 	s.logger.Info("created ssh password method", slog.String("host_id", hostID.String()), slog.String("method_id", method.ID.String()), slog.String("username", username))
+	s.publishHostManagementMethodCreated(ctx, hostID, method)
 	return method, nil
 }
 
@@ -291,6 +340,7 @@ func (s *Service) CreateSSHKeyManagementMethod(ctx context.Context, hostID uuid.
 		return HostManagementMethod{}, err
 	}
 	s.logger.Info("created ssh key method", slog.String("host_id", hostID.String()), slog.String("method_id", method.ID.String()), slog.String("username", username))
+	s.publishHostManagementMethodCreated(ctx, hostID, method)
 	return method, nil
 }
 
@@ -310,6 +360,9 @@ func (s *Service) PingHost(ctx context.Context, hostID uuid.UUID) (PingResult, e
 		s.logger.Info("host is reachable", slog.String("host_id", hostID.String()), slog.Int64("duration_ms", result.Duration.Milliseconds()))
 	} else {
 		s.logger.Warn("host is unreachable", slog.String("host_id", hostID.String()), slog.String("reason", result.ErrorMessage))
+	}
+	if err := s.eventBus.Publish(ctx, HostPingCompletedEvent{Result: result}); err != nil {
+		s.logger.Error("failed to publish host ping completed event", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
 	}
 	return result, nil
 }
@@ -331,8 +384,18 @@ func (s *Service) PingAllHosts(ctx context.Context) ([]PingResult, error) {
 		results = append(results, result)
 	}
 	s.logger.Info("completed ping all hosts", slog.Int("total", len(results)))
+	if err := s.eventBus.Publish(ctx, HostsPingCompletedEvent{Results: results}); err != nil {
+		s.logger.Error("failed to publish hosts ping completed event", slog.String("error", err.Error()))
+	}
 
 	return results, nil
+}
+
+func (s *Service) publishHostManagementMethodCreated(ctx context.Context, hostID uuid.UUID, method HostManagementMethod) {
+	method.Secret = nil
+	if err := s.eventBus.Publish(ctx, HostManagementMethodCreatedEvent{HostID: hostID, Method: method}); err != nil {
+		s.logger.Error("failed to publish host management method created event", slog.String("host_id", hostID.String()), slog.String("method_id", method.ID.String()), slog.String("error", err.Error()))
+	}
 }
 
 func (s *Service) pingHost(ctx context.Context, targetHost Host) (PingResult, error) {
