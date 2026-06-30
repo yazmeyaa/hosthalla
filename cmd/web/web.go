@@ -115,6 +115,7 @@ func main() {
 		AuthService:       authService,
 		SessionRepository: sessionRepository,
 		Logger:            logger,
+		EventBus:          eventBus,
 	})
 	apiRouter := api.NewRouter(
 		api.RouterParams{

@@ -1,0 +1,105 @@
+package dashboard_hosts_ui
+
+import (
+	"strconv"
+
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
+)
+
+type HostRow struct {
+	Name                  string
+	IP                    string
+	Tags                  []string
+	ManagementMethodCount int
+	HasMonitoringAgent    bool
+	Status                string
+	StatusLabel           string
+	StatusVariant         string
+	LastMetricLabel       string
+	CPUUsageLabel         string
+	MemoryUsageLabel      string
+	DiskUsageLabel        string
+	NetworkUsageLabel     string
+	SystemLabel           string
+}
+
+type DashboardHostsProps struct {
+	Hosts []HostRow
+}
+
+templ DashboardHosts(props DashboardHostsProps) {
+	<section class={ dashboard_hosts() }>
+		<div class={ dashboard_hosts_header() }>
+			<h2 class={ dashboard_hosts_title() }>Host status</h2>
+			<span class={ dashboard_hosts_count() }>{ formatCount(len(props.Hosts), "host") }</span>
+		</div>
+		if len(props.Hosts) == 0 {
+			@card.Card() {
+				<p class={ dashboard_hosts_empty() }>No hosts registered yet.</p>
+			}
+		} else {
+			<ul class={ dashboard_hosts_list() }>
+				for _, host := range props.Hosts {
+					<li class={ dashboard_hosts_item() }>
+						@card.Card() {
+							<div class={ dashboard_hosts_item_header() }>
+								<div class={ dashboard_hosts_identity() }>
+									<h3 class={ dashboard_hosts_name() }>{ host.Name }</h3>
+									<p class={ dashboard_hosts_ip() }>{ host.IP }</p>
+								</div>
+								@badge.Badge(badge.BadgeProps{Variant: host.StatusVariant}) {
+									{ host.StatusLabel }
+								}
+							</div>
+							<div class={ dashboard_hosts_meta() }>
+								<span>{ host.SystemLabel }</span>
+								<span>{ host.LastMetricLabel }</span>
+							</div>
+							<dl class={ dashboard_hosts_metrics() }>
+								<div class={ dashboard_hosts_metric() }>
+									<dt class={ dashboard_hosts_metric_label() }>CPU</dt>
+									<dd class={ dashboard_hosts_metric_value() }>{ host.CPUUsageLabel }</dd>
+								</div>
+								<div class={ dashboard_hosts_metric() }>
+									<dt class={ dashboard_hosts_metric_label() }>Memory</dt>
+									<dd class={ dashboard_hosts_metric_value() }>{ host.MemoryUsageLabel }</dd>
+								</div>
+								<div class={ dashboard_hosts_metric() }>
+									<dt class={ dashboard_hosts_metric_label() }>Disk</dt>
+									<dd class={ dashboard_hosts_metric_value() }>{ host.DiskUsageLabel }</dd>
+								</div>
+								<div class={ dashboard_hosts_metric() }>
+									<dt class={ dashboard_hosts_metric_label() }>Network</dt>
+									<dd class={ dashboard_hosts_metric_value() }>{ host.NetworkUsageLabel }</dd>
+								</div>
+							</dl>
+							<div class={ dashboard_hosts_tags() }>
+								if host.HasMonitoringAgent {
+									@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+										Agent assigned
+									}
+								}
+								@badge.Badge(badge.BadgeProps{Variant: "neutral"}) {
+									{ formatCount(host.ManagementMethodCount, "method") }
+								}
+								for _, tag := range host.Tags {
+									@badge.Badge(badge.BadgeProps{Variant: "neutral"}) {
+										{ "#" + tag }
+									}
+								}
+							</div>
+						}
+					</li>
+				}
+			</ul>
+		}
+	</section>
+}
+
+func formatCount(value int, noun string) string {
+	if value == 1 {
+		return "1 " + noun
+	}
+	return strconv.Itoa(value) + " " + noun + "s"
+}

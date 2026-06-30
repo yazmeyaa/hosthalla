@@ -24,7 +24,7 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 					hx-push-url="true"
 				>
 					<ul class={ authenticated_nav_list() }>
-						<li><a class={ authenticated_nav_link() } href="/">Home</a></li>
+						<li><a class={ authenticated_nav_link() } href="/dashboard">Dashboard</a></li>
 						<li><a class={ authenticated_nav_link() } href="/hosts">Hosts</a></li>
 						<li><a class={ authenticated_nav_link() } href="/administration">Administration</a></li>
 					</ul>

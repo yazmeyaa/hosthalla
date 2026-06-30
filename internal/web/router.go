@@ -6,6 +6,7 @@ import (
 
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage"
+	"github.com/yazmeyaa/hosthalla/internal/events"
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/handlers"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
@@ -17,6 +18,7 @@ type NewRouterParams struct {
 	SessionRepository authentication_repository.SessionRepository
 	AuthService       *auth_service.Service
 	Logger            *slog.Logger
+	EventBus          events.EventBus
 }
 
 func NewRouter(params NewRouterParams) http.Handler {
@@ -24,13 +26,23 @@ func NewRouter(params NewRouterParams) http.Handler {
 	authHandler := handlers.NewAuthHandler(params.Logger, params.AuthService)
 	hostHandler := handlers.NewHostsHandler(params.HostService, params.AuthService, params.Logger)
 	administrationHandler := handlers.NewAdministrationHandler(params.AuthService, params.Logger)
+	dashboardHandler := handlers.NewDashboardHandler(handlers.DashboardHandlerParams{
+		Logger:         params.Logger,
+		HostService:    params.HostService,
+		ProfileService: params.AuthService,
+		EventBus:       params.EventBus,
+	})
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(ui_assets.Files))))
+
 	mux.Handle("GET /", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(indexHandler.Index)))
+	mux.Handle("GET /dashboard", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(dashboardHandler.Dashboard)))
+
 	mux.HandleFunc("GET /auth", authHandler.Auth)
 	mux.HandleFunc("POST /auth/login", authHandler.Login)
 	mux.Handle("POST /auth/logout", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(authHandler.Logout)))
+
 	mux.Handle("GET /hosts", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.ListHosts)))
 	mux.Handle("POST /hosts/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateHost)))
 	mux.Handle("POST /hosts/{id}/update", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.UpdateHost)))
@@ -39,10 +51,13 @@ func NewRouter(params NewRouterParams) http.Handler {
 	mux.Handle("POST /hosts/{id}/management-methods/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateHostManagementMethod)))
 	mux.Handle("POST /hosts/{id}/agent/register-command", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateAgentRegisterCommand)))
 	mux.Handle("POST /hosts/ping-all", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.PingAllHosts)))
+
 	mux.Handle("GET /administration", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.Administration)))
 	mux.Handle("POST /administration/api-tokens/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.CreateAPIToken)))
 	mux.Handle("POST /administration/api-tokens/{id}/revoke", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.RevokeAPIToken)))
 
 	csrfProtection := http.NewCrossOriginProtection()
-	return csrfProtection.Handler(middlewares.RequestLoggingMiddleware(params.Logger, mux))
+	protectedRoutes := csrfProtection.Handler(middlewares.RequestLoggingMiddleware(params.Logger, mux))
+
+	return protectedRoutes
 }
