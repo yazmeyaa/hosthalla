@@ -8,7 +8,7 @@ before:
 
 builds:
   - id: hosthalla
-    main: ./cmd/web
+    main: ./cmd/hosthalla
     binary: hosthalla
 
     goos:

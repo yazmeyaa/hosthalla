@@ -7,8 +7,7 @@ DATABASE_URL := postgres://hosthalla:hosthalla@localhost:5432/hosthalla?sslmode=
 DATABASE_URL_DOCKER := postgres://hosthalla:hosthalla@postgres:5432/hosthalla?sslmode=disable
 MIGRATE_IMAGE := migrate/migrate:v4.18.2
 DIST_DIR := dist
-WEB_BINARY := $(DIST_DIR)/hosthalla-web
-CLI_BINARY := $(DIST_DIR)/hosthalla-cli
+HOSTHALLA_BINARY := $(DIST_DIR)/hosthalla
 
 VERSION_VERSION := $(shell git describe --tags --always --dirty)
 VERSION_COMMIT := $(shell git rev-parse --short HEAD)
@@ -23,7 +22,7 @@ LDFLAGS_BUILD := -ldflags "-s -w $(VERSION_LDFLAGS)"
 
 .DEFAULT_GOAL := help
 
-.PHONY: help dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down templ-generate build build-cli build-web dev-run-web dev-web
+.PHONY: help dev dev-up dev-down dev-logs dev-ps dev-reset migrate-up migrate-down templ-generate build build-hosthalla dev-run-web dev-web
 
 # Start dev infrastructure and wait until services are healthy.
 dev: dev-up ## Start development infrastructure.
@@ -71,26 +70,19 @@ migrate-down: dev-up ## Roll back one migration in docker network.
 templ-generate: ## Regenerate templ views.
 	go tool templ generate
 
-build: build-cli build-web ## Build both CLI and WEB binaries locally.
+build: build-hosthalla ## Build binary locally.
 
-build-cli: ## Build CLI binary from cmd/cli.
+build-hosthalla: templ-generate ## Build unified Hosthalla binary from cmd/hosthalla.
 	mkdir -p $(DIST_DIR)
 	go build \
 	$(LDFLAGS_BUILD) \
-		-o $(CLI_BINARY) \
-		./cmd/cli
-
-build-web: templ-generate ## Build WEB binary from cmd/web.
-	mkdir -p $(DIST_DIR)
-	go build \
-	$(LDFLAGS_BUILD) \
-		-o $(WEB_BINARY) \
-		./cmd/web
+		-o $(HOSTHALLA_BINARY) \
+		./cmd/hosthalla
 
 dev-run-web: ## Run web server locally from source.
 	go run \
 	$(LDFLAGS) \
-		./cmd/web
+		./cmd/hosthalla serve
 
 
 dev-web: templ-generate dev-run-web ## Regenerate templates and run web server.

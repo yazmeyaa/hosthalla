@@ -1,9 +1,8 @@
-package main
+package web
 
 import (
 	"context"
 	"errors"
-	"flag"
 	"log/slog"
 	"net/http"
 	"os"
@@ -23,12 +22,13 @@ import (
 	host_repository "github.com/yazmeyaa/hosthalla/internal/host/postgres"
 	app_logger "github.com/yazmeyaa/hosthalla/internal/logger"
 	"github.com/yazmeyaa/hosthalla/internal/version"
-	"github.com/yazmeyaa/hosthalla/internal/web"
 )
 
-func main() {
-	ctx := context.Background()
+type RunParams struct {
+	ConfigPath string
+}
 
+func Run(ctx context.Context, params RunParams) error {
 	eventBus := events.NewInMemoryEventBus()
 
 	bootstrapLogger := app_logger.NewLogger(app_logger.LoggerParams{
@@ -36,23 +36,21 @@ func main() {
 		Level:  slog.LevelWarn,
 	})
 
-	flags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	configPath := flags.String("config", config.DefaultConfigPath, "path to config file")
-	if err := flags.Parse(os.Args[1:]); err != nil {
-		bootstrapLogger.Error("failed to parse command flags", slog.String("error", err.Error()))
-		os.Exit(1)
+	configPath := params.ConfigPath
+	if configPath == "" {
+		configPath = config.DefaultConfigPath
 	}
 
 	cfg := config.AppConfig{}
-	if err := cfg.LoadFromPath(*configPath); err != nil {
-		bootstrapLogger.Error("failed to load config", slog.String("path", *configPath), slog.String("error", err.Error()))
-		os.Exit(1)
+	if err := cfg.LoadFromPath(configPath); err != nil {
+		bootstrapLogger.Error("failed to load config", slog.String("path", configPath), slog.String("error", err.Error()))
+		return err
 	}
 
 	logLevel, err := cfg.SlogLevel()
 	if err != nil {
 		bootstrapLogger.Error("invalid config value", slog.String("field", "log_level"), slog.String("error", err.Error()))
-		os.Exit(1)
+		return err
 	}
 
 	logger := app_logger.NewLogger(app_logger.LoggerParams{
@@ -62,14 +60,14 @@ func main() {
 	logger.Info("web logger configured", slog.String("log_level", cfg.LogLevel))
 
 	pool, err := pgxpool.New(ctx, cfg.Database.ConnectionString())
-	if err := pool.Ping(ctx); err != nil {
-		logger.Error("failed to ping database", slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-
 	if err != nil {
 		logger.Error("failed to connect to database", slog.String("error", err.Error()))
-		os.Exit(1)
+		return err
+	}
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		logger.Error("failed to ping database", slog.String("error", err.Error()))
+		return err
 	}
 	defer pool.Close()
 	logger.Info("database connection pool initialized")
@@ -78,12 +76,12 @@ func main() {
 	secretEncryptionKey, err := cfg.SecretEncryptionKey()
 	if err != nil {
 		logger.Error("invalid secret encryption key", slog.String("error", err.Error()))
-		os.Exit(1)
+		return err
 	}
 	secretCipher, err := host.NewAESGCMSecretCipher(secretEncryptionKey)
 	if err != nil {
 		logger.Error("failed to initialize secret cipher", slog.String("error", err.Error()))
-		os.Exit(1)
+		return err
 	}
 
 	sessionRepository := authentication_repository.NewSessionRepository(pool)
@@ -114,7 +112,7 @@ func main() {
 		EventBus:              eventBus,
 		Logger:                logger,
 	})
-	router := web.NewRouter(web.NewRouterParams{
+	router := NewRouter(NewRouterParams{
 		HostService:       hostService,
 		AuthService:       authService,
 		SessionRepository: sessionRepository,
@@ -158,7 +156,7 @@ func main() {
 	case err := <-errCh:
 		if err != nil {
 			logger.Error("web server stopped unexpectedly", slog.String("error", err.Error()))
-			os.Exit(1)
+			return err
 		}
 	case <-shutdownSignalCtx.Done():
 		logger.Info("shutdown signal received, shutting down web server")
@@ -169,9 +167,9 @@ func main() {
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Error("failed to gracefully shut down web server", slog.String("error", err.Error()))
-		os.Exit(1)
+		return err
 	}
 
 	logger.Info("web server stopped gracefully")
-	os.Exit(0)
+	return nil
 }
