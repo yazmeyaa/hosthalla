@@ -1,4 +1,4 @@
-package cli
+package commands
 
 import (
 	"bytes"
@@ -26,25 +26,25 @@ import (
 	"github.com/yazmeyaa/hosthalla/internal/version"
 )
 
-func ProcessAgentCommand(args []string) {
+func runAgentCommand(ctx context.Context, stdout io.Writer, stderr io.Writer, args []string) error {
 	if len(args) == 0 {
-		printAgentUsage()
-		os.Exit(1)
+		printAgentUsage(stderr)
+		return fmt.Errorf("agent command is required")
 	}
 
 	switch args[0] {
 	case "register":
-		processAgentRegisterCommand(args[1:])
+		return processAgentRegisterCommand(ctx, stdout, stderr, args[1:])
 	case "run":
-		processAgentRunCommand(args[1:])
+		return processAgentRunCommand(ctx, stdout, stderr, args[1:])
 	default:
-		fmt.Printf("Unknown agent command %q\n", args[0])
-		printAgentUsage()
-		os.Exit(1)
+		fmt.Fprintf(stderr, "Unknown agent command %q\n", args[0])
+		printAgentUsage(stderr)
+		return fmt.Errorf("unknown agent command %q", args[0])
 	}
 }
 
-func processAgentRegisterCommand(args []string) {
+func processAgentRegisterCommand(ctx context.Context, stdout io.Writer, stderr io.Writer, args []string) error {
 	flags := flag.NewFlagSet("hosthalla agent register", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
@@ -55,41 +55,36 @@ func processAgentRegisterCommand(args []string) {
 	configPath := flags.String("config", agent.DefaultConfigPath, "path to agent config file")
 
 	if err := flags.Parse(args); err != nil {
-		fmt.Printf("Failed to parse flags: %s\n", err)
-		printAgentRegisterUsage()
-		os.Exit(1)
+		fmt.Fprintf(stderr, "Failed to parse flags: %s\n", err)
+		printAgentRegisterUsage(stderr)
+		return err
 	}
 	if flags.NArg() != 0 {
-		printAgentRegisterUsage()
-		os.Exit(1)
+		printAgentRegisterUsage(stderr)
+		return fmt.Errorf("agent register does not accept positional arguments")
 	}
 
 	hostID, err := uuid.Parse(strings.TrimSpace(*hostIDValue))
 	if err != nil {
-		fmt.Printf("Invalid --host-id value: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("invalid --host-id value: %w", err)
 	}
 
 	scheme, host, err := normalizeConnectionHost(*hostValue, *schemeValue)
 	if err != nil {
-		fmt.Printf("Invalid --host value: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("invalid --host value: %w", err)
 	}
 
-	registerResponse, err := registerAgent(context.Background(), scheme, host, strings.TrimSpace(*tokenValue), hostID)
+	registerResponse, err := registerAgent(ctx, scheme, host, strings.TrimSpace(*tokenValue), hostID)
 	if err != nil {
-		fmt.Printf("Failed to register agent: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("register agent: %w", err)
 	}
 
-	systemInfo, err := collectHostSystemInfo(context.Background(), hostID)
+	systemInfo, err := collectHostSystemInfo(ctx, hostID)
 	if err != nil {
-		fmt.Printf("Failed to collect host system info: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("collect host system info: %w", err)
 	}
-	if err := sendHostSystemInfo(context.Background(), scheme, host, strings.TrimSpace(*tokenValue), systemInfo); err != nil {
-		fmt.Printf("Failed to send host system info: %s\n", err)
-		os.Exit(1)
+	if err := sendHostSystemInfo(ctx, scheme, host, strings.TrimSpace(*tokenValue), systemInfo); err != nil {
+		return fmt.Errorf("send host system info: %w", err)
 	}
 
 	cfg := agent.NewAgentConfig()
@@ -102,45 +97,45 @@ func processAgentRegisterCommand(args []string) {
 	cfg.Version = 1
 
 	if err := agent.SaveConfigToPath(*configPath, cfg); err != nil {
-		fmt.Printf("Failed to write agent config: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("write agent config: %w", err)
 	}
 
-	fmt.Printf("Agent registered. Config saved at %q\n", *configPath)
+	fmt.Fprintf(stdout, "Agent registered. Config saved at %q\n", *configPath)
+	return nil
 }
 
-func processAgentRunCommand(args []string) {
+func processAgentRunCommand(ctx context.Context, stdout io.Writer, stderr io.Writer, args []string) error {
 	flags := flag.NewFlagSet("hosthalla agent run", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
 	configPath := flags.String("config", agent.DefaultConfigPath, "path to agent config file")
 	if err := flags.Parse(args); err != nil {
-		fmt.Printf("Failed to parse flags: %s\n", err)
-		printAgentRunUsage()
-		os.Exit(1)
+		fmt.Fprintf(stderr, "Failed to parse flags: %s\n", err)
+		printAgentRunUsage(stderr)
+		return err
 	}
 	if flags.NArg() != 0 {
-		printAgentRunUsage()
-		os.Exit(1)
+		printAgentRunUsage(stderr)
+		return fmt.Errorf("agent run does not accept positional arguments")
 	}
 
 	cfg, err := agent.LoadConfigFromPath(*configPath)
 	if err != nil {
-		fmt.Printf("Failed to load agent config: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("load agent config: %w", err)
 	}
 
 	logger := app_logger.NewLogger(app_logger.LoggerParams{
-		Output: os.Stdout,
+		Output: stdout,
 	})
 	logger.Info("starting agent worker", "version", version.VersionString(), "config_path", *configPath)
 
 	argusService := agent.NewArgusService(cfg, logger)
 	worker := agent.NewWorker(cfg, argusService, logger)
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	worker.Run(ctx)
+	return nil
 }
 
 type agentRegisterResponse struct {
@@ -416,16 +411,16 @@ func isLocalhostHost(rawHost string) bool {
 	return strings.HasPrefix(lowerHost, "127.")
 }
 
-func printAgentUsage() {
-	fmt.Println("Usage:")
-	fmt.Println("  hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file>]")
-	fmt.Println("  hosthalla agent run [--config <file>]")
+func printAgentUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file>]")
+	fmt.Fprintln(w, "  hosthalla agent run [--config <file>]")
 }
 
-func printAgentRegisterUsage() {
-	fmt.Println("Usage: hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file>]")
+func printAgentRegisterUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage: hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file>]")
 }
 
-func printAgentRunUsage() {
-	fmt.Println("Usage: hosthalla agent run [--config <file>]")
+func printAgentRunUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage: hosthalla agent run [--config <file>]")
 }

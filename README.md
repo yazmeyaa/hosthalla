@@ -48,23 +48,23 @@ trap 'rm -rf "$TMP"' EXIT
 curl -L -o "$TMP/pkg.tar.gz" "$URL"
 tar -xzf "$TMP/pkg.tar.gz" -C "$TMP"
 
-for bin in hosthalla hosthalla-cli hosthalla-web; do
+for bin in hosthalla; do
   if [ -f "$TMP/$bin" ]; then
     sudo install -m 0755 "$TMP/$bin" "/usr/local/bin/$bin"
   fi
 done
 ```
 
-## Quick Start (Binaries)
+## Quick Start
 
-### 1. Install binaries
+### 1. Install binary
 
-Run the install script above, or download assets from the latest release and place binaries in your `PATH`.
+Run the install script above, or download the latest release asset and place `hosthalla` in your `PATH`.
 
 ### 2. Generate app config
 
 ```sh
-hosthalla-cli config generate
+hosthalla config generate
 ```
 
 Default path: `~/.hosthalla/config.yaml`.
@@ -87,13 +87,13 @@ log_level: warning   # debug | info | warning | error
 ### 4. Apply migrations
 
 ```sh
-hosthalla-cli database up
+hosthalla db migrate
 ```
 
 ### 5. Start Hosthalla
 
 ```sh
-hosthalla
+hosthalla serve
 ```
 
 The UI is available at `http://localhost:8080`.
@@ -101,7 +101,7 @@ The UI is available at `http://localhost:8080`.
 ### 6. (Optional) Create first user from CLI
 
 ```sh
-hosthalla-cli create-user <username> <password>
+hosthalla users create <username> <password>
 ```
 
 ## Building
@@ -110,38 +110,49 @@ hosthalla-cli create-user <username> <password>
 make build
 ```
 
-Builds both binaries locally:
-- `dist/hosthalla-cli`
-- `dist/hosthalla-web`
+Builds the binary locally:
+- `dist/hosthalla`
 
-Both binaries include version, commit, and build timestamp via ldflags.
+Release binaries include version, commit, and build timestamp via ldflags.
 
 ## CLI Reference
 
-The CLI binary (`cmd/cli`) handles everything except serving the UI.
+The `hosthalla` binary exposes the server, local agent, and administration
+commands through one explicit command tree. Legacy command aliases are not
+supported.
 
 ### Help
 
 ```sh
-hosthalla-cli help
+hosthalla help
 # or
-hosthalla-cli --help
+hosthalla --help
 ```
 
 ### Config commands
 
 ```sh
 # Generate default config at ~/.hosthalla/config.yaml
-hosthalla-cli config generate [--path <file>] [--overwrite]
+hosthalla config generate [--path <file>] [--overwrite]
 
 # Print the current config
-hosthalla-cli config show [--path <file>]
+hosthalla config show [--path <file>]
+
+# Validate the current config
+hosthalla config validate [--path <file>]
 ```
 
 ### User management
 
 ```sh
-hosthalla-cli create-user <username> <password>
+hosthalla users create <username> <password>
+```
+
+### Database commands
+
+```sh
+# Apply all pending migrations
+hosthalla db migrate
 ```
 
 ### Agent commands
@@ -150,16 +161,13 @@ hosthalla-cli create-user <username> <password>
 # Register this machine as an agent for a host
 # (The recommended way is to use the "Register Agent" button in the UI,
 #  which generates the full command with a pre-filled token.)
-hosthalla-cli agent register \
+hosthalla agent register \
   --host <server-url> \
   --host-id <uuid> \
   --token <hht_...>
 
 # Start the agent worker (heartbeat + metrics loop)
-hosthalla-cli agent run [--config <file>]
-
-# Apply all pending migrations
-hosthalla-cli database up
+hosthalla agent run [--config <file>]
 ```
 
 Agent config is saved to `~/.hosthalla/agent.yaml` by default.
@@ -169,8 +177,8 @@ The agent sends a heartbeat every **5 seconds** and metrics every **30 seconds**
 
 1. Open the dashboard and navigate to a host.
 2. Click **Register Agent** — a shell command with a scoped API token is generated.
-3. Run `hosthalla-cli agent register ...` on the target machine.
-4. Run `hosthalla-cli agent run` on the target machine (or set it up as a systemd service).
+3. Run `hosthalla agent register ...` on the target machine.
+4. Run `hosthalla agent run` on the target machine (or set it up as a systemd service).
 
 The dashboard then shows live CPU, memory, disk, and network metrics for the host.
 
@@ -178,10 +186,10 @@ The dashboard then shows live CPU, memory, disk, and network metrics for the hos
 
 ```sh
 # 1) Register agent on target host
-hosthalla-cli agent register --host <server-url> --host-id <uuid> --token <hht_...>
+hosthalla agent register --host <server-url> --host-id <uuid> --token <hht_...>
 
 # 2) Start agent loop
-hosthalla-cli agent run
+hosthalla agent run
 ```
 
 ## Make Targets
@@ -192,22 +200,21 @@ hosthalla-cli agent run
 | `make migrate-down` | Roll back the last migration |
 | `make templ-generate` | Regenerate `*_templ.go` files |
 | `make help` | Show available Make targets |
-| `make build` | Build CLI + WEB binaries |
-| `make build-cli` | Build CLI binary to `dist/hosthalla-cli` |
-| `make build-web` | Build WEB binary to `dist/hosthalla-web` |
+| `make build` | Build Hosthalla binary |
+| `make build-hosthalla` | Build binary to `dist/hosthalla` |
 | `make dev-web` | Regenerate Templ files + run the web server |
 
 ## Project Structure
 
 ```
 cmd/
-  cli/          # CLI entry point (config, users, agent)
-  web/          # Web server entry point
+  hosthalla/    # Unified CLI entry point
 internal/
   agent/        # Agent model, config, gopsutil metrics, worker loop
   api/          # REST API for agents (/api/v1/...)
   authentication/ # Sessions, API tokens, bcrypt passwords
-  cli/          # CLI command implementations
+  cli/          # CLI command tree runner
+  commands/     # Hosthalla command implementations
   config/       # App config struct, load/save
   host/         # Host domain: model, service, repository interfaces
   logger/       # slog setup
