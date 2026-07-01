@@ -82,6 +82,8 @@ database:
   password: <postgres-password>
   database: <postgres-database>
 log_level: warning   # debug | info | warning | error
+security:
+  secret_encryption_key: <secret_encryption_key>
 ```
 
 ### 4. Apply migrations

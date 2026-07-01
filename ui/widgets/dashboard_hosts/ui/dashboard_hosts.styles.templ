@@ -68,6 +68,18 @@ css dashboard_hosts_ip() {
 	font-size: 0.84rem;
 }
 
+css dashboard_hosts_ip_masked() {
+	display: inline-flex;
+	min-height: 1.35em;
+	padding: 1px 4px;
+	border-radius: var(--radius-xs);
+	color: transparent;
+	text-shadow: var(--shadow-sensitive-text);
+	background: var(--surface-sensitive-mask);
+	filter: blur(var(--blur-sensitive));
+	user-select: none;
+}
+
 css dashboard_hosts_meta() {
 	display: flex;
 	flex-wrap: wrap;

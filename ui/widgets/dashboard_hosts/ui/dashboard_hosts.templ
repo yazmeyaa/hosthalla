@@ -46,7 +46,7 @@ templ DashboardHosts(props DashboardHostsProps) {
 							<div class={ dashboard_hosts_item_header() }>
 								<div class={ dashboard_hosts_identity() }>
 									<h3 class={ dashboard_hosts_name() }>{ host.Name }</h3>
-									<p class={ dashboard_hosts_ip() }>{ host.IP }</p>
+									<p class={ dashboard_hosts_ip(), dashboard_hosts_ip_masked() }>{ host.IP }</p>
 								</div>
 								@badge.Badge(badge.BadgeProps{Variant: host.StatusVariant}) {
 									{ host.StatusLabel }
