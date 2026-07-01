@@ -5,6 +5,7 @@ import (
 
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/icons"
 )
 
 type HostRow struct {
@@ -46,7 +47,23 @@ templ DashboardHosts(props DashboardHostsProps) {
 							<div class={ dashboard_hosts_item_header() }>
 								<div class={ dashboard_hosts_identity() }>
 									<h3 class={ dashboard_hosts_name() }>{ host.Name }</h3>
-									<p class={ dashboard_hosts_ip(), dashboard_hosts_ip_masked() }>{ host.IP }</p>
+									<div class={ dashboard_hosts_ip_disclosure() } data-host-ip-disclosure>
+										<button
+											type="button"
+											class={ dashboard_hosts_ip_toggle() }
+											aria-expanded="false"
+											aria-label="Show IP"
+											data-host-ip-toggle
+										>
+											<span class={ dashboard_hosts_ip_toggle_icon() } data-host-ip-icon-hidden>
+												@icons.EyeClosedIcon()
+											</span>
+											<span class={ dashboard_hosts_ip_toggle_icon() } data-host-ip-icon-visible style="display: none;">
+												@icons.EyeOpenIcon()
+											</span>
+										</button>
+										<span class={ dashboard_hosts_ip(), dashboard_hosts_ip_masked() } data-host-ip-value>{ host.IP }</span>
+									</div>
 								</div>
 								@badge.Badge(badge.BadgeProps{Variant: host.StatusVariant}) {
 									{ host.StatusLabel }

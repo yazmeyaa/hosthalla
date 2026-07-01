@@ -24,6 +24,14 @@ func (m fakeMigrator) Up() error {
 	return nil
 }
 
+func (m fakeMigrator) Down() error {
+	return nil
+}
+
+func (m fakeMigrator) Version() (uint, bool, error) {
+	return 0, false, nil
+}
+
 func TestDBMigrateUsesConfigAndMigrator(t *testing.T) {
 	oldOpenSQL := openSQL
 	oldNewMigrator := newMigrator

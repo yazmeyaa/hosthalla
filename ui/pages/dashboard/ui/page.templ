@@ -2,6 +2,7 @@ package dashboard_ui
 
 import (
 	"github.com/yazmeyaa/hosthalla/ui/app/layout"
+	"github.com/yazmeyaa/hosthalla/ui/entities/host_details"
 	dashboard_hosts "github.com/yazmeyaa/hosthalla/ui/widgets/dashboard_hosts"
 	dashboard_overview "github.com/yazmeyaa/hosthalla/ui/widgets/dashboard_overview"
 )
@@ -60,5 +61,6 @@ templ DashboardPageContent(props DashboardPageProps) {
 		@dashboard_hosts.DashboardHosts(dashboard_hosts.DashboardHostsProps{
 			Hosts: props.Data.Hosts,
 		})
+		@host_details.HostDetailsScripts()
 	</div>
 }

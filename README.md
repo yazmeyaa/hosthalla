@@ -148,6 +148,10 @@ hosthalla config validate [--path <file>]
 
 ```sh
 hosthalla users create <username> <password>
+hosthalla users list [--json]
+hosthalla users show <user-id-or-username> [--json]
+hosthalla users password set <user-id-or-username> <password>
+hosthalla users delete <user-id-or-username>
 ```
 
 ### Database commands
@@ -155,6 +159,36 @@ hosthalla users create <username> <password>
 ```sh
 # Apply all pending migrations
 hosthalla db migrate
+
+# Print current migration version
+hosthalla db status [--json]
+
+# Roll back one migration
+hosthalla db rollback
+```
+
+### Token management
+
+```sh
+hosthalla tokens list [--user <user-id-or-username>] [--json]
+hosthalla tokens create --user <user-id-or-username> --name <name> [--scope <scope>] [--ttl <duration>] [--json]
+hosthalla tokens show <token-id> [--json]
+hosthalla tokens revoke <token-id>
+```
+
+`tokens create` prints the plain token once. Store it immediately; later
+commands show only token metadata.
+
+### Host and agent administration
+
+```sh
+hosthalla hosts list [--json]
+hosthalla hosts show <host-id> [--json]
+hosthalla hosts delete <host-id>
+
+hosthalla agents list [--json]
+hosthalla agents show <agent-id> [--json]
+hosthalla agents delete <agent-id>
 ```
 
 ### Agent commands

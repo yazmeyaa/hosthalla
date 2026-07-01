@@ -16,6 +16,7 @@ const (
 	agentSelectColumns = "id, host_id, version, created_at, last_seen_at"
 
 	insertAgentQuery           = "insert into agent (host_id, version) values ($1, $2) returning " + agentSelectColumns
+	listAgentsQuery            = "select " + agentSelectColumns + " from agent order by created_at desc"
 	getAgentByIDQuery          = "select " + agentSelectColumns + " from agent where id = $1"
 	getAgentByHostIDQuery      = "select " + agentSelectColumns + " from agent where host_id = $1"
 	updateAgentQuery           = "update agent set host_id = $2, version = $3 where id = $1 returning created_at, last_seen_at"
@@ -44,6 +45,27 @@ type AgentRepositoryPostgresImpl struct {
 func (r *AgentRepositoryPostgresImpl) Create(ctx context.Context, data agent.CreateAgentDTO) (agent.Agent, error) {
 	row := r.pool.QueryRow(ctx, insertAgentQuery, data.HostID, data.Version)
 	return scanAgent(row)
+}
+
+func (r *AgentRepositoryPostgresImpl) List(ctx context.Context) ([]agent.Agent, error) {
+	rows, err := r.pool.Query(ctx, listAgentsQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]agent.Agent, 0)
+	for rows.Next() {
+		value, err := scanAgent(rows)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, value)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (r *AgentRepositoryPostgresImpl) GetByID(ctx context.Context, id uuid.UUID) (agent.Agent, error) {

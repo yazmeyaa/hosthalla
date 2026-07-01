@@ -17,6 +17,7 @@ const (
 	insertAPITokenQuery           = "insert into api_token (profile_id, name, prefix, hash, scopes, expires_at) values ($1, $2, $3, $4, $5, $6) returning " + apiTokenSelectColumns
 	getAPITokenByIDQuery          = "select " + apiTokenSelectColumns + " from api_token where id = $1"
 	getAPITokenByHashQuery        = "select " + apiTokenSelectColumns + " from api_token where hash = $1"
+	listAPITokensQuery            = "select " + apiTokenSelectColumns + " from api_token order by created_at desc"
 	listAPITokensByProfileIDQuery = "select " + apiTokenSelectColumns + " from api_token where profile_id = $1 order by created_at desc"
 	revokeAPITokenQuery           = "update api_token set revoked_at = now() where id = $1 and revoked_at is null"
 	updateLastUsedAtQuery         = "update api_token set last_used_at = $2 where id = $1"
@@ -58,6 +59,27 @@ func (r *APITokenRepositoryPostgresImpl) GetAPITokenByID(ctx context.Context, id
 func (r *APITokenRepositoryPostgresImpl) GetAPITokenByHash(ctx context.Context, hash string) (authentication.APIToken, error) {
 	row := r.pool.QueryRow(ctx, getAPITokenByHashQuery, hash)
 	return scanAPIToken(row)
+}
+
+func (r *APITokenRepositoryPostgresImpl) ListAPITokens(ctx context.Context) ([]authentication.APIToken, error) {
+	rows, err := r.pool.Query(ctx, listAPITokensQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]authentication.APIToken, 0)
+	for rows.Next() {
+		token, err := scanAPIToken(rows)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, token)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (r *APITokenRepositoryPostgresImpl) ListAPITokensByProfileID(ctx context.Context, profileID string) ([]authentication.APIToken, error) {
