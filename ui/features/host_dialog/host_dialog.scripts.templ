@@ -43,6 +43,8 @@ templ HostDialogScripts() {
 			const port = source.dataset.port || "Not provided";
 			const user = source.dataset.user || "Not provided";
 			const password = source.dataset.password || "Not provided";
+			const secretLabel = source.dataset.secretLabel || "Secret";
+			const secretValue = source.dataset.secretValue || "";
 			const payload = [
 				"Description: " + description,
 				"Authentication Type: " + authenticationType,
@@ -50,12 +52,127 @@ templ HostDialogScripts() {
 				"Port: " + port,
 				"User: " + user,
 				"Password: " + password,
-			].join("\n");
+			];
+			if (secretLabel !== "Password") {
+				payload.push(secretLabel + ": " + (secretValue || "Reveal secret first."));
+			}
 
-			await writeToClipboard(payload);
+			await writeToClipboard(payload.join("\n"));
 		}
 
 		window.copyHostManagementMethodDetails = copyHostManagementMethodDetails;
+
+		function setHostManagementMethodSecretStatus(dialog, message) {
+			const statusElement = dialog.querySelector("[data-management-method-secret-status]");
+			if (statusElement instanceof HTMLElement) {
+				statusElement.textContent = message;
+			}
+		}
+
+		function readHostManagementMethodSecretElements(dialogId) {
+			const dialog = document.getElementById(dialogId);
+			if (!(dialog instanceof HTMLDialogElement)) {
+				return null;
+			}
+
+			const secretElement = dialog.querySelector("[data-management-method-secret-value]");
+			const source = dialog.querySelector("[data-copy-source='host-management-method']");
+			if (!(secretElement instanceof HTMLTextAreaElement) || !(source instanceof HTMLElement)) {
+				return null;
+			}
+
+			return { dialog, secretElement, source };
+		}
+
+		function formatHostManagementMethodSecret(payload) {
+			const password = typeof payload.password === "string" ? payload.password : "";
+			if (password !== "") {
+				return { label: "Password", value: password };
+			}
+
+			const privateKey = typeof payload.privateKey === "string" ? payload.privateKey : "";
+			const publicKey = typeof payload.publicKey === "string" ? payload.publicKey : "";
+			if (privateKey !== "") {
+				return { label: "Private Key", value: privateKey };
+			}
+			if (publicKey !== "") {
+				return { label: "Public Key", value: publicKey };
+			}
+
+			return { label: "Secret", value: "" };
+		}
+
+		async function revealHostManagementMethodSecret(dialogId) {
+			const elements = readHostManagementMethodSecretElements(dialogId);
+			if (elements === null) {
+				return;
+			}
+
+			const hostID = elements.secretElement.dataset.hostId || "";
+			const methodID = elements.secretElement.dataset.methodId || "";
+			if (hostID === "" || methodID === "") {
+				setHostManagementMethodSecretStatus(elements.dialog, "Cannot resolve secret endpoint.");
+				return;
+			}
+
+			setHostManagementMethodSecretStatus(elements.dialog, "Loading secret...");
+			try {
+				const response = await fetch("/hosts/" + encodeURIComponent(hostID) + "/management-methods/" + encodeURIComponent(methodID) + "/secret", {
+					method: "POST",
+					headers: {
+						"Accept": "application/json",
+					},
+				});
+
+				if (!response.ok) {
+					const text = (await response.text()).trim();
+					throw new Error(text || ("Request failed with status " + response.status));
+				}
+
+				const payload = await response.json();
+				const secret = formatHostManagementMethodSecret(payload);
+				if (secret.value === "") {
+					throw new Error("Server returned empty secret.");
+				}
+
+				elements.secretElement.value = secret.value;
+				elements.source.dataset.secretLabel = secret.label;
+				elements.source.dataset.secretValue = secret.value;
+				if (secret.label === "Password") {
+					elements.source.dataset.password = secret.value;
+				}
+				setHostManagementMethodSecretStatus(elements.dialog, "Secret is visible. Keep it safe.");
+			} catch (error) {
+				setHostManagementMethodSecretStatus(elements.dialog, error instanceof Error ? error.message : "Failed to load secret.");
+			}
+		}
+
+		window.revealHostManagementMethodSecret = revealHostManagementMethodSecret;
+
+		async function copyHostManagementMethodSecret(dialogId) {
+			const elements = readHostManagementMethodSecretElements(dialogId);
+			if (elements === null) {
+				return;
+			}
+
+			let secret = elements.source.dataset.secretValue || "";
+			if (secret === "") {
+				await revealHostManagementMethodSecret(dialogId);
+				secret = elements.source.dataset.secretValue || "";
+			}
+			if (secret === "") {
+				return;
+			}
+
+			try {
+				await writeToClipboard(secret);
+				setHostManagementMethodSecretStatus(elements.dialog, "Secret copied to clipboard.");
+			} catch (error) {
+				setHostManagementMethodSecretStatus(elements.dialog, "Failed to copy secret.");
+			}
+		}
+
+		window.copyHostManagementMethodSecret = copyHostManagementMethodSecret;
 
 		async function generateHostAgentRegistrationCommand(hostID, statusElementID, commandElementID) {
 			const statusElement = document.getElementById(statusElementID);

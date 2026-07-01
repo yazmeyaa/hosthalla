@@ -211,6 +211,32 @@ css host_management_method_details_empty_value() {
 	color: var(--muted);
 }
 
+css host_management_method_secret_section() {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+css host_management_method_secret_value() {
+	width: 100%;
+	min-height: 110px;
+	font-family: var(--font-mono);
+	font-size: 0.84rem;
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
+	color: var(--text);
+	resize: vertical;
+}
+
+css host_management_method_secret_status() {
+	margin: 0;
+	min-height: 1.2em;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
 css host_management_method_form() {
 	max-width: 100%;
 }

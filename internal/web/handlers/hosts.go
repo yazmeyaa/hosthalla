@@ -30,6 +30,12 @@ type createAgentRegisterCommandResponse struct {
 	Command string `json:"command"`
 }
 
+type getHostManagementMethodSecretResponse struct {
+	Password   string `json:"password,omitempty"`
+	PublicKey  string `json:"publicKey,omitempty"`
+	PrivateKey string `json:"privateKey,omitempty"`
+}
+
 func NewHostsHandler(hostService *host.Service, profileService *auth_service.Service, logger *slog.Logger) *HostsHandler {
 	return &HostsHandler{hostService: hostService, profileService: profileService, logger: logger}
 }
@@ -322,6 +328,40 @@ func (h *HostsHandler) CreateHostManagementMethod(w http.ResponseWriter, r *http
 	}
 
 	http.Redirect(w, r, "/hosts", http.StatusSeeOther)
+}
+
+func (h *HostsHandler) GetHostManagementMethodSecret(w http.ResponseWriter, r *http.Request) {
+	hostID, err := parseHostID(r.PathValue("id"))
+	if err != nil {
+		h.logger.Warn("invalid host id in management method secret request", slog.String("host_id", r.PathValue("id")), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	methodID, err := parseHostID(r.PathValue("methodID"))
+	if err != nil {
+		h.logger.Warn("invalid management method id in secret request", slog.String("host_id", hostID.String()), slog.String("method_id", r.PathValue("methodID")), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	secret, err := h.hostService.GetHostManagementMethodSecret(r.Context(), hostID, methodID)
+	if err != nil {
+		h.logger.Warn("failed to get management method secret in handler", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(getHostManagementMethodSecretResponse{
+		Password:   secret.Password,
+		PublicKey:  secret.PublicKey,
+		PrivateKey: secret.PrivateKey,
+	}); err != nil {
+		h.logger.Error("failed to encode management method secret response", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *HostsHandler) CreateAgentRegisterCommand(w http.ResponseWriter, r *http.Request) {

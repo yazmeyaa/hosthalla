@@ -176,6 +176,42 @@ func (s *Service) ListHostManagementMethodsByHostIDs(ctx context.Context, hostID
 	return methodsByHostID, nil
 }
 
+func (s *Service) GetHostManagementMethodSecret(ctx context.Context, hostID uuid.UUID, methodID uuid.UUID) (HostManagementMethodSecret, error) {
+	method, err := s.hostManagementMethodRepository.GetHostManagementMethodByID(ctx, methodID)
+	if err != nil {
+		s.logger.Error("failed to get host management method by id", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		return HostManagementMethodSecret{}, err
+	}
+	if method.HostID != hostID {
+		s.logger.Warn("host management method does not belong to host", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("method_host_id", method.HostID.String()))
+		return HostManagementMethodSecret{}, errors.New("management method not found")
+	}
+
+	decryptedSecret, err := s.secretCipher.Decrypt(method.Secret)
+	if err != nil {
+		s.logger.Error("failed to decrypt host management method secret", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		return HostManagementMethodSecret{}, fmt.Errorf("failed to decrypt secret: %w", err)
+	}
+
+	switch method.Type {
+	case HostManagementMethodTypeSSHPassword:
+		return HostManagementMethodSecret{Password: string(decryptedSecret)}, nil
+	case HostManagementMethodTypeSSHKey:
+		var payload struct {
+			PublicKey  string `json:"publicKey"`
+			PrivateKey string `json:"privateKey"`
+		}
+		if err := json.Unmarshal(decryptedSecret, &payload); err != nil {
+			s.logger.Error("failed to decode ssh key method secret", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+			return HostManagementMethodSecret{}, fmt.Errorf("failed to decode secret: %w", err)
+		}
+		return HostManagementMethodSecret{PublicKey: payload.PublicKey, PrivateKey: payload.PrivateKey}, nil
+	default:
+		s.logger.Warn("unsupported host management method secret type", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("method_type", string(method.Type)))
+		return HostManagementMethodSecret{}, errors.New("unsupported management method type")
+	}
+}
+
 func (s *Service) GetHostSystemInfoByHostID(ctx context.Context, hostID uuid.UUID) (HostSystemInfo, error) {
 	systemInfo, err := s.hostSystemInfoRepository.GetHostSystemInfoByHostID(ctx, hostID)
 	if err != nil {

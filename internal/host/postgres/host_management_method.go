@@ -81,6 +81,12 @@ func (h HostManagementMethodRepositoryPostgresImpl) ListHostManagementMethodsByH
 	return result, nil
 }
 
+func (h HostManagementMethodRepositoryPostgresImpl) GetHostManagementMethodByID(ctx context.Context, methodID uuid.UUID) (host.HostManagementMethod, error) {
+	query := "select " + hostManagementMethodSelectColumns + " from host_credential where id = $1"
+	row := h.pool.QueryRow(ctx, query, uuid.UUID(methodID))
+	return scanHostManagementMethod(row)
+}
+
 func (h HostManagementMethodRepositoryPostgresImpl) CreateHostManagementMethod(ctx context.Context, hostID uuid.UUID, data host.CreateHostManagementMethodDTO) (host.HostManagementMethod, error) {
 	const insertManagementMethodQuery = "insert into host_credential (id, host_id, type, username, port, secret, description) values ($1, $2, $3, $4, $5, $6, $7) returning id, host_id, type, username, port, secret, description, created_at, updated_at"
 	row := h.pool.QueryRow(

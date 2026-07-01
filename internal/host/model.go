@@ -56,6 +56,12 @@ type HostManagementMethod struct {
 	UpdatedAt   time.Time
 }
 
+type HostManagementMethodSecret struct {
+	Password   string
+	PublicKey  string
+	PrivateKey string
+}
+
 type HostSystemInfo struct {
 	HostID uuid.UUID
 
