@@ -14,6 +14,7 @@ const (
 	profileSelectColumns = "id, username, created_at, updated_at"
 
 	insertProfileQuery        = "insert into profile (username) values ($1) returning " + profileSelectColumns
+	listProfilesQuery         = "select " + profileSelectColumns + " from profile order by created_at desc"
 	getProfileByIDQuery       = "select " + profileSelectColumns + " from profile where id = $1"
 	getProfileByUsernameQuery = "select " + profileSelectColumns + " from profile where username = $1"
 	updateProfileQuery        = "update profile set username = $2, updated_at = now() where id = $1 returning updated_at"
@@ -41,6 +42,27 @@ type ProfileRepositoryPostgresImpl struct {
 func (p *ProfileRepositoryPostgresImpl) CreateProfile(ctx context.Context, data storage.CreateProfileDTO) (authentication.Profile, error) {
 	row := p.pool.QueryRow(ctx, insertProfileQuery, data.Username)
 	return scanProfile(row)
+}
+
+func (p *ProfileRepositoryPostgresImpl) ListProfiles(ctx context.Context) ([]authentication.Profile, error) {
+	rows, err := p.pool.Query(ctx, listProfilesQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]authentication.Profile, 0)
+	for rows.Next() {
+		profile, err := scanProfile(rows)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, profile)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // GetProfileByID implements storage.ProfileRepository.

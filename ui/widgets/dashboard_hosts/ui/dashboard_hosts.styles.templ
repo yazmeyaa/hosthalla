@@ -63,9 +63,53 @@ css dashboard_hosts_name() {
 }
 
 css dashboard_hosts_ip() {
-	margin: 4px 0 0;
 	color: var(--muted);
 	font-size: 0.84rem;
+	word-break: break-word;
+}
+
+css dashboard_hosts_ip_disclosure() {
+	display: inline-flex;
+	flex-direction: row-reverse;
+	align-items: center;
+	gap: 10px;
+	margin-top: 4px;
+	max-width: 100%;
+}
+
+css dashboard_hosts_ip_toggle() {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-pill);
+	color: var(--text);
+	background: transparent;
+	line-height: 1;
+	cursor: pointer;
+	user-select: none;
+}
+
+css dashboard_hosts_ip_toggle_icon() {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: currentColor;
+}
+
+css dashboard_hosts_ip_masked() {
+	display: inline-flex;
+	min-height: 1.35em;
+	padding: 1px 4px;
+	border-radius: var(--radius-xs);
+	color: transparent;
+	text-shadow: var(--shadow-sensitive-text);
+	background: var(--surface-sensitive-mask);
+	filter: blur(var(--blur-sensitive));
+	user-select: none;
 }
 
 css dashboard_hosts_meta() {

@@ -14,9 +14,10 @@ templ GenericLayout(props GenericLayoutProps) {
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>Hosthalla - { props.Title }</title>
 			<script src="/assets/htmx.min.js"></script>
+			<script src="/assets/htmx-ext-ws.min.js"></script>
 			@layout_styles()
 		</head>
-		<body class={ generic_layout_styles() }>
+		<body hx-ext="ws" class={ generic_layout_styles() }>
 			{ children... }
 			<footer class={ generic_layout_footer() }>
 				<div class={ generic_layout_footer_inner() }>

@@ -115,7 +115,27 @@ func parseGlobalFlags(root *Command, args []string, env *Env) ([]string, bool, e
 
 	env.ConfigPath = *configPath
 	env.JSON = *jsonOutput
-	return flags.Args(), *help, nil
+	remaining := flags.Args()
+	remaining, jsonAfterCommand := collectJSONFlag(remaining)
+	env.JSON = env.JSON || jsonAfterCommand
+	return remaining, *help, nil
+}
+
+func collectJSONFlag(args []string) ([]string, bool) {
+	if len(args) == 0 {
+		return args, false
+	}
+
+	result := make([]string, 0, len(args))
+	found := false
+	for _, arg := range args {
+		if arg == "--json" {
+			found = true
+			continue
+		}
+		result = append(result, arg)
+	}
+	return result, found
 }
 
 func prepare(ctx context.Context, env *Env, cmd *Command, deps Dependencies) error {

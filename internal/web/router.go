@@ -49,6 +49,7 @@ func NewRouter(params NewRouterParams) http.Handler {
 	mux.Handle("POST /hosts/{id}/delete", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.DeleteHost)))
 	mux.Handle("POST /hosts/{id}/ping", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.PingHost)))
 	mux.Handle("POST /hosts/{id}/management-methods/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateHostManagementMethod)))
+	mux.Handle("POST /hosts/{id}/management-methods/{methodID}/secret", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.GetHostManagementMethodSecret)))
 	mux.Handle("POST /hosts/{id}/agent/register-command", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateAgentRegisterCommand)))
 	mux.Handle("POST /hosts/ping-all", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.PingAllHosts)))
 
@@ -59,5 +60,15 @@ func NewRouter(params NewRouterParams) http.Handler {
 	csrfProtection := http.NewCrossOriginProtection()
 	protectedRoutes := csrfProtection.Handler(middlewares.RequestLoggingMiddleware(params.Logger, mux))
 
-	return protectedRoutes
+	rootMux := http.NewServeMux()
+	rootMux.Handle(
+		"GET /dashboard/subscribe",
+		middlewares.RequestLoggingMiddleware(
+			params.Logger,
+			middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(dashboardHandler.SubscribeToDashboard)),
+		),
+	)
+	rootMux.Handle("/", protectedRoutes)
+
+	return rootMux
 }

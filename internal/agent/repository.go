@@ -21,6 +21,7 @@ type CreateAgentConfigDTO struct {
 
 type Repository interface {
 	Create(ctx context.Context, data CreateAgentDTO) (Agent, error)
+	List(ctx context.Context) ([]Agent, error)
 	GetByID(ctx context.Context, id uuid.UUID) (Agent, error)
 	GetByHostID(ctx context.Context, hostID uuid.UUID) (Agent, error)
 	Update(ctx context.Context, agent *Agent) error
