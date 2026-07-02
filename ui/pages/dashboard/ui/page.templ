@@ -38,29 +38,61 @@ templ DashboardPage(props DashboardPageProps) {
 }
 
 templ DashboardPageContent(props DashboardPageProps) {
-	<div class={ dashboard_page_shell() }>
+	<div class={ dashboard_page_shell() } hx-ext="ws" ws-connect="/dashboard/subscribe">
 		<header class={ dashboard_page_header() }>
 			<div class={ dashboard_page_heading() }>
 				<h1 class={ dashboard_page_title() }>Dashboard</h1>
-				<p class={ dashboard_page_meta() }>Cached snapshot generated at { props.Data.GeneratedAtLabel }</p>
+				@DashboardGeneratedAtMeta(props.Data.GeneratedAtLabel)
 			</div>
 			<a class={ dashboard_page_refresh_link() } href="/dashboard">Refresh</a>
 		</header>
-
-		@dashboard_overview.DashboardOverview(dashboard_overview.DashboardOverviewProps{
-			TotalHosts: props.Data.Summary.TotalHosts,
-			ReportingHosts: props.Data.Summary.ReportingHosts,
-			StaleHosts: props.Data.Summary.StaleHosts,
-			WaitingHosts: props.Data.Summary.WaitingHosts,
-			MonitoredHosts: props.Data.Summary.MonitoredHosts,
-			SystemInfoHosts: props.Data.Summary.SystemInfoHosts,
-			ManagementMethods: props.Data.Summary.ManagementMethods,
-			LatestMetricAtLabel: props.Data.Summary.LatestMetricAtLabel,
-		})
-
-		@dashboard_hosts.DashboardHosts(dashboard_hosts.DashboardHostsProps{
-			Hosts: props.Data.Hosts,
-		})
+		@DashboardOverviewSection(props.Data)
+		@DashboardHostsSection(props.Data)
 		@host_details.HostDetailsScripts()
 	</div>
+}
+
+templ DashboardGeneratedAtMeta(generatedAtLabel string) {
+	<p id="dashboard-generated-at" class={ dashboard_page_meta() }>Cached snapshot generated at { generatedAtLabel }</p>
+}
+
+templ DashboardOverviewSection(data DashboardData) {
+	<div id="dashboard-overview">
+		@DashboardOverviewContent(data)
+	</div>
+}
+
+templ DashboardHostsSection(data DashboardData) {
+	<div id="dashboard-hosts">
+		@DashboardHostsContent(data)
+	</div>
+}
+
+templ DashboardLiveUpdate(data DashboardData) {
+	<p id="dashboard-generated-at" class={ dashboard_page_meta() } hx-swap-oob="outerHTML">Cached snapshot generated at { data.GeneratedAtLabel }</p>
+	<div id="dashboard-overview" hx-swap-oob="outerHTML">
+		@DashboardOverviewContent(data)
+	</div>
+	<div id="dashboard-hosts" hx-swap-oob="outerHTML">
+		@DashboardHostsContent(data)
+	</div>
+}
+
+templ DashboardOverviewContent(data DashboardData) {
+	@dashboard_overview.DashboardOverview(dashboard_overview.DashboardOverviewProps{
+		TotalHosts:          data.Summary.TotalHosts,
+		ReportingHosts:      data.Summary.ReportingHosts,
+		StaleHosts:          data.Summary.StaleHosts,
+		WaitingHosts:        data.Summary.WaitingHosts,
+		MonitoredHosts:      data.Summary.MonitoredHosts,
+		SystemInfoHosts:     data.Summary.SystemInfoHosts,
+		ManagementMethods:   data.Summary.ManagementMethods,
+		LatestMetricAtLabel: data.Summary.LatestMetricAtLabel,
+	})
+}
+
+templ DashboardHostsContent(data DashboardData) {
+	@dashboard_hosts.DashboardHosts(dashboard_hosts.DashboardHostsProps{
+		Hosts: data.Hosts,
+	})
 }

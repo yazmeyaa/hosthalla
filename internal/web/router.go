@@ -60,5 +60,15 @@ func NewRouter(params NewRouterParams) http.Handler {
 	csrfProtection := http.NewCrossOriginProtection()
 	protectedRoutes := csrfProtection.Handler(middlewares.RequestLoggingMiddleware(params.Logger, mux))
 
-	return protectedRoutes
+	rootMux := http.NewServeMux()
+	rootMux.Handle(
+		"GET /dashboard/subscribe",
+		middlewares.RequestLoggingMiddleware(
+			params.Logger,
+			middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(dashboardHandler.SubscribeToDashboard)),
+		),
+	)
+	rootMux.Handle("/", protectedRoutes)
+
+	return rootMux
 }
