@@ -10,3 +10,6 @@ type DashboardPageProps = dashboard_ui.DashboardPageProps
 var DashboardPage = dashboard_ui.DashboardPage
 var DashboardPageContent = dashboard_ui.DashboardPageContent
 var DashboardLiveUpdate = dashboard_ui.DashboardLiveUpdate
+var DashboardGeneratedAtLiveUpdate = dashboard_ui.DashboardGeneratedAtLiveUpdate
+var DashboardOverviewLiveUpdate = dashboard_ui.DashboardOverviewLiveUpdate
+var DashboardHostsLiveUpdate = dashboard_ui.DashboardHostsLiveUpdate

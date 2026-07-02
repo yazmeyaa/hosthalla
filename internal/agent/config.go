@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	DefaultAgentHeartbeatInterval = 5 * time.Second
-	DefaultAgentMetricsInterval   = 30 * time.Second
+	DefaultAgentHeartbeatInterval = 2 * time.Second
+	DefaultAgentMetricsInterval   = 4 * time.Second
 )
 
 type AgentConfig struct {
