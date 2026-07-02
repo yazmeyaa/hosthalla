@@ -153,6 +153,29 @@ func TestExecuteParsesGlobalFlags(t *testing.T) {
 	}
 }
 
+func TestExecuteParsesJSONFlagAfterCommand(t *testing.T) {
+	var gotArgs []string
+	var gotJSON bool
+	root := testRoot(func(ctx context.Context, env *Env, args []string) error {
+		gotArgs = append([]string(nil), args...)
+		gotJSON = env.JSON
+		return nil
+	})
+	var stdout, stderr bytes.Buffer
+
+	code := Execute(context.Background(), root, []string{"users", "list", "--json"}, &stdout, &stderr, testDeps(nil))
+
+	if code != ExitCodeOK {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if !gotJSON {
+		t.Fatal("JSON flag was not set")
+	}
+	if len(gotArgs) != 0 {
+		t.Fatalf("args = %#v", gotArgs)
+	}
+}
+
 func TestExecuteLoadsConfigOnlyWhenNeeded(t *testing.T) {
 	var loadCount int
 	deps := testDeps(&loadCount)

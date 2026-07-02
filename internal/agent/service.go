@@ -65,6 +65,14 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (Agent, error) {
 	return agent, nil
 }
 
+func (s *Service) ListAgents(ctx context.Context) ([]Agent, error) {
+	agents, err := s.agentRepository.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return agents, nil
+}
+
 func (s *Service) GetAgentByHostID(ctx context.Context, hostID uuid.UUID) (Agent, error) {
 	agent, err := s.agentRepository.GetByHostID(ctx, hostID)
 	if err != nil {
@@ -93,6 +101,16 @@ func (s *Service) UpdateAgent(ctx context.Context, target *Agent) error {
 	s.logger.Info("agent updated", slog.String("agent_id", target.ID.String()), slog.String("host_id", target.HostID.String()))
 	if err := s.eventBus.Publish(ctx, AgentUpdatedEvent{Agent: *target}); err != nil {
 		s.logger.Error("failed to publish agent updated event", slog.String("agent_id", target.ID.String()), slog.String("error", err.Error()))
+	}
+	return nil
+}
+
+func (s *Service) DeleteAgent(ctx context.Context, id uuid.UUID) error {
+	if err := s.agentRepository.Delete(ctx, id); err != nil {
+		return err
+	}
+	if err := s.eventBus.Publish(ctx, AgentDeletedEvent{AgentID: id}); err != nil {
+		s.logger.Error("failed to publish agent deleted event", slog.String("agent_id", id.String()), slog.String("error", err.Error()))
 	}
 	return nil
 }

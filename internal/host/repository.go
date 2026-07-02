@@ -38,6 +38,7 @@ type HostRepository interface {
 type HostManagementMethodRepository interface {
 	ListHostManagementMethods(ctx context.Context, hostID uuid.UUID) ([]HostManagementMethod, error)
 	ListHostManagementMethodsByHostIDs(ctx context.Context, hostIDs []uuid.UUID) (map[uuid.UUID][]HostManagementMethod, error)
+	GetHostManagementMethodByID(ctx context.Context, methodID uuid.UUID) (HostManagementMethod, error)
 	CreateHostManagementMethod(ctx context.Context, hostID uuid.UUID, data CreateHostManagementMethodDTO) (HostManagementMethod, error)
 }
 

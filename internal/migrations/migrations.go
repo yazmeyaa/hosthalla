@@ -51,3 +51,12 @@ func (m *Migrator) Down() error {
 
 	return nil
 }
+
+func (m *Migrator) Version() (uint, bool, error) {
+	version, dirty, err := m.migrate.Version()
+	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
+		return 0, false, fmt.Errorf("read migration version: %w", err)
+	}
+
+	return version, dirty, nil
+}

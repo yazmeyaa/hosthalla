@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -9,7 +10,9 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	"github.com/coder/websocket"
 	"github.com/google/uuid"
+	"github.com/yazmeyaa/hosthalla/internal/agent"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	"github.com/yazmeyaa/hosthalla/internal/events"
 	"github.com/yazmeyaa/hosthalla/internal/host"
@@ -27,6 +30,9 @@ type DashboardHandler struct {
 
 	mu    sync.RWMutex
 	cache dashboardCache
+
+	clientsMu sync.RWMutex
+	clients   map[*dashboardClient]struct{}
 }
 
 type DashboardHandlerParams struct {
@@ -41,24 +47,33 @@ type dashboardCache struct {
 	expiresAt time.Time
 }
 
+type dashboardClient struct {
+	updateCh chan struct{}
+}
+
 func NewDashboardHandler(params DashboardHandlerParams) *DashboardHandler {
 	h := &DashboardHandler{
 		logger:         params.Logger.With("component", "dashboard_handler"),
 		hostService:    params.HostService,
 		profileService: params.ProfileService,
+		clients:        make(map[*dashboardClient]struct{}),
 	}
 
 	if params.EventBus != nil {
-		h.subscribeInvalidation(params.EventBus, host.CreateHostEvent{})
-		h.subscribeInvalidation(params.EventBus, host.UpdateHostEvent{})
-		h.subscribeInvalidation(params.EventBus, host.DeleteHostEvent{})
-		h.subscribeInvalidation(params.EventBus, host.HostMetricReceivedEvent{})
-		h.subscribeInvalidation(params.EventBus, host.HostMonitoringAgentAssignedEvent{})
-		h.subscribeInvalidation(params.EventBus, host.HostManagementMethodCreatedEvent{})
-		h.subscribeInvalidation(params.EventBus, host.HostPingCompletedEvent{})
-		h.subscribeInvalidation(params.EventBus, host.HostsPingCompletedEvent{})
-		h.subscribeInvalidation(params.EventBus, host.HostSystemInfoUpdatedEvent{})
-		h.subscribeInvalidation(params.EventBus, host.HostMetricSnapshotCreatedEvent{})
+		h.subscribeDashboardEvent(params.EventBus, host.CreateHostEvent{})
+		h.subscribeDashboardEvent(params.EventBus, host.UpdateHostEvent{})
+		h.subscribeDashboardEvent(params.EventBus, host.DeleteHostEvent{})
+		h.subscribeDashboardEvent(params.EventBus, host.HostMetricReceivedEvent{})
+		h.subscribeDashboardEvent(params.EventBus, host.HostMonitoringAgentAssignedEvent{})
+		h.subscribeDashboardEvent(params.EventBus, host.HostManagementMethodCreatedEvent{})
+		h.subscribeDashboardEvent(params.EventBus, host.HostPingCompletedEvent{})
+		h.subscribeDashboardEvent(params.EventBus, host.HostsPingCompletedEvent{})
+		h.subscribeDashboardEvent(params.EventBus, host.HostSystemInfoUpdatedEvent{})
+		h.subscribeDashboardEvent(params.EventBus, host.HostMetricSnapshotCreatedEvent{})
+		h.subscribeDashboardEvent(params.EventBus, agent.AgentRegisteredEvent{})
+		h.subscribeDashboardEvent(params.EventBus, agent.AgentUpdatedEvent{})
+		h.subscribeDashboardEvent(params.EventBus, agent.AgentDeletedEvent{})
+		h.subscribeDashboardEvent(params.EventBus, agent.AgentLastSeenUpdatedEvent{})
 	}
 
 	return h
@@ -100,6 +115,44 @@ func (h *DashboardHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dashboard_page.DashboardPage(pageProps).Render(r.Context(), w)
+}
+
+func (h *DashboardHandler) SubscribeToDashboard(w http.ResponseWriter, r *http.Request) {
+	conn, err := websocket.Accept(w, r, nil)
+	if err != nil {
+		h.logger.Error("failed to accept dashboard websocket", slog.String("error", err.Error()))
+		return
+	}
+
+	client := &dashboardClient{updateCh: make(chan struct{}, 1)}
+	h.registerClient(client)
+	defer h.unregisterClient(client)
+	defer conn.Close(websocket.StatusNormalClosure, "dashboard subscription closed")
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+	ctx = conn.CloseRead(ctx)
+
+	h.signalClient(client)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-client.updateCh:
+			payload, err := h.renderLiveUpdate(ctx)
+			if err != nil {
+				h.logger.Error("failed to render dashboard websocket update", slog.String("error", err.Error()))
+				return
+			}
+			writeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			err = conn.Write(writeCtx, websocket.MessageText, payload)
+			cancel()
+			if err != nil {
+				h.logger.Debug("dashboard websocket disconnected", slog.String("error", err.Error()))
+				return
+			}
+		}
+	}
 }
 
 func (h *DashboardHandler) dashboardData(ctx context.Context) (dashboard_page.DashboardData, error) {
@@ -243,13 +296,14 @@ func (h *DashboardHandler) collectDashboardData(ctx context.Context, now time.Ti
 	return data, nil
 }
 
-func (h *DashboardHandler) subscribeInvalidation(eventBus events.EventBus, event events.Event) {
+func (h *DashboardHandler) subscribeDashboardEvent(eventBus events.EventBus, event events.Event) {
 	if err := eventBus.Subscribe(event, func(ctx context.Context, event events.Event) error {
 		h.invalidateCache()
-		h.logger.Debug("dashboard cache invalidated", slog.String("event", event.EventName()))
+		h.queueLiveUpdate()
+		h.logger.Debug("dashboard update queued", slog.String("event", event.EventName()))
 		return nil
 	}); err != nil {
-		h.logger.Error("failed to subscribe dashboard cache invalidation", slog.String("event", event.EventName()), slog.String("error", err.Error()))
+		h.logger.Error("failed to subscribe dashboard updates", slog.String("event", event.EventName()), slog.String("error", err.Error()))
 	}
 }
 
@@ -257,6 +311,48 @@ func (h *DashboardHandler) invalidateCache() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.cache = dashboardCache{}
+}
+
+func (h *DashboardHandler) registerClient(client *dashboardClient) {
+	h.clientsMu.Lock()
+	defer h.clientsMu.Unlock()
+	h.clients[client] = struct{}{}
+	h.logger.Debug("dashboard websocket client connected", slog.Int("clients", len(h.clients)))
+}
+
+func (h *DashboardHandler) unregisterClient(client *dashboardClient) {
+	h.clientsMu.Lock()
+	defer h.clientsMu.Unlock()
+	delete(h.clients, client)
+	h.logger.Debug("dashboard websocket client disconnected", slog.Int("clients", len(h.clients)))
+}
+
+func (h *DashboardHandler) queueLiveUpdate() {
+	h.clientsMu.RLock()
+	defer h.clientsMu.RUnlock()
+	for client := range h.clients {
+		h.signalClient(client)
+	}
+}
+
+func (h *DashboardHandler) signalClient(client *dashboardClient) {
+	select {
+	case client.updateCh <- struct{}{}:
+	default:
+	}
+}
+
+func (h *DashboardHandler) renderLiveUpdate(ctx context.Context) ([]byte, error) {
+	data, err := h.dashboardData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var body bytes.Buffer
+	if err := dashboard_page.DashboardLiveUpdate(data).Render(ctx, &body); err != nil {
+		return nil, err
+	}
+	return body.Bytes(), nil
 }
 
 func formatSystemLabel(info host.HostSystemInfo) string {

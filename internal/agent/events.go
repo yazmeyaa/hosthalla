@@ -19,6 +19,14 @@ func (e AgentUpdatedEvent) EventName() string {
 	return "agent.updated"
 }
 
+type AgentDeletedEvent struct {
+	AgentID uuid.UUID
+}
+
+func (e AgentDeletedEvent) EventName() string {
+	return "agent.deleted"
+}
+
 type AgentLastSeenUpdatedEvent struct {
 	AgentID uuid.UUID
 	HostID  uuid.UUID

@@ -30,6 +30,12 @@ templ HostManagementMethodDetailsDialog(hostIP string, method host.HostManagemen
 		passwordValue := "Hidden for security reasons"
 
 		authenticationTypeLabel := hostManagementMethodDetailsTypeLabel(method.Type)
+		secretLabel := "Password"
+		if method.Type == host.HostManagementMethodTypeSSHKey {
+			secretLabel = "Private Key"
+		}
+		secretValueID := "management-method-secret-value-" + method.ID.String()
+		secretStatusID := "management-method-secret-status-" + method.ID.String()
 	}}
 	@modal.Modal(modal.ModalProps{ID: dialogID, AriaLabel: "Management method details"}) {
 		@modal.Content() {
@@ -43,6 +49,8 @@ templ HostManagementMethodDetailsDialog(hostIP string, method host.HostManagemen
 				data-port={ strconv.Itoa(int(method.Port)) }
 				data-user={ method.Username }
 				data-password={ passwordValue }
+				data-secret-label={ secretLabel }
+				data-secret-value=""
 			></div>
 			<div class={ host_management_method_details_list() }>
 				<div class={ host_management_method_details_row() }>
@@ -68,9 +76,30 @@ templ HostManagementMethodDetailsDialog(hostIP string, method host.HostManagemen
 					<span class={ host_management_method_details_value() }>{ descriptionValue }</span>
 				</div>
 			</div>
+			<div class={ host_management_method_secret_section() }>
+				<div class={ host_management_method_details_row() }>
+					<span class={ host_management_method_details_label() }>{ secretLabel }</span>
+					<textarea
+						id={ secretValueID }
+						class={ host_management_method_secret_value(), "ui-input" }
+						rows="5"
+						readonly
+						data-management-method-secret-value
+						data-host-id={ method.HostID.String() }
+						data-method-id={ method.ID.String() }
+					>Secret is hidden. Reveal it when you need to connect.</textarea>
+				</div>
+				<p id={ secretStatusID } class={ host_management_method_secret_status() } data-management-method-secret-status></p>
+			</div>
 			@modal.Actions() {
+				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("revealHostManagementMethodSecret", dialogID)}) {
+					Reveal Secret
+				}
+				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("copyHostManagementMethodSecret", dialogID)}) {
+					Copy Secret
+				}
 				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("copyHostManagementMethodDetails", dialogID)}) {
-					Copy
+					Copy Details
 				}
 				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", dialogID)}) {
 					Close

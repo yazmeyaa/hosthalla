@@ -122,6 +122,10 @@ func (s *Service) GetProfileByID(ctx context.Context, id string) (authentication
 	return s.profileRepository.GetProfileByID(ctx, id)
 }
 
+func (s *Service) ListUsers(ctx context.Context) ([]authentication.Profile, error) {
+	return s.profileRepository.ListProfiles(ctx)
+}
+
 func (s *Service) GetProfileByUsername(ctx context.Context, username string) (authentication.Profile, error) {
 	return s.profileRepository.GetProfileByUsername(ctx, username)
 }
@@ -240,6 +244,10 @@ func (s *Service) CreateAPIToken(ctx context.Context, data CreateAPITokenDTO) (C
 
 func (s *Service) GetAPITokenByID(ctx context.Context, id string) (authentication.APIToken, error) {
 	return s.apiTokenRepository.GetAPITokenByID(ctx, id)
+}
+
+func (s *Service) ListAPITokens(ctx context.Context) ([]authentication.APIToken, error) {
+	return s.apiTokenRepository.ListAPITokens(ctx)
 }
 
 func (s *Service) ListAPITokensByProfileID(ctx context.Context, profileID string) ([]authentication.APIToken, error) {
