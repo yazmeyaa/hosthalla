@@ -69,10 +69,22 @@ templ DashboardHostsSection(data DashboardData) {
 }
 
 templ DashboardLiveUpdate(data DashboardData) {
+	@DashboardGeneratedAtLiveUpdate(data)
+	@DashboardOverviewLiveUpdate(data)
+	@DashboardHostsLiveUpdate(data)
+}
+
+templ DashboardGeneratedAtLiveUpdate(data DashboardData) {
 	<p id="dashboard-generated-at" class={ dashboard_page_meta() } hx-swap-oob="outerHTML">Cached snapshot generated at { data.GeneratedAtLabel }</p>
+}
+
+templ DashboardOverviewLiveUpdate(data DashboardData) {
 	<div id="dashboard-overview" hx-swap-oob="outerHTML">
 		@DashboardOverviewContent(data)
 	</div>
+}
+
+templ DashboardHostsLiveUpdate(data DashboardData) {
 	<div id="dashboard-hosts" hx-swap-oob="outerHTML">
 		@DashboardHostsContent(data)
 	</div>

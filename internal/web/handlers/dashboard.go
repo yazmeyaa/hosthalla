@@ -47,8 +47,18 @@ type dashboardCache struct {
 	expiresAt time.Time
 }
 
+type dashboardUpdateSections uint8
+
+const (
+	dashboardUpdateGeneratedAt dashboardUpdateSections = 1 << iota
+	dashboardUpdateOverview
+	dashboardUpdateHosts
+
+	dashboardUpdateAll = dashboardUpdateGeneratedAt | dashboardUpdateOverview | dashboardUpdateHosts
+)
+
 type dashboardClient struct {
-	updateCh chan struct{}
+	updateCh chan dashboardUpdateSections
 }
 
 func NewDashboardHandler(params DashboardHandlerParams) *DashboardHandler {
@@ -126,7 +136,7 @@ func (h *DashboardHandler) SubscribeToDashboard(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	client := &dashboardClient{updateCh: make(chan struct{}, 1)}
+	client := &dashboardClient{updateCh: make(chan dashboardUpdateSections, 8)}
 	h.registerClient(client)
 	defer h.unregisterClient(client)
 	defer conn.Close(websocket.StatusNormalClosure, "dashboard subscription closed")
@@ -135,13 +145,13 @@ func (h *DashboardHandler) SubscribeToDashboard(w http.ResponseWriter, r *http.R
 	defer cancel()
 	ctx = conn.CloseRead(ctx)
 
-	h.signalClient(client)
+	h.signalClient(client, dashboardUpdateAll)
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-client.updateCh:
-			payload, err := h.renderLiveUpdate(ctx)
+		case sections := <-client.updateCh:
+			payload, err := h.renderLiveUpdate(ctx, sections)
 			if err != nil {
 				h.logger.Error("failed to render dashboard websocket update", slog.String("error", err.Error()))
 				return
@@ -300,12 +310,34 @@ func (h *DashboardHandler) collectDashboardData(ctx context.Context, now time.Ti
 
 func (h *DashboardHandler) subscribeDashboardEvent(eventBus events.EventBus, event events.Event) {
 	if err := eventBus.Subscribe(event, func(ctx context.Context, event events.Event) error {
+		sections := dashboardUpdateSectionsForEvent(event)
+		if sections == 0 {
+			h.logger.Debug("dashboard update skipped", slog.String("event", event.EventName()))
+			return nil
+		}
 		h.invalidateCache()
-		h.queueLiveUpdate()
-		h.logger.Debug("dashboard update queued", slog.String("event", event.EventName()))
+		h.queueLiveUpdate(sections)
+		h.logger.Debug("dashboard update queued", slog.String("event", event.EventName()), slog.Uint64("sections", uint64(sections)))
 		return nil
 	}); err != nil {
 		h.logger.Error("failed to subscribe dashboard updates", slog.String("event", event.EventName()), slog.String("error", err.Error()))
+	}
+}
+
+func dashboardUpdateSectionsForEvent(event events.Event) dashboardUpdateSections {
+	switch event.(type) {
+	case host.UpdateHostEvent:
+		return dashboardUpdateGeneratedAt | dashboardUpdateHosts
+	case host.HostPingCompletedEvent,
+		host.HostsPingCompletedEvent,
+		host.HostMetricReceivedEvent,
+		agent.AgentRegisteredEvent,
+		agent.AgentUpdatedEvent,
+		agent.AgentDeletedEvent,
+		agent.AgentLastSeenUpdatedEvent:
+		return 0
+	default:
+		return dashboardUpdateAll
 	}
 }
 
@@ -329,30 +361,55 @@ func (h *DashboardHandler) unregisterClient(client *dashboardClient) {
 	h.logger.Debug("dashboard websocket client disconnected", slog.Int("clients", len(h.clients)))
 }
 
-func (h *DashboardHandler) queueLiveUpdate() {
+func (h *DashboardHandler) queueLiveUpdate(sections dashboardUpdateSections) {
 	h.clientsMu.RLock()
 	defer h.clientsMu.RUnlock()
 	for client := range h.clients {
-		h.signalClient(client)
+		h.signalClient(client, sections)
 	}
 }
 
-func (h *DashboardHandler) signalClient(client *dashboardClient) {
+func (h *DashboardHandler) signalClient(client *dashboardClient, sections dashboardUpdateSections) {
 	select {
-	case client.updateCh <- struct{}{}:
+	case client.updateCh <- sections:
 	default:
+		select {
+		case pending := <-client.updateCh:
+			select {
+			case client.updateCh <- pending | sections:
+			default:
+			}
+		default:
+		}
 	}
 }
 
-func (h *DashboardHandler) renderLiveUpdate(ctx context.Context) ([]byte, error) {
+func (h *DashboardHandler) renderLiveUpdate(ctx context.Context, sections dashboardUpdateSections) ([]byte, error) {
 	data, err := h.dashboardData(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	var body bytes.Buffer
-	if err := dashboard_page.DashboardLiveUpdate(data).Render(ctx, &body); err != nil {
-		return nil, err
+	if sections&dashboardUpdateGeneratedAt != 0 {
+		if err := dashboard_page.DashboardGeneratedAtLiveUpdate(data).Render(ctx, &body); err != nil {
+			return nil, err
+		}
+	}
+	if sections&dashboardUpdateOverview != 0 {
+		if err := dashboard_page.DashboardOverviewLiveUpdate(data).Render(ctx, &body); err != nil {
+			return nil, err
+		}
+	}
+	if sections&dashboardUpdateHosts != 0 {
+		if err := dashboard_page.DashboardHostsLiveUpdate(data).Render(ctx, &body); err != nil {
+			return nil, err
+		}
+	}
+	if body.Len() == 0 {
+		if err := dashboard_page.DashboardLiveUpdate(data).Render(ctx, &body); err != nil {
+			return nil, err
+		}
 	}
 	return body.Bytes(), nil
 }
