@@ -4,13 +4,16 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/a-h/templ"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage"
 	"github.com/yazmeyaa/hosthalla/internal/events"
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/handlers"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
+	"github.com/yazmeyaa/hosthalla/ui/app/layout"
 	ui_assets "github.com/yazmeyaa/hosthalla/ui/assets"
+	dashboard_page "github.com/yazmeyaa/hosthalla/ui/pages/dashboard"
 )
 
 type NewRouterParams struct {
@@ -70,5 +73,11 @@ func NewRouter(params NewRouterParams) http.Handler {
 	)
 	rootMux.Handle("/", protectedRoutes)
 
-	return rootMux
+	return templ.NewCSSMiddleware(rootMux, cssClasses()...)
+}
+
+func cssClasses() []templ.CSSClass {
+	classes := layout.CSSClasses()
+	classes = append(classes, dashboard_page.CSSClasses()...)
+	return classes
 }

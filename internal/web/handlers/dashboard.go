@@ -328,6 +328,8 @@ func dashboardUpdateSectionsForEvent(event events.Event) dashboardUpdateSections
 	switch event.(type) {
 	case host.UpdateHostEvent:
 		return dashboardUpdateGeneratedAt | dashboardUpdateHosts
+	case host.HostMetricSnapshotCreatedEvent:
+		return dashboardUpdateGeneratedAt | dashboardUpdateOverview | dashboardUpdateHosts
 	case host.HostPingCompletedEvent,
 		host.HostsPingCompletedEvent,
 		host.HostMetricReceivedEvent,

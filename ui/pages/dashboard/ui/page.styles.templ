@@ -1,5 +1,16 @@
 package dashboard_ui
 
+func CSSClasses() []templ.CSSClass {
+	return []templ.CSSClass{
+		dashboard_page_shell(),
+		dashboard_page_header(),
+		dashboard_page_heading(),
+		dashboard_page_title(),
+		dashboard_page_meta(),
+		dashboard_page_refresh_link(),
+	}
+}
+
 css dashboard_page_shell() {
 	display: flex;
 	flex-direction: column;

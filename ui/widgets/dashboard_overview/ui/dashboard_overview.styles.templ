@@ -1,5 +1,16 @@
 package dashboard_overview_ui
 
+func CSSClasses() []templ.CSSClass {
+	return []templ.CSSClass{
+		dashboard_overview(),
+		dashboard_overview_card(),
+		dashboard_overview_label(),
+		dashboard_overview_value(),
+		dashboard_overview_value_text(),
+		dashboard_overview_hint(),
+	}
+}
+
 css dashboard_overview() {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

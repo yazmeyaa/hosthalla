@@ -1,5 +1,11 @@
 package card
 
+func CSSClasses() []templ.CSSClass {
+	return []templ.CSSClass{
+		card(),
+	}
+}
+
 css card() {
 	background: var(--card);
 	border: 1px solid var(--border);
