@@ -118,7 +118,9 @@ func (h *DashboardHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DashboardHandler) SubscribeToDashboard(w http.ResponseWriter, r *http.Request) {
-	conn, err := websocket.Accept(w, r, nil)
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		CompressionMode: websocket.CompressionDisabled,
+	})
 	if err != nil {
 		h.logger.Error("failed to accept dashboard websocket", slog.String("error", err.Error()))
 		return

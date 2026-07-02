@@ -38,7 +38,7 @@ templ DashboardPage(props DashboardPageProps) {
 }
 
 templ DashboardPageContent(props DashboardPageProps) {
-	<div class={ dashboard_page_shell() } hx-ext="ws" ws-connect="/dashboard/subscribe">
+	<div class={ dashboard_page_shell() } ws-connect="/dashboard/subscribe">
 		<header class={ dashboard_page_header() }>
 			<div class={ dashboard_page_heading() }>
 				<h1 class={ dashboard_page_title() }>Dashboard</h1>
