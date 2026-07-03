@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -53,12 +54,18 @@ const (
 	dashboardUpdateGeneratedAt dashboardUpdateSections = 1 << iota
 	dashboardUpdateOverview
 	dashboardUpdateHosts
+	dashboardUpdateHostRows
 
 	dashboardUpdateAll = dashboardUpdateGeneratedAt | dashboardUpdateOverview | dashboardUpdateHosts
 )
 
+type dashboardUpdate struct {
+	sections dashboardUpdateSections
+	hostIDs  map[uuid.UUID]struct{}
+}
+
 type dashboardClient struct {
-	updateCh chan dashboardUpdateSections
+	updateCh chan dashboardUpdate
 }
 
 func NewDashboardHandler(params DashboardHandlerParams) *DashboardHandler {
@@ -136,7 +143,7 @@ func (h *DashboardHandler) SubscribeToDashboard(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	client := &dashboardClient{updateCh: make(chan dashboardUpdateSections, 8)}
+	client := &dashboardClient{updateCh: make(chan dashboardUpdate, 8)}
 	h.registerClient(client)
 	defer h.unregisterClient(client)
 	defer conn.Close(websocket.StatusNormalClosure, "dashboard subscription closed")
@@ -145,13 +152,13 @@ func (h *DashboardHandler) SubscribeToDashboard(w http.ResponseWriter, r *http.R
 	defer cancel()
 	ctx = conn.CloseRead(ctx)
 
-	h.signalClient(client, dashboardUpdateAll)
+	h.signalClient(client, dashboardUpdate{sections: dashboardUpdateAll})
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case sections := <-client.updateCh:
-			payload, err := h.renderLiveUpdate(ctx, sections)
+		case update := <-client.updateCh:
+			payload, err := h.renderLiveUpdate(ctx, update)
 			if err != nil {
 				h.logger.Error("failed to render dashboard websocket update", slog.String("error", err.Error()))
 				return
@@ -237,6 +244,7 @@ func (h *DashboardHandler) collectDashboardData(ctx context.Context, now time.Ti
 		}
 
 		row := dashboard_page.DashboardHostRow{
+			ID:                    listedHost.ID.String(),
 			Name:                  listedHost.Name,
 			IP:                    listedHost.IP.String(),
 			Tags:                  listedHost.Tags,
@@ -310,24 +318,35 @@ func (h *DashboardHandler) collectDashboardData(ctx context.Context, now time.Ti
 
 func (h *DashboardHandler) subscribeDashboardEvent(eventBus events.EventBus, event events.Event) {
 	if err := eventBus.Subscribe(event, func(ctx context.Context, event events.Event) error {
-		sections := dashboardUpdateSectionsForEvent(event)
-		if sections == 0 {
+		update := dashboardUpdateForEvent(event)
+		if update.sections == 0 {
 			h.logger.Debug("dashboard update skipped", slog.String("event", event.EventName()))
 			return nil
 		}
 		h.invalidateCache()
-		h.queueLiveUpdate(sections)
-		h.logger.Debug("dashboard update queued", slog.String("event", event.EventName()), slog.Uint64("sections", uint64(sections)))
+		h.queueLiveUpdate(update)
+		h.logger.Debug("dashboard update queued", slog.String("event", event.EventName()), slog.Uint64("sections", uint64(update.sections)), slog.Int("host_ids", len(update.hostIDs)))
 		return nil
 	}); err != nil {
 		h.logger.Error("failed to subscribe dashboard updates", slog.String("event", event.EventName()), slog.String("error", err.Error()))
 	}
 }
 
-func dashboardUpdateSectionsForEvent(event events.Event) dashboardUpdateSections {
-	switch event.(type) {
+func dashboardUpdateForEvent(event events.Event) dashboardUpdate {
+	switch value := event.(type) {
+	case host.CreateHostEvent,
+		host.DeleteHostEvent:
+		return dashboardUpdate{sections: dashboardUpdateAll}
 	case host.UpdateHostEvent:
-		return dashboardUpdateGeneratedAt | dashboardUpdateHosts
+		return dashboardHostRowUpdate(dashboardUpdateGeneratedAt, value.Host.ID)
+	case host.HostMetricSnapshotCreatedEvent:
+		return dashboardHostRowUpdate(dashboardUpdateGeneratedAt|dashboardUpdateOverview, value.HostID)
+	case host.HostSystemInfoUpdatedEvent:
+		return dashboardHostRowUpdate(dashboardUpdateGeneratedAt|dashboardUpdateOverview, value.HostID)
+	case host.HostMonitoringAgentAssignedEvent:
+		return dashboardHostRowUpdate(dashboardUpdateGeneratedAt|dashboardUpdateOverview, value.HostID)
+	case host.HostManagementMethodCreatedEvent:
+		return dashboardHostRowUpdate(dashboardUpdateGeneratedAt|dashboardUpdateOverview, value.HostID)
 	case host.HostPingCompletedEvent,
 		host.HostsPingCompletedEvent,
 		host.HostMetricReceivedEvent,
@@ -335,10 +354,27 @@ func dashboardUpdateSectionsForEvent(event events.Event) dashboardUpdateSections
 		agent.AgentUpdatedEvent,
 		agent.AgentDeletedEvent,
 		agent.AgentLastSeenUpdatedEvent:
-		return 0
+		return dashboardUpdate{}
 	default:
-		return dashboardUpdateAll
+		return dashboardUpdate{sections: dashboardUpdateAll}
 	}
+}
+
+func dashboardHostRowUpdate(sections dashboardUpdateSections, hostIDs ...uuid.UUID) dashboardUpdate {
+	update := dashboardUpdate{
+		sections: sections | dashboardUpdateHostRows,
+		hostIDs:  make(map[uuid.UUID]struct{}, len(hostIDs)),
+	}
+	for _, hostID := range hostIDs {
+		if hostID == uuid.Nil {
+			continue
+		}
+		update.hostIDs[hostID] = struct{}{}
+	}
+	if len(update.hostIDs) == 0 {
+		return dashboardUpdate{sections: sections | dashboardUpdateHosts}
+	}
+	return update
 }
 
 func (h *DashboardHandler) invalidateCache() {
@@ -361,22 +397,23 @@ func (h *DashboardHandler) unregisterClient(client *dashboardClient) {
 	h.logger.Debug("dashboard websocket client disconnected", slog.Int("clients", len(h.clients)))
 }
 
-func (h *DashboardHandler) queueLiveUpdate(sections dashboardUpdateSections) {
+func (h *DashboardHandler) queueLiveUpdate(update dashboardUpdate) {
 	h.clientsMu.RLock()
 	defer h.clientsMu.RUnlock()
 	for client := range h.clients {
-		h.signalClient(client, sections)
+		h.signalClient(client, update)
 	}
 }
 
-func (h *DashboardHandler) signalClient(client *dashboardClient, sections dashboardUpdateSections) {
+func (h *DashboardHandler) signalClient(client *dashboardClient, update dashboardUpdate) {
 	select {
-	case client.updateCh <- sections:
+	case client.updateCh <- update:
 	default:
 		select {
 		case pending := <-client.updateCh:
+			merged := mergeDashboardUpdates(pending, update)
 			select {
-			case client.updateCh <- pending | sections:
+			case client.updateCh <- merged:
 			default:
 			}
 		default:
@@ -384,26 +421,51 @@ func (h *DashboardHandler) signalClient(client *dashboardClient, sections dashbo
 	}
 }
 
-func (h *DashboardHandler) renderLiveUpdate(ctx context.Context, sections dashboardUpdateSections) ([]byte, error) {
+func mergeDashboardUpdates(left dashboardUpdate, right dashboardUpdate) dashboardUpdate {
+	merged := dashboardUpdate{
+		sections: left.sections | right.sections,
+		hostIDs:  make(map[uuid.UUID]struct{}, len(left.hostIDs)+len(right.hostIDs)),
+	}
+	for hostID := range left.hostIDs {
+		merged.hostIDs[hostID] = struct{}{}
+	}
+	for hostID := range right.hostIDs {
+		merged.hostIDs[hostID] = struct{}{}
+	}
+	return merged
+}
+
+func (h *DashboardHandler) renderLiveUpdate(ctx context.Context, update dashboardUpdate) ([]byte, error) {
 	data, err := h.dashboardData(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	var body bytes.Buffer
-	if sections&dashboardUpdateGeneratedAt != 0 {
+	if update.sections&dashboardUpdateGeneratedAt != 0 {
 		if err := dashboard_page.DashboardGeneratedAtLiveUpdate(data).Render(ctx, &body); err != nil {
 			return nil, err
 		}
 	}
-	if sections&dashboardUpdateOverview != 0 {
+	if update.sections&dashboardUpdateOverview != 0 {
 		if err := dashboard_page.DashboardOverviewLiveUpdate(data).Render(ctx, &body); err != nil {
 			return nil, err
 		}
 	}
-	if sections&dashboardUpdateHosts != 0 {
+	if update.sections&dashboardUpdateHosts != 0 {
 		if err := dashboard_page.DashboardHostsLiveUpdate(data).Render(ctx, &body); err != nil {
 			return nil, err
+		}
+	} else if update.sections&dashboardUpdateHostRows != 0 {
+		rowsByID := dashboardHostRowsByID(data.Hosts)
+		for _, hostID := range sortedDashboardHostIDs(update.hostIDs) {
+			row, ok := rowsByID[hostID]
+			if !ok {
+				continue
+			}
+			if err := dashboard_page.DashboardHostRowLiveUpdate(row).Render(ctx, &body); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if body.Len() == 0 {
@@ -412,6 +474,26 @@ func (h *DashboardHandler) renderLiveUpdate(ctx context.Context, sections dashbo
 		}
 	}
 	return body.Bytes(), nil
+}
+
+func dashboardHostRowsByID(rows []dashboard_page.DashboardHostRow) map[string]dashboard_page.DashboardHostRow {
+	result := make(map[string]dashboard_page.DashboardHostRow, len(rows))
+	for _, row := range rows {
+		if row.ID == "" {
+			continue
+		}
+		result[row.ID] = row
+	}
+	return result
+}
+
+func sortedDashboardHostIDs(hostIDs map[uuid.UUID]struct{}) []string {
+	result := make([]string, 0, len(hostIDs))
+	for hostID := range hostIDs {
+		result = append(result, hostID.String())
+	}
+	sort.Strings(result)
+	return result
 }
 
 func formatSystemLabel(info host.HostSystemInfo) string {

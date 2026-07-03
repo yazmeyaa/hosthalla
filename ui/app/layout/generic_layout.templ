@@ -1,6 +1,9 @@
 package layout
 
-import "github.com/yazmeyaa/hosthalla/internal/version"
+import (
+	"github.com/yazmeyaa/hosthalla/internal/version"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/icons"
+)
 
 type GenericLayoutProps struct {
 	Title string
@@ -18,6 +21,7 @@ templ GenericLayout(props GenericLayoutProps) {
 			@layout_styles()
 		</head>
 		<body hx-ext="ws" class={ generic_layout_styles() }>
+			@icons.EyeIconSymbols()
 			{ children... }
 			<footer class={ generic_layout_footer() }>
 				<div class={ generic_layout_footer_inner() }>
