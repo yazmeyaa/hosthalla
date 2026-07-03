@@ -90,6 +90,10 @@ templ DashboardHostsLiveUpdate(data DashboardData) {
 	</div>
 }
 
+templ DashboardHostRowLiveUpdate(host DashboardHostRow) {
+	@dashboard_hosts.DashboardHostItemOOB(host)
+}
+
 templ DashboardOverviewContent(data DashboardData) {
 	@dashboard_overview.DashboardOverview(dashboard_overview.DashboardOverviewProps{
 		TotalHosts:          data.Summary.TotalHosts,
