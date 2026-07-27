@@ -1,0 +1,718 @@
+package hosts_page_ui
+
+import "github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
+
+templ HostDialogScripts() {
+	@modal.Scripts()
+	<script>
+		async function writeToClipboard(text) {
+			if (typeof text !== "string" || text.length === 0) {
+				return;
+			}
+
+			if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+				await navigator.clipboard.writeText(text);
+				return;
+			}
+
+			const textarea = document.createElement("textarea");
+			textarea.value = text;
+			textarea.setAttribute("readonly", "");
+			textarea.style.position = "fixed";
+			textarea.style.left = "-9999px";
+			document.body.appendChild(textarea);
+			textarea.select();
+			document.execCommand("copy");
+			document.body.removeChild(textarea);
+		}
+
+		async function copyHostManagementMethodDetails(dialogId) {
+			const dialog = document.getElementById(dialogId);
+			if (!(dialog instanceof HTMLDialogElement)) {
+				return;
+			}
+
+			const source = dialog.querySelector("[data-copy-source='host-management-method']");
+			if (!(source instanceof HTMLElement)) {
+				return;
+			}
+
+			const description = source.dataset.description || "Not provided";
+			const authenticationType = source.dataset.authenticationType || "Unknown";
+			const ip = source.dataset.ip || "Not provided";
+			const port = source.dataset.port || "Not provided";
+			const user = source.dataset.user || "Not provided";
+			const password = source.dataset.password || "Not provided";
+			const secretLabel = source.dataset.secretLabel || "Secret";
+			const secretValue = source.dataset.secretValue || "";
+			const payload = [
+				"Description: " + description,
+				"Authentication Type: " + authenticationType,
+				"IP: " + ip,
+				"Port: " + port,
+				"User: " + user,
+				"Password: " + password,
+			];
+			if (secretLabel !== "Password") {
+				payload.push(secretLabel + ": " + (secretValue || "Reveal secret first."));
+			}
+
+			await writeToClipboard(payload.join("\n"));
+		}
+
+		window.copyHostManagementMethodDetails = copyHostManagementMethodDetails;
+
+		function setHostManagementMethodSecretStatus(dialog, message) {
+			const statusElement = dialog.querySelector("[data-management-method-secret-status]");
+			if (statusElement instanceof HTMLElement) {
+				statusElement.textContent = message;
+			}
+		}
+
+		function readHostManagementMethodSecretElements(dialogId) {
+			const dialog = document.getElementById(dialogId);
+			if (!(dialog instanceof HTMLDialogElement)) {
+				return null;
+			}
+
+			const secretElement = dialog.querySelector("[data-management-method-secret-value]");
+			const source = dialog.querySelector("[data-copy-source='host-management-method']");
+			if (!(secretElement instanceof HTMLTextAreaElement) || !(source instanceof HTMLElement)) {
+				return null;
+			}
+
+			return { dialog, secretElement, source };
+		}
+
+		function formatHostManagementMethodSecret(payload) {
+			const password = typeof payload.password === "string" ? payload.password : "";
+			if (password !== "") {
+				return { label: "Password", value: password };
+			}
+
+			const privateKey = typeof payload.privateKey === "string" ? payload.privateKey : "";
+			const publicKey = typeof payload.publicKey === "string" ? payload.publicKey : "";
+			if (privateKey !== "") {
+				return { label: "Private Key", value: privateKey };
+			}
+			if (publicKey !== "") {
+				return { label: "Public Key", value: publicKey };
+			}
+
+			return { label: "Secret", value: "" };
+		}
+
+		async function revealHostManagementMethodSecret(dialogId) {
+			const elements = readHostManagementMethodSecretElements(dialogId);
+			if (elements === null) {
+				return;
+			}
+
+			const hostID = elements.secretElement.dataset.hostId || "";
+			const methodID = elements.secretElement.dataset.methodId || "";
+			if (hostID === "" || methodID === "") {
+				setHostManagementMethodSecretStatus(elements.dialog, "Cannot resolve secret endpoint.");
+				return;
+			}
+
+			setHostManagementMethodSecretStatus(elements.dialog, "Loading secret...");
+			try {
+				const response = await fetch("/hosts/" + encodeURIComponent(hostID) + "/management-methods/" + encodeURIComponent(methodID) + "/secret", {
+					method: "POST",
+					headers: {
+						"Accept": "application/json",
+					},
+				});
+
+				if (!response.ok) {
+					const text = (await response.text()).trim();
+					throw new Error(text || ("Request failed with status " + response.status));
+				}
+
+				const payload = await response.json();
+				const secret = formatHostManagementMethodSecret(payload);
+				if (secret.value === "") {
+					throw new Error("Server returned empty secret.");
+				}
+
+				elements.secretElement.value = secret.value;
+				elements.source.dataset.secretLabel = secret.label;
+				elements.source.dataset.secretValue = secret.value;
+				if (secret.label === "Password") {
+					elements.source.dataset.password = secret.value;
+				}
+				setHostManagementMethodSecretStatus(elements.dialog, "Secret is visible. Keep it safe.");
+			} catch (error) {
+				setHostManagementMethodSecretStatus(elements.dialog, error instanceof Error ? error.message : "Failed to load secret.");
+			}
+		}
+
+		window.revealHostManagementMethodSecret = revealHostManagementMethodSecret;
+
+		async function copyHostManagementMethodSecret(dialogId) {
+			const elements = readHostManagementMethodSecretElements(dialogId);
+			if (elements === null) {
+				return;
+			}
+
+			let secret = elements.source.dataset.secretValue || "";
+			if (secret === "") {
+				await revealHostManagementMethodSecret(dialogId);
+				secret = elements.source.dataset.secretValue || "";
+			}
+			if (secret === "") {
+				return;
+			}
+
+			try {
+				await writeToClipboard(secret);
+				setHostManagementMethodSecretStatus(elements.dialog, "Secret copied to clipboard.");
+			} catch (error) {
+				setHostManagementMethodSecretStatus(elements.dialog, "Failed to copy secret.");
+			}
+		}
+
+		window.copyHostManagementMethodSecret = copyHostManagementMethodSecret;
+
+		async function generateHostAgentRegistrationCommand(hostID, statusElementID, commandElementID) {
+			const statusElement = document.getElementById(statusElementID);
+			const commandElement = document.getElementById(commandElementID);
+			if (!(commandElement instanceof HTMLTextAreaElement)) {
+				return;
+			}
+
+			if (statusElement instanceof HTMLElement) {
+				statusElement.textContent = "Generating registration command...";
+			}
+			commandElement.value = "";
+
+			try {
+				const response = await fetch("/hosts/" + encodeURIComponent(hostID) + "/agent/register-command", {
+					method: "POST",
+					headers: {
+						"Accept": "application/json",
+					},
+				});
+
+				if (!response.ok) {
+					const text = (await response.text()).trim();
+					throw new Error(text || ("Request failed with status " + response.status));
+				}
+
+				const payload = await response.json();
+				const command = typeof payload.command === "string" ? payload.command.trim() : "";
+				if (command === "") {
+					throw new Error("Server returned empty command");
+				}
+
+				commandElement.value = command;
+				if (statusElement instanceof HTMLElement) {
+					statusElement.textContent = "Command is ready. Keep token secure; it will not be shown again.";
+				}
+			} catch (error) {
+				if (statusElement instanceof HTMLElement) {
+					statusElement.textContent = error instanceof Error ? error.message : "Failed to generate command";
+				}
+			}
+		}
+
+		window.generateHostAgentRegistrationCommand = generateHostAgentRegistrationCommand;
+
+		async function copyHostAgentRegistrationCommand(commandElementID, statusElementID) {
+			const commandElement = document.getElementById(commandElementID);
+			const statusElement = document.getElementById(statusElementID);
+			if (!(commandElement instanceof HTMLTextAreaElement)) {
+				return;
+			}
+			const command = commandElement.value.trim();
+			if (command === "") {
+				if (statusElement instanceof HTMLElement) {
+					statusElement.textContent = "Generate a command first.";
+				}
+				return;
+			}
+
+			try {
+				await writeToClipboard(command);
+				if (statusElement instanceof HTMLElement) {
+					statusElement.textContent = "Command copied to clipboard.";
+				}
+			} catch (error) {
+				if (statusElement instanceof HTMLElement) {
+					statusElement.textContent = "Failed to copy command.";
+				}
+			}
+		}
+
+		window.copyHostAgentRegistrationCommand = copyHostAgentRegistrationCommand;
+
+		function normalizeHostTag(rawTag) {
+			return String(rawTag || "").trim().replace(/^#+/, "").toLowerCase();
+		}
+
+		function readHostTags(field) {
+			const valueInput = field.querySelector("[data-host-tags-value]");
+			if (!(valueInput instanceof HTMLInputElement) || valueInput.value.trim() === "") {
+				return [];
+			}
+
+			const tags = [];
+			const seen = new Set();
+			valueInput.value.split(",").forEach(function(rawTag) {
+				const tag = normalizeHostTag(rawTag);
+				if (tag === "" || seen.has(tag)) {
+					return;
+				}
+				seen.add(tag);
+				tags.push(tag);
+			});
+			return tags;
+		}
+
+		function writeHostTags(field, tags) {
+			const valueInput = field.querySelector("[data-host-tags-value]");
+			if (valueInput instanceof HTMLInputElement) {
+				valueInput.value = tags.join(",");
+			}
+			renderHostTags(field, tags);
+		}
+
+		function renderHostTags(field, tags) {
+			const list = field.querySelector("[data-host-tags-list]");
+			const template = field.querySelector("[data-host-tag-chip-template]");
+			if (!(list instanceof HTMLElement) || !(template instanceof HTMLTemplateElement)) {
+				return;
+			}
+
+			list.replaceChildren();
+			tags.forEach(function(tag) {
+				const fragment = template.content.cloneNode(true);
+				const chip = fragment.querySelector("[data-host-tag-remove]");
+				const label = fragment.querySelector("[data-host-tag-chip-label]");
+				if (chip instanceof HTMLElement) {
+					chip.dataset.tagName = tag;
+					chip.setAttribute("aria-label", "Remove tag " + tag);
+				}
+				if (label instanceof HTMLElement) {
+					label.textContent = "#" + tag;
+				}
+				list.appendChild(fragment);
+			});
+		}
+
+		function addHostTags(field, rawTags) {
+			const tags = readHostTags(field);
+			const seen = new Set(tags);
+			rawTags.forEach(function(rawTag) {
+				const tag = normalizeHostTag(rawTag);
+				if (tag === "" || seen.has(tag)) {
+					return;
+				}
+				seen.add(tag);
+				tags.push(tag);
+			});
+			writeHostTags(field, tags);
+		}
+
+		function removeHostTag(field, tag) {
+			writeHostTags(field, readHostTags(field).filter(function(existingTag) {
+				return existingTag !== tag;
+			}));
+		}
+
+		function initHostTagsField(field) {
+			if (!(field instanceof HTMLElement)) {
+				return;
+			}
+			writeHostTags(field, readHostTags(field));
+		}
+
+		function splitHostTagsInput(value) {
+			return String(value || "").split(/[\n,]+/);
+		}
+
+		function syncHostManagementMethodForm(form) {
+			if (!(form instanceof HTMLFormElement)) {
+				return;
+			}
+
+			const typeSelect = form.querySelector("select[name='methodType']");
+			if (!(typeSelect instanceof HTMLSelectElement)) {
+				return;
+			}
+
+			const usernameInput = form.querySelector("input[name='username']");
+			const passwordInput = form.querySelector("input[name='password']");
+			const publicKeyInput = form.querySelector("textarea[name='publicKey']");
+			const privateKeyInput = form.querySelector("textarea[name='privateKey']");
+			const passwordField = form.querySelector("[data-method-field='password']");
+			const publicKeyField = form.querySelector("[data-method-field='publicKey']");
+			const privateKeyField = form.querySelector("[data-method-field='privateKey']");
+			const isSSHKey = typeSelect.value === "ssh_key";
+
+			if (passwordField instanceof HTMLElement) {
+				passwordField.style.display = isSSHKey ? "none" : "";
+			}
+			if (publicKeyField instanceof HTMLElement) {
+				publicKeyField.style.display = isSSHKey ? "" : "none";
+			}
+			if (privateKeyField instanceof HTMLElement) {
+				privateKeyField.style.display = isSSHKey ? "" : "none";
+			}
+
+			if (usernameInput instanceof HTMLInputElement) {
+				usernameInput.required = true;
+				usernameInput.disabled = false;
+			}
+			if (passwordInput instanceof HTMLInputElement) {
+				passwordInput.required = !isSSHKey;
+				passwordInput.disabled = isSSHKey;
+			}
+			if (publicKeyInput instanceof HTMLTextAreaElement) {
+				publicKeyInput.required = isSSHKey;
+				publicKeyInput.disabled = !isSSHKey;
+			}
+			if (privateKeyInput instanceof HTMLTextAreaElement) {
+				privateKeyInput.required = isSSHKey;
+				privateKeyInput.disabled = !isSSHKey;
+			}
+		}
+
+		window.syncHostManagementMethodForm = syncHostManagementMethodForm;
+
+		function readImportHostsPayload(rawPayload) {
+			const payload = JSON.parse(rawPayload);
+			if (Array.isArray(payload)) {
+				return payload;
+			}
+			if (payload !== null && typeof payload === "object" && Array.isArray(payload.hosts)) {
+				return payload.hosts;
+			}
+			throw new Error("JSON must contain a hosts array.");
+		}
+
+		function normalizeImportHost(value) {
+			if (value === null || typeof value !== "object") {
+				return { name: "", ip: "", methods: [], valid: false };
+			}
+			const name = typeof value.Name === "string" ? value.Name : String(value.name || "");
+			const ip = typeof value.IP === "string" ? value.IP : String(value.ip || "");
+			const methods = Array.isArray(value.managementMethods) ? value.managementMethods : (Array.isArray(value.ManagementMethods) ? value.ManagementMethods : []);
+			return {
+				name: name.trim(),
+				ip: ip.trim(),
+				methods: methods,
+				valid: name.trim() !== "" && ip.trim() !== "" && methods.every(isValidImportManagementMethod),
+			};
+		}
+
+		function readImportManagementMethodType(method) {
+			return typeof method.type === "string" ? method.type : String(method.Type || "");
+		}
+
+		function readImportManagementMethodUsername(method) {
+			return typeof method.username === "string" ? method.username : String(method.Username || "");
+		}
+
+		function readImportManagementMethodSecret(method) {
+			if (method.secret !== null && typeof method.secret === "object") {
+				return method.secret;
+			}
+			if (method.Secret !== null && typeof method.Secret === "object") {
+				return method.Secret;
+			}
+			return {};
+		}
+
+		function readImportSecretValue(secret, lowerName, upperName) {
+			return typeof secret[lowerName] === "string" ? secret[lowerName] : String(secret[upperName] || "");
+		}
+
+		function isValidImportManagementMethod(method) {
+			if (method === null || typeof method !== "object") {
+				return false;
+			}
+			if (readImportManagementMethodUsername(method).trim() === "") {
+				return false;
+			}
+			const type = readImportManagementMethodType(method);
+			const secret = readImportManagementMethodSecret(method);
+			if (type === "ssh_password") {
+				return readImportSecretValue(secret, "password", "Password").trim() !== "";
+			}
+			if (type === "ssh_key") {
+				return readImportSecretValue(secret, "publicKey", "PublicKey").trim() !== "" && readImportSecretValue(secret, "privateKey", "PrivateKey").trim() !== "";
+			}
+			return false;
+		}
+
+		function readExistingImportIPs(form) {
+			const ips = new Set();
+			form.querySelectorAll("[data-existing-host-ip]").forEach(function(element) {
+				if (element instanceof HTMLElement && element.dataset.existingHostIp) {
+					ips.add(element.dataset.existingHostIp);
+				}
+			});
+			return ips;
+		}
+
+		function setHostsImportStatus(form, message) {
+			const status = form.querySelector("[data-hosts-import-status]");
+			if (status instanceof HTMLElement) {
+				status.textContent = message;
+			}
+		}
+
+		function setHostsImportCount(form, selector, count) {
+			const element = form.querySelector(selector);
+			if (element instanceof HTMLElement) {
+				element.textContent = String(count);
+			}
+		}
+
+		function setHostsImportReady(form, isReady) {
+			const submitButton = form.querySelector("button[type='submit']");
+			if (submitButton instanceof HTMLButtonElement) {
+				submitButton.disabled = !isReady;
+			}
+		}
+
+		async function previewHostsImport(form) {
+			const fileInput = form.querySelector("[data-hosts-import-file]");
+			const summary = form.querySelector("[data-hosts-import-summary]");
+			if (!(fileInput instanceof HTMLInputElement) || !(summary instanceof HTMLElement)) {
+				return;
+			}
+
+			setHostsImportReady(form, false);
+			summary.hidden = true;
+
+			const file = fileInput.files && fileInput.files[0];
+			if (!(file instanceof File)) {
+				setHostsImportStatus(form, "Select a JSON file exported from Hosts.");
+				return;
+			}
+
+			try {
+				const hosts = readImportHostsPayload(await file.text());
+				const existingIPs = readExistingImportIPs(form);
+				const seenIPs = new Set();
+				let newCount = 0;
+				let duplicateCount = 0;
+				let invalidCount = 0;
+				let methodCount = 0;
+
+				hosts.forEach(function(rawHost) {
+					const importedHost = normalizeImportHost(rawHost);
+					if (!importedHost.valid) {
+						invalidCount += 1;
+						return;
+					}
+					if (existingIPs.has(importedHost.ip) || seenIPs.has(importedHost.ip)) {
+						duplicateCount += 1;
+						return;
+					}
+					seenIPs.add(importedHost.ip);
+					newCount += 1;
+					methodCount += importedHost.methods.length;
+				});
+
+				setHostsImportCount(form, "[data-hosts-import-new-count]", newCount);
+				setHostsImportCount(form, "[data-hosts-import-method-count]", methodCount);
+				setHostsImportCount(form, "[data-hosts-import-duplicate-count]", duplicateCount);
+				setHostsImportCount(form, "[data-hosts-import-invalid-count]", invalidCount);
+				summary.hidden = false;
+
+				if (invalidCount > 0) {
+					setHostsImportStatus(form, "Fix invalid host records before importing.");
+					return;
+				}
+				if (newCount === 0) {
+					setHostsImportStatus(form, duplicateCount > 0 ? "All hosts in this file already exist." : "No hosts found in this file.");
+					return;
+				}
+
+				setHostsImportStatus(form, duplicateCount > 0 ? "Duplicates will be skipped." : "Ready to import.");
+				setHostsImportReady(form, true);
+			} catch (error) {
+				setHostsImportStatus(form, error instanceof Error ? error.message : "Failed to read JSON file.");
+			}
+		}
+
+		async function submitHostsImport(form) {
+			setHostsImportReady(form, false);
+			setHostsImportStatus(form, "Importing hosts...");
+			try {
+				const response = await fetch(form.action, {
+					method: "POST",
+					headers: {
+						"Accept": "application/json",
+					},
+					body: new FormData(form),
+				});
+				if (!response.ok) {
+					const text = (await response.text()).trim();
+					throw new Error(text || ("Import failed with status " + response.status));
+				}
+
+				const payload = await response.json();
+				const imported = Number(payload.imported || 0);
+				const skipped = Number(payload.skipped || 0);
+				setHostsImportStatus(form, "Imported " + imported + " host" + (imported === 1 ? "" : "s") + ". Skipped " + skipped + ".");
+				if (imported > 0) {
+					window.setTimeout(function() {
+						window.location.href = "/hosts";
+					}, 700);
+				} else {
+					setHostsImportReady(form, true);
+				}
+			} catch (error) {
+				setHostsImportReady(form, true);
+				setHostsImportStatus(form, error instanceof Error ? error.message : "Failed to import hosts.");
+			}
+		}
+
+		if (!window.__hostManagementMethodFormBound) {
+			window.__hostManagementMethodFormBound = true;
+			document.querySelectorAll("[data-host-tags-field]").forEach(initHostTagsField);
+			document.querySelectorAll("[data-hosts-import-form]").forEach(function(form) {
+				if (form instanceof HTMLFormElement) {
+					setHostsImportReady(form, false);
+				}
+			});
+
+			document.addEventListener("click", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLElement)) {
+					return;
+				}
+
+				const suggestion = target.closest("[data-host-tag-suggestion]");
+				if (suggestion instanceof HTMLElement) {
+					const field = suggestion.closest("[data-host-tags-field]");
+					if (field instanceof HTMLElement) {
+						addHostTags(field, [suggestion.dataset.tagName || ""]);
+					}
+					return;
+				}
+
+				const removeButton = target.closest("[data-host-tag-remove]");
+				if (removeButton instanceof HTMLElement) {
+					const field = removeButton.closest("[data-host-tags-field]");
+					if (field instanceof HTMLElement) {
+						removeHostTag(field, normalizeHostTag(removeButton.dataset.tagName || ""));
+					}
+				}
+			});
+
+			document.addEventListener("keydown", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLInputElement) || !target.matches("[data-host-tags-input]")) {
+					return;
+				}
+				if (event.key !== "Enter" && event.key !== ",") {
+					return;
+				}
+
+				event.preventDefault();
+				const field = target.closest("[data-host-tags-field]");
+				if (field instanceof HTMLElement) {
+					addHostTags(field, splitHostTagsInput(target.value));
+					target.value = "";
+				}
+			});
+
+			document.addEventListener("input", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLInputElement) || !target.matches("[data-host-tags-input]")) {
+					return;
+				}
+				if (!target.value.includes(",") && !target.value.includes("\n")) {
+					return;
+				}
+
+				const field = target.closest("[data-host-tags-field]");
+				if (field instanceof HTMLElement) {
+					addHostTags(field, splitHostTagsInput(target.value));
+					target.value = "";
+				}
+			});
+
+			document.addEventListener("change", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLInputElement) || !target.matches("[data-hosts-import-file]")) {
+					return;
+				}
+				const form = target.closest("[data-hosts-import-form]");
+				if (form instanceof HTMLFormElement) {
+					previewHostsImport(form);
+				}
+			});
+
+			document.addEventListener("dragover", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLElement) || target.closest("[data-hosts-import-form]") === null) {
+					return;
+				}
+				event.preventDefault();
+			});
+
+			document.addEventListener("drop", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLElement)) {
+					return;
+				}
+				const form = target.closest("[data-hosts-import-form]");
+				if (!(form instanceof HTMLFormElement)) {
+					return;
+				}
+				const fileInput = form.querySelector("[data-hosts-import-file]");
+				if (!(fileInput instanceof HTMLInputElement) || event.dataTransfer === null || event.dataTransfer.files.length === 0) {
+					return;
+				}
+				event.preventDefault();
+				fileInput.files = event.dataTransfer.files;
+				previewHostsImport(form);
+			});
+
+			document.addEventListener("submit", function(event) {
+				const form = event.target;
+				if (!(form instanceof HTMLFormElement)) {
+					return;
+				}
+
+				if (form.matches("[data-hosts-import-form]")) {
+					event.preventDefault();
+					submitHostsImport(form);
+					return;
+				}
+
+				form.querySelectorAll("[data-host-tags-field]").forEach(function(field) {
+					if (!(field instanceof HTMLElement)) {
+						return;
+					}
+					const input = field.querySelector("[data-host-tags-input]");
+					if (input instanceof HTMLInputElement && input.value.trim() !== "") {
+						addHostTags(field, splitHostTagsInput(input.value));
+						input.value = "";
+					}
+				});
+			});
+
+			document.querySelectorAll("form.host-management-method-form").forEach(function(form) {
+				syncHostManagementMethodForm(form);
+			});
+
+			document.addEventListener("change", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLSelectElement)) {
+					return;
+				}
+				if (!target.classList.contains("host-management-method-type-select")) {
+					return;
+				}
+				syncHostManagementMethodForm(target.form);
+			});
+		}
+	</script>
+}

@@ -11,8 +11,8 @@ import (
 	"github.com/a-h/templ"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
-	"github.com/yazmeyaa/hosthalla/ui/app/layout"
 	"github.com/yazmeyaa/hosthalla/ui/pages/administration_page"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
 )
 
 type AdministrationHandler struct {

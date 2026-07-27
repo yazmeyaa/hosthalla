@@ -1,0 +1,112 @@
+package hosts_page_ui
+
+import (
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	host_entity "github.com/yazmeyaa/hosthalla/ui/entities/host"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
+)
+
+templ HostDetailsDialog(
+	host host.Host,
+	methods []host.HostManagementMethod,
+	systemInfo *host.HostSystemInfo,
+	detailsDialogID string,
+	addManagementMethodDialogID string,
+) {
+	@modal.Modal(modal.ModalProps{ID: detailsDialogID, AriaLabel: "Host Details"}) {
+		@modal.Content() {
+			{{
+				agentRegisterStatusID := "host-agent-register-status-" + host.ID.String()
+				agentRegisterCommandID := "host-agent-register-command-" + host.ID.String()
+			}}
+			@modal.Title("Host Details")
+			@host_entity.HostDetailsSummary(host)
+			@host_entity.HostSystemInfo(systemInfo)
+			<div class={ host_tags_section() }>
+				<h3 class={ host_tags_title() }>Tags</h3>
+				if len(host.Tags) == 0 {
+					<p class={ host_tags_empty() }>No tags added yet.</p>
+				} else {
+					<div class={ host_tags_list() }>
+						for _, tag := range host.Tags {
+							@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+								{ "#" + tag }
+							}
+						}
+					</div>
+				}
+			</div>
+			<div class={ host_management_methods_section() }>
+				<h3 class={ host_management_methods_title() }>Management Methods</h3>
+				if len(methods) == 0 {
+					<p class={ host_management_methods_empty() }>No methods added yet.</p>
+				} else {
+					<div class={ host_management_methods_list() }>
+						for _, method := range methods {
+							{{
+								methodDetailsDialogID := "host-management-method-details-" + method.ID.String()
+							}}
+							<button
+								type="button"
+								class={ host_management_method_details_trigger() }
+								aria-label={ "Show connection details for " + method.Username }
+								onclick={ templ.JSFuncCall("openModalDialog", methodDetailsDialogID) }
+							>
+								@host_entity.MethodTypeTag(method.Type)
+							</button>
+							@HostManagementMethodDetailsDialog(host.IP.String(), method, methodDetailsDialogID)
+						}
+					</div>
+				}
+			</div>
+			<div class={ host_agent_registration_section() }>
+				<h3 class={ host_agent_registration_title() }>Monitoring Agent</h3>
+				<p class={ host_agent_registration_description() }>
+					Create a non-expiring API token and generate a ready-to-run registration command.
+				</p>
+				<div class={ host_agent_registration_actions() }>
+					@button.Button(button.ButtonProps{
+						Type: "button",
+						OnClick: templ.JSFuncCall(
+							"generateHostAgentRegistrationCommand",
+							host.ID.String(),
+							agentRegisterStatusID,
+							agentRegisterCommandID,
+						),
+					}) {
+						Register Agent
+					}
+					@button.Button(button.ButtonProps{
+						Type: "button",
+						Variant: "secondary",
+						OnClick: templ.JSFuncCall(
+							"copyHostAgentRegistrationCommand",
+							agentRegisterCommandID,
+							agentRegisterStatusID,
+						),
+					}) {
+						Copy Command
+					}
+				</div>
+				<p id={ agentRegisterStatusID } class={ host_agent_registration_status() }></p>
+				<textarea
+					id={ agentRegisterCommandID }
+					class={ host_agent_registration_command() }
+					readonly
+					rows="3"
+					placeholder="Generated command will appear here."
+				></textarea>
+			</div>
+			@modal.Actions() {
+				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", detailsDialogID)}) {
+					Close
+				}
+				@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", addManagementMethodDialogID)}) {
+					Add Method
+				}
+			}
+		}
+	}
+}

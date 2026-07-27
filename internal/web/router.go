@@ -11,7 +11,7 @@ import (
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/handlers"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
-	ui_assets "github.com/yazmeyaa/hosthalla/ui/assets"
+	ui_assets "github.com/yazmeyaa/hosthalla/ui/app/assets"
 )
 
 type NewRouterParams struct {

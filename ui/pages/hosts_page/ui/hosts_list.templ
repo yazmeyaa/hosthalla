@@ -1,0 +1,69 @@
+package hosts_page_ui
+
+import (
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	host_entity "github.com/yazmeyaa/hosthalla/ui/entities/host"
+	hosts_page_model "github.com/yazmeyaa/hosthalla/ui/pages/hosts_page/model"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/icons"
+)
+
+templ HostsList(
+	hosts []host.Host,
+	hostManagementMethodsByHostID map[string][]host.HostManagementMethod,
+	hostSystemInfoByHostID map[string]host.HostSystemInfo,
+	hostLatestMetricsByHostID map[string]hosts_page_model.HostLatestMetricsBadges,
+	availableTags []host.Tag,
+) {
+	<ul class={ hosts_list() }>
+		for _, listedHost := range hosts {
+			{{
+				updateDialogID := "update-host-dialog-" + listedHost.ID.String()
+				detailsDialogID := "host-details-dialog-" + listedHost.ID.String()
+				addManagementMethodDialogID := "add-host-management-method-dialog-" + listedHost.ID.String()
+				hostManagementMethods := hostManagementMethodsByHostID[listedHost.ID.String()]
+				var hostSystemInfo *host.HostSystemInfo
+				if value, ok := hostSystemInfoByHostID[listedHost.ID.String()]; ok {
+					hostSystemInfo = &value
+				}
+			}}
+			<li class={ host_list_item() }>
+				<div class={ host_list_item_card() }>
+					@card.Card() {
+						@host_entity.HostDetails(listedHost)
+						if metrics, ok := hostLatestMetricsByHostID[listedHost.ID.String()]; ok {
+							<div class={ host_latest_metrics() }>
+								@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+									<span class={ host_metric_badge_content() }>
+										@icons.CPUIcon()
+										{ metrics.CPU }
+									</span>
+								}
+								@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+									<span class={ host_metric_badge_content() }>
+										@icons.RAMIcon()
+										{ metrics.MemoryUsed }
+										if metrics.MemoryTotal != "" {
+											{ "/" + metrics.MemoryTotal }
+										}
+									</span>
+								}
+								@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+									<span class={ host_metric_badge_content() }>
+										@icons.HardDriveIcon()
+										{ metrics.Disk }
+									</span>
+								}
+							</div>
+						}
+						@HostActions(listedHost.ID.String(), updateDialogID, detailsDialogID)
+					}
+				</div>
+				@UpdateHostDialog(listedHost, availableTags)
+				@HostDetailsDialog(listedHost, hostManagementMethods, hostSystemInfo, detailsDialogID, addManagementMethodDialogID)
+				@AddHostManagementMethodDialog(listedHost, addManagementMethodDialogID)
+			</li>
+		}
+	</ul>
+}

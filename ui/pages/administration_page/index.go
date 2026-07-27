@@ -1,0 +1,8 @@
+package administration_page
+
+import administration_page_ui "github.com/yazmeyaa/hosthalla/ui/pages/administration_page/ui"
+
+type AdministrationPageProps = administration_page_ui.AdministrationPageProps
+
+var AdministrationPage = administration_page_ui.AdministrationPage
+var AdministrationPageContent = administration_page_ui.AdministrationPageContent
