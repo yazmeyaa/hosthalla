@@ -2,7 +2,34 @@ package layout
 
 templ layout_styles() {
 	<style>
+		@font-face {
+			font-family: "Adwaita Sans";
+			src: url("/assets/fonts/AdwaitaSans-Regular.8381c33b.ttf") format("truetype");
+			font-style: normal;
+			font-weight: 400;
+			font-display: swap;
+		}
+
+		@font-face {
+			font-family: "Adwaita Sans";
+			src: url("/assets/fonts/AdwaitaSans-Italic.a3dc55af.ttf") format("truetype");
+			font-style: italic;
+			font-weight: 400;
+			font-display: swap;
+		}
+
+		@font-face {
+			font-family: "JetBrains Mono";
+			src: url("/assets/fonts/JetBrainsMono-wght.662a196d.ttf") format("truetype");
+			font-style: normal;
+			font-weight: 100 800;
+			font-display: swap;
+		}
+
         :root {
+            --font-sans: "Adwaita Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
             --bg: #0F172A;
             --surface: #111827;
             --card: #1F2937;
@@ -130,6 +157,13 @@ templ layout_styles() {
 			margin: 0;
 		}
 
+		.ui-mono-text {
+			font-family: var(--font-mono);
+			font-size-adjust: 0.52;
+			font-variant-ligatures: none;
+			letter-spacing: 0;
+		}
+
 		.ui-button:hover {
 			filter: brightness(1.06);
 			transform: translateY(-1px);
@@ -155,8 +189,15 @@ templ layout_styles() {
 css generic_layout_styles() {
 	background-color: var(--bg);
 	color: var(--text);
-	font-size: 14px;
-	font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+	font-size: 15px;
+	font-family: var(--font-sans);
+	font-feature-settings: "kern";
+	font-kerning: normal;
+	line-height: 1.45;
+	letter-spacing: 0;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 	margin: 0;
 	min-height: 100vh;
 	display: flex;

@@ -3,6 +3,7 @@ package web
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage"
@@ -34,7 +35,7 @@ func NewRouter(params NewRouterParams) http.Handler {
 	})
 
 	mux := http.NewServeMux()
-	mux.Handle("GET /assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(ui_assets.Files))))
+	mux.Handle("GET /assets/", staticAssetsHandler(http.StripPrefix("/assets/", http.FileServer(http.FS(ui_assets.Files)))))
 
 	mux.Handle("GET /", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(indexHandler.Index)))
 	mux.Handle("GET /dashboard", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(dashboardHandler.Dashboard)))
@@ -73,4 +74,16 @@ func NewRouter(params NewRouterParams) http.Handler {
 	rootMux.Handle("/", protectedRoutes)
 
 	return rootMux
+}
+
+func staticAssetsHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/assets/")
+		if strings.HasPrefix(path, "fonts/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			w.Header().Set("Cache-Control", "public, max-age=3600")
+		}
+		next.ServeHTTP(w, r)
+	})
 }

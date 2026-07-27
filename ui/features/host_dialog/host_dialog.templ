@@ -18,7 +18,7 @@ templ HostFormFields(idPrefix string, name string, description string, ip string
 	</div>
 	<div class={ host_form_field() }>
 		<label class={ host_form_label() } for={ idPrefix + "-ip" }>IP</label>
-		@input.Input(input.InputProps{Id: idPrefix + "-ip", Name: "ip", Value: ip, Placeholder: "127.0.0.1", Required: true})
+		@input.Input(input.InputProps{Id: idPrefix + "-ip", Name: "ip", Value: ip, Placeholder: "127.0.0.1", ClassName: "ui-mono-text", Required: true})
 	</div>
 	<div class={ host_form_field(), "host-tags-field" } data-host-tags-field>
 		<label class={ host_form_label() } for={ idPrefix + "-tags-input" }>Tags</label>
