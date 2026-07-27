@@ -44,7 +44,9 @@ func NewRouter(params NewRouterParams) http.Handler {
 	mux.Handle("POST /auth/logout", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(authHandler.Logout)))
 
 	mux.Handle("GET /hosts", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.ListHosts)))
+	mux.Handle("GET /hosts/export", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.ExportHosts)))
 	mux.Handle("POST /hosts/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.CreateHost)))
+	mux.Handle("POST /hosts/import", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.ImportHosts)))
 	mux.Handle("POST /hosts/{id}/update", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.UpdateHost)))
 	mux.Handle("POST /hosts/{id}/delete", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.DeleteHost)))
 	mux.Handle("POST /hosts/{id}/ping", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.PingHost)))
