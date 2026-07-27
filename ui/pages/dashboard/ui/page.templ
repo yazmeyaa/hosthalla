@@ -75,7 +75,7 @@ templ DashboardLiveUpdate(data DashboardData) {
 }
 
 templ DashboardGeneratedAtLiveUpdate(data DashboardData) {
-	<p id="dashboard-generated-at" class={ dashboard_page_meta() } hx-swap-oob="outerHTML">Cached snapshot generated at { data.GeneratedAtLabel }</p>
+	<p id="dashboard-generated-at" class={ dashboardPageMetaClass() } hx-swap-oob="outerHTML">Cached snapshot generated at { data.GeneratedAtLabel }</p>
 }
 
 templ DashboardOverviewLiveUpdate(data DashboardData) {
@@ -111,4 +111,8 @@ templ DashboardHostsContent(data DashboardData) {
 	@dashboard_hosts.DashboardHosts(dashboard_hosts.DashboardHostsProps{
 		Hosts: data.Hosts,
 	})
+}
+
+func dashboardPageMetaClass() string {
+	return dashboard_page_meta().ClassName()
 }
