@@ -61,15 +61,15 @@ templ HostManagementMethodDetailsDialog(hostIP string, method host.HostManagemen
 				</div>
 				<div class={ host_management_method_details_row() }>
 					<span class={ host_management_method_details_label() }>IP</span>
-					<span class={ host_management_method_details_value() }>{ hostIP }</span>
+					<span class={ host_management_method_details_value(), "ui-mono-text" }>{ hostIP }</span>
 				</div>
 				<div class={ host_management_method_details_row() }>
 					<span class={ host_management_method_details_label() }>Username</span>
-					<span class={ host_management_method_details_value() }>{ method.Username }</span>
+					<span class={ host_management_method_details_value(), "ui-mono-text" }>{ method.Username }</span>
 				</div>
 				<div class={ host_management_method_details_row() }>
 					<span class={ host_management_method_details_label() }>Port</span>
-					<span class={ host_management_method_details_value() }>{ method.Port }</span>
+					<span class={ host_management_method_details_value(), "ui-mono-text" }>{ method.Port }</span>
 				</div>
 				<div class={ host_management_method_details_row() }>
 					<span class={ host_management_method_details_label() }>Description</span>

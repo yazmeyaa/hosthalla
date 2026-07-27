@@ -25,11 +25,11 @@ templ AddHostManagementMethodDialog(host host.Host, dialogID string) {
 				</div>
 				<div class={ host_form_field() } data-method-field="username">
 					<label class={ host_form_label() } for={ "management-method-username-" + host.ID.String() }>Username</label>
-					@input.Input(input.InputProps{Id: "management-method-username-" + host.ID.String(), Name: "username", Required: true})
+					@input.Input(input.InputProps{Id: "management-method-username-" + host.ID.String(), Name: "username", ClassName: "ui-mono-text", Required: true})
 				</div>
 				<div class={ host_form_field() }>
 					<label class={ host_form_label() } for={ "management-method-port-" + host.ID.String() }>Port</label>
-					@input.Input(input.InputProps{Id: "management-method-port-" + host.ID.String(), Name: "port", Type: "number", Value: "22"})
+					@input.Input(input.InputProps{Id: "management-method-port-" + host.ID.String(), Name: "port", Type: "number", Value: "22", ClassName: "ui-mono-text"})
 				</div>
 				<div class={ host_form_field() } data-method-field="password">
 					<label class={ host_form_label() } for={ "management-method-password-" + host.ID.String() }>Password</label>
@@ -38,11 +38,11 @@ templ AddHostManagementMethodDialog(host host.Host, dialogID string) {
 				<div class={ host_management_method_key_fields() }>
 					<div class={ host_form_field() } data-method-field="publicKey">
 						<label class={ host_form_label() } for={ "management-method-public-key-" + host.ID.String() }>Public Key</label>
-						<textarea class={ host_management_method_textarea(), "ui-input" } id={ "management-method-public-key-" + host.ID.String() } name="publicKey" rows="4"></textarea>
+						<textarea class={ host_management_method_textarea(), "ui-input", "ui-mono-text" } id={ "management-method-public-key-" + host.ID.String() } name="publicKey" rows="4"></textarea>
 					</div>
 					<div class={ host_form_field() } data-method-field="privateKey">
 						<label class={ host_form_label() } for={ "management-method-private-key-" + host.ID.String() }>Private Key</label>
-						<textarea class={ host_management_method_textarea(), "ui-input" } id={ "management-method-private-key-" + host.ID.String() } name="privateKey" rows="7"></textarea>
+						<textarea class={ host_management_method_textarea(), "ui-input", "ui-mono-text" } id={ "management-method-private-key-" + host.ID.String() } name="privateKey" rows="7"></textarea>
 					</div>
 				</div>
 				@modal.Actions() {

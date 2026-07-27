@@ -284,6 +284,84 @@ css host_agent_registration_command() {
 	resize: vertical;
 }
 
+css host_import_form() {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+css host_import_existing_ips() {
+	display: none;
+}
+
+css host_import_warning() {
+	margin: 0;
+	padding: 10px;
+	border: 1px solid var(--border-interactive-warning);
+	border-radius: var(--radius-sm);
+	background: var(--surface-interactive-warning);
+	color: var(--text-warning-muted);
+	font-size: 0.86rem;
+}
+
+css host_import_dropzone() {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 18px;
+	border: 1px dashed var(--border-interactive-subtle-strong);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
+	cursor: pointer;
+}
+
+css host_import_dropzone_title() {
+	color: var(--text);
+	font-weight: 700;
+}
+
+css host_import_dropzone_hint() {
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+css host_import_file_input() {
+	margin-top: 6px;
+	color: var(--text-neutral-soft);
+}
+
+css host_import_summary() {
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
+}
+
+css host_import_summary_grid() {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+	gap: 8px;
+}
+
+css host_import_summary_item() {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+css host_import_summary_label() {
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
+css host_import_status() {
+	margin: 0;
+	min-height: 1.2em;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
 css host_management_method_select() {
 	width: 100%;
 }

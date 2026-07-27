@@ -1,0 +1,97 @@
+package dropdown
+
+type LinkItemProps struct {
+	Href        string
+	Label       string
+	Description string
+}
+
+type ButtonItemProps struct {
+	Label       string
+	Description string
+	OnClick     templ.ComponentScript
+}
+
+templ Menu(label string) {
+	<details class="ui-dropdown">
+		<summary class="ui-dropdown__trigger">
+			<span>{ label }</span>
+			<span class="ui-dropdown__chevron">v</span>
+		</summary>
+		<div class="ui-dropdown__panel">
+			{ children... }
+		</div>
+	</details>
+}
+
+templ LinkItem(props LinkItemProps) {
+	<a class="ui-dropdown__item" href={ props.Href } data-ui-dropdown-item>
+		<span class="ui-dropdown__item-label">{ props.Label }</span>
+		if props.Description != "" {
+			<span class="ui-dropdown__item-description">{ props.Description }</span>
+		}
+	</a>
+}
+
+templ ButtonItem(props ButtonItemProps) {
+	<button class="ui-dropdown__item" type="button" onclick={ props.OnClick } data-ui-dropdown-item>
+		<span class="ui-dropdown__item-label">{ props.Label }</span>
+		if props.Description != "" {
+			<span class="ui-dropdown__item-description">{ props.Description }</span>
+		}
+	</button>
+}
+
+templ Scripts() {
+	<script>
+		if (!window.__uiDropdownBound) {
+			window.__uiDropdownBound = true;
+
+			function closeUIDropdowns(exceptMenu) {
+				document.querySelectorAll("details.ui-dropdown[open]").forEach(function(menu) {
+					if (exceptMenu && menu === exceptMenu) {
+						return;
+					}
+					menu.removeAttribute("open");
+				});
+			}
+
+			document.addEventListener("click", function(event) {
+				const target = event.target;
+				if (!(target instanceof Element)) {
+					closeUIDropdowns(null);
+					return;
+				}
+
+				const clickedSummary = target.closest("summary");
+				const clickedMenu = clickedSummary ? clickedSummary.parentElement : null;
+				if (clickedMenu instanceof HTMLDetailsElement && clickedMenu.classList.contains("ui-dropdown")) {
+					closeUIDropdowns(clickedMenu);
+					return;
+				}
+
+				const clickedItem = target.closest("[data-ui-dropdown-item]");
+				if (clickedItem instanceof Element) {
+					const menu = clickedItem.closest("details.ui-dropdown");
+					if (menu instanceof HTMLDetailsElement) {
+						menu.removeAttribute("open");
+					}
+					return;
+				}
+
+				if (target.closest("details.ui-dropdown")) {
+					return;
+				}
+
+				closeUIDropdowns(null);
+			});
+
+			document.addEventListener("keydown", function(event) {
+				if (event.key !== "Escape") {
+					return;
+				}
+				closeUIDropdowns(null);
+			});
+		}
+	</script>
+}

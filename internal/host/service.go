@@ -189,7 +189,7 @@ func (s *Service) GetHostManagementMethodSecret(ctx context.Context, hostID uuid
 
 	decryptedSecret, err := s.secretCipher.Decrypt(method.Secret)
 	if err != nil {
-		s.logger.Error("failed to decrypt host management method secret", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		s.logger.Warn("failed to decrypt host management method secret", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
 		return HostManagementMethodSecret{}, fmt.Errorf("failed to decrypt secret: %w", err)
 	}
 

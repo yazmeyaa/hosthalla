@@ -44,7 +44,7 @@ templ HostDetails(host host.Host) {
 								@icons.EyeOpenIcon()
 							</span>
 						</button>
-						<span class={ host_details_ip_value(), host_details_ip_value_masked() } data-host-ip-value>{ host.IP.String() }</span>
+						<span class={ host_details_ip_value(), host_details_ip_value_masked(), "ui-mono-text" } data-host-ip-value>{ host.IP.String() }</span>
 					</div>
 				</dd>
 			</div>
@@ -62,7 +62,7 @@ templ HostDetailsSummary(host host.Host) {
 			<strong>Name:</strong> { host.Name }
 		</p>
 		<p class={ host_details_summary_row() }>
-			<strong>IP:</strong> { host.IP.String() }
+			<strong>IP:</strong> <span class="ui-mono-text">{ host.IP.String() }</span>
 		</p>
 		if host.Description != "" {
 			<p class={ host_details_summary_row() }>
