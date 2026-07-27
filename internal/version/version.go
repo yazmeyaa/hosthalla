@@ -13,3 +13,7 @@ var (
 func VersionString() string {
 	return fmt.Sprintf("%s+%s", Version, Commit)
 }
+
+func TagString() string {
+	return Version
+}

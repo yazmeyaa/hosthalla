@@ -12,9 +12,9 @@ import (
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/handlers"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
-	"github.com/yazmeyaa/hosthalla/ui/app/layout"
-	ui_assets "github.com/yazmeyaa/hosthalla/ui/assets"
+	ui_assets "github.com/yazmeyaa/hosthalla/ui/app/assets"
 	dashboard_page "github.com/yazmeyaa/hosthalla/ui/pages/dashboard"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
 )
 
 type NewRouterParams struct {

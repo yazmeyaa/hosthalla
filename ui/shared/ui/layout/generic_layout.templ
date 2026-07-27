@@ -1,0 +1,43 @@
+package layout
+
+import (
+	"github.com/yazmeyaa/hosthalla/internal/version"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/icons"
+)
+
+type GenericLayoutProps struct {
+	Title string
+}
+
+templ GenericLayout(props GenericLayoutProps) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Hosthalla - { props.Title }</title>
+			<script src="/assets/htmx.min.js"></script>
+			<script src="/assets/htmx-ext-ws.min.js"></script>
+			@layout_styles()
+			<link rel="stylesheet" href="/styles/templ.css"/>
+		</head>
+		<body hx-ext="ws" class={ generic_layout_styles() }>
+			@icons.EyeIconSymbols()
+			{ children... }
+			<footer class={ generic_layout_footer() }>
+				<div class={ generic_layout_footer_inner() }>
+					<span class={ generic_layout_footer_brand() }>Hosthalla</span>
+					<span class={ generic_layout_footer_version() }>{ version.TagString() }</span>
+					<span>by yazmeyaa</span>
+					<a class={ generic_layout_footer_link() } href="https://github.com/yazmeyaa/hosthalla" target="_blank" rel="noopener noreferrer">GitHub</a>
+				</div>
+			</footer>
+		</body>
+	</html>
+}
+
+templ AppContent() {
+	<main id="app-content" class={ generic_layout_main() }>
+		{ children... }
+	</main>
+}

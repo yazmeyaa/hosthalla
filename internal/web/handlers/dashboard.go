@@ -19,8 +19,8 @@ import (
 	"github.com/yazmeyaa/hosthalla/internal/events"
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
-	"github.com/yazmeyaa/hosthalla/ui/app/layout"
 	dashboard_page "github.com/yazmeyaa/hosthalla/ui/pages/dashboard"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
 )
 
 const (

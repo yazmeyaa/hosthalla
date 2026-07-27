@@ -47,7 +47,7 @@ func newVersionCommand() *cliapp.Command {
 			if len(args) != 0 {
 				return cliapp.UsageError{Message: "version does not accept arguments", Usage: "hosthalla version"}
 			}
-			fmt.Fprintln(env.Stdout, version.VersionString())
+			fmt.Fprintln(env.Stdout, version.TagString())
 			return nil
 		},
 	}

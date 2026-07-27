@@ -1,0 +1,243 @@
+package dashboard_ui
+
+import (
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/icons"
+)
+
+type HostRow struct {
+	ID                    string
+	Name                  string
+	IP                    string
+	Tags                  []string
+	ManagementMethodCount int
+	HasMonitoringAgent    bool
+	Status                string
+	StatusLabel           string
+	StatusVariant         string
+	LastMetricLabel       string
+	CPUUsageLabel         string
+	CPUUsageSeries        []float64
+	MemoryUsageLabel      string
+	MemoryUsageSeries     []float64
+	DiskUsageLabel        string
+	NetworkUsageLabel     string
+	SystemLabel           string
+}
+
+type DashboardHostsProps struct {
+	Hosts []HostRow
+}
+
+templ DashboardHosts(props DashboardHostsProps) {
+	<section class={ dashboard_hosts() }>
+		<div class={ dashboard_hosts_header() }>
+			<h2 class={ dashboard_hosts_title() }>Host status</h2>
+			<span class={ dashboard_hosts_count() }>{ formatCount(len(props.Hosts), "host") }</span>
+		</div>
+		if len(props.Hosts) == 0 {
+			@card.Card() {
+				<p class={ dashboard_hosts_empty() }>No hosts registered yet.</p>
+			}
+		} else {
+			<ul class={ dashboard_hosts_list() }>
+				for _, host := range props.Hosts {
+					@DashboardHostItem(host)
+				}
+			</ul>
+		}
+	</section>
+}
+
+templ DashboardHostItem(host HostRow) {
+	<li id={ hostItemID(host.ID) } class={ dashboard_hosts_item() }>
+		@DashboardHostItemContent(host)
+	</li>
+}
+
+templ DashboardHostItemOOB(host HostRow) {
+	<li id={ hostItemID(host.ID) } class={ dashboardHostsItemClass() } hx-swap-oob="outerHTML">
+		@DashboardHostItemContent(host)
+	</li>
+}
+
+templ DashboardHostItemContent(host HostRow) {
+	@card.Card() {
+		<div class={ dashboard_hosts_item_header() }>
+			<div class={ dashboard_hosts_identity() }>
+				<h3 class={ dashboard_hosts_name() }>{ host.Name }</h3>
+				<div class={ dashboard_hosts_ip_disclosure() } data-host-ip-disclosure>
+					<button
+						type="button"
+						class={ dashboard_hosts_ip_toggle() }
+						aria-expanded="false"
+						aria-label="Show IP"
+						data-host-ip-toggle
+					>
+						<span class={ dashboard_hosts_ip_toggle_icon() } data-host-ip-icon-hidden>
+							@icons.EyeClosedIcon()
+						</span>
+						<span class={ dashboard_hosts_ip_toggle_icon() } data-host-ip-icon-visible style="display: none;">
+							@icons.EyeOpenIcon()
+						</span>
+					</button>
+					<span class={ dashboard_hosts_ip(), dashboard_hosts_ip_masked() } data-host-ip-value>{ host.IP }</span>
+				</div>
+			</div>
+			@badge.Badge(badge.BadgeProps{Variant: host.StatusVariant}) {
+				{ host.StatusLabel }
+			}
+		</div>
+		<div class={ dashboard_hosts_meta() }>
+			<span>{ host.SystemLabel }</span>
+			<span>{ host.LastMetricLabel }</span>
+		</div>
+		<div class={ dashboard_hosts_metrics() }>
+			<div class={ dashboard_hosts_metric() }>
+				<div class={ dashboard_hosts_metric_summary() }>
+					<span class={ dashboard_hosts_metric_label() }>CPU</span>
+					<span class={ dashboard_hosts_metric_compact_value() }>{ host.CPUUsageLabel }</span>
+				</div>
+				@UsageSparkline(UsageSparklineProps{
+					Label:   "CPU usage",
+					Values:  host.CPUUsageSeries,
+					Variant: "cpu",
+				})
+			</div>
+			<div class={ dashboard_hosts_metric() }>
+				<div class={ dashboard_hosts_metric_summary() }>
+					<span class={ dashboard_hosts_metric_label() }>Memory</span>
+					<span class={ dashboard_hosts_metric_compact_value() }>{ host.MemoryUsageLabel }</span>
+				</div>
+				@UsageSparkline(UsageSparklineProps{
+					Label:   "Memory usage",
+					Values:  host.MemoryUsageSeries,
+					Variant: "memory",
+				})
+			</div>
+			<div class={ dashboard_hosts_metric() }>
+				<div class={ dashboard_hosts_metric_summary() }>
+					<span class={ dashboard_hosts_metric_label() }>Disk</span>
+					<span class={ dashboard_hosts_metric_compact_value() }>{ host.DiskUsageLabel }</span>
+				</div>
+			</div>
+			<div class={ dashboard_hosts_metric() }>
+				<div class={ dashboard_hosts_metric_summary() }>
+					<span class={ dashboard_hosts_metric_label() }>Network</span>
+					<span class={ dashboard_hosts_metric_compact_value() }>{ host.NetworkUsageLabel }</span>
+				</div>
+			</div>
+		</div>
+		<div class={ dashboard_hosts_tags() }>
+			if host.HasMonitoringAgent {
+				@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+					Agent assigned
+				}
+			}
+			@badge.Badge(badge.BadgeProps{Variant: "neutral"}) {
+				{ formatCount(host.ManagementMethodCount, "method") }
+			}
+			for _, tag := range host.Tags {
+				@badge.Badge(badge.BadgeProps{Variant: "neutral"}) {
+					{ "#" + tag }
+				}
+			}
+		</div>
+	}
+}
+
+type UsageSparklineProps struct {
+	Label   string
+	Values  []float64
+	Variant string
+}
+
+templ UsageSparkline(props UsageSparklineProps) {
+	{{
+		variantClass := dashboard_hosts_sparkline_cpu()
+		if props.Variant == "memory" {
+			variantClass = dashboard_hosts_sparkline_memory()
+		}
+	}}
+	<div class={ dashboard_hosts_sparkline_shell() }>
+		<div class={ dashboard_hosts_sparkline_scale() } aria-hidden="true">
+			<span>100%</span>
+			<span>0%</span>
+		</div>
+		<svg
+			class={ dashboard_hosts_sparkline(), variantClass }
+			viewBox="0 0 100 28"
+			preserveAspectRatio="none"
+			role="img"
+			aria-label={ props.Label }
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<line class={ dashboard_hosts_sparkline_rule() } x1="0" y1="4" x2="100" y2="4"></line>
+			<line class={ dashboard_hosts_sparkline_mid_rule() } x1="0" y1="14" x2="100" y2="14"></line>
+			<line class={ dashboard_hosts_sparkline_rule() } x1="0" y1="24" x2="100" y2="24"></line>
+			if len(props.Values) > 0 {
+				<polyline class={ dashboard_hosts_sparkline_line() } points={ sparklinePoints(props.Values) }></polyline>
+			}
+		</svg>
+	</div>
+}
+
+func hostItemID(hostID string) string {
+	return "dashboard-host-" + hostID
+}
+
+func dashboardHostsItemClass() string {
+	return dashboard_hosts_item().ClassName()
+}
+
+func formatCount(value int, noun string) string {
+	if value == 1 {
+		return "1 " + noun
+	}
+	return strconv.Itoa(value) + " " + noun + "s"
+}
+
+func sparklinePoints(values []float64) string {
+	if len(values) == 0 {
+		return ""
+	}
+
+	const (
+		width    = 100.0
+		height   = 28.0
+		paddingX = 2.0
+		paddingY = 4.0
+	)
+
+	if len(values) == 1 {
+		y := sparklineY(values[0], height, paddingY)
+		return fmt.Sprintf("%.1f,%.1f %.1f,%.1f", paddingX, y, width-paddingX, y)
+	}
+
+	var builder strings.Builder
+	step := (width - paddingX*2) / float64(len(values)-1)
+	for idx, value := range values {
+		if idx > 0 {
+			builder.WriteByte(' ')
+		}
+		x := paddingX + float64(idx)*step
+		y := sparklineY(value, height, paddingY)
+		builder.WriteString(fmt.Sprintf("%.1f,%.1f", x, y))
+	}
+
+	return builder.String()
+}
+
+func sparklineY(value float64, height float64, paddingY float64) float64 {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		value = 0
+	}
+	value = math.Max(0, math.Min(100, value))
+	return paddingY + ((100-value)/100)*(height-paddingY*2)
+}

@@ -1,0 +1,329 @@
+package hosts_page_ui
+
+css host_form() {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+css host_form_field() {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+css host_form_label() {
+	font-size: 0.9rem;
+	color: var(--muted);
+}
+
+css host_tags_control() {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	min-height: 42px;
+	padding: 6px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
+}
+
+css host_tags_chips() {
+	display: contents;
+}
+
+css host_tag_chip() {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 9px;
+	border-radius: var(--radius-pill);
+	border: 1px solid var(--border-interactive-info);
+	background: var(--surface-interactive-info);
+	color: var(--text-info-soft);
+	font-size: 0.82rem;
+	cursor: pointer;
+}
+
+css host_tags_input() {
+	flex: 1 1 160px;
+	min-width: 120px;
+	border: 0;
+	outline: 0;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+}
+
+css host_tags_suggestions() {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+css host_tags_suggestion() {
+	display: inline-flex;
+	align-items: center;
+	padding: 3px 8px;
+	border-radius: var(--radius-pill);
+	border: 1px solid var(--border-interactive-subtle);
+	background: var(--surface-interactive-subtle);
+	color: var(--text-neutral-soft);
+	font-size: 0.78rem;
+	cursor: pointer;
+}
+
+css host_tags_section() {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+css host_tags_title() {
+	margin: 0;
+	font-size: 1rem;
+}
+
+css host_tags_empty() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+css host_tags_list() {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+css host_management_methods_section() {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+css host_management_methods_title() {
+	margin: 0;
+	font-size: 1rem;
+}
+
+css host_management_methods_empty() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+css host_management_methods_list() {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+css host_management_method_details_trigger() {
+	padding: 0;
+	border: none;
+	background: none;
+	cursor: pointer;
+}
+
+css host_management_method_details_title() {
+	margin: 0;
+	font-size: 1.1rem;
+	color: var(--text);
+}
+
+css host_management_method_details_list() {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+css host_management_method_details_row() {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+css host_management_method_details_label() {
+	font-size: 0.78rem;
+	color: var(--muted);
+}
+
+css host_management_method_details_value() {
+	font-size: 0.92rem;
+	color: var(--text);
+	word-break: break-word;
+}
+
+css host_management_method_details_empty_value() {
+	color: var(--muted);
+}
+
+css host_management_method_secret_section() {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+css host_management_method_secret_value() {
+	width: 100%;
+	min-height: 110px;
+	font-family: var(--font-mono);
+	font-size: 0.84rem;
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
+	color: var(--text);
+	resize: vertical;
+}
+
+css host_management_method_secret_status() {
+	margin: 0;
+	min-height: 1.2em;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+css host_management_method_form() {
+	max-width: 100%;
+}
+
+css host_agent_registration_section() {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+css host_agent_registration_title() {
+	margin: 0;
+	font-size: 1rem;
+}
+
+css host_agent_registration_description() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+css host_agent_registration_actions() {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+css host_agent_registration_status() {
+	margin: 0;
+	min-height: 1.2em;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+css host_agent_registration_command() {
+	width: 100%;
+	font-family: var(--font-mono);
+	font-size: 0.85rem;
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
+	color: var(--text);
+	resize: vertical;
+}
+
+css host_import_form() {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+css host_import_existing_ips() {
+	display: none;
+}
+
+css host_import_warning() {
+	margin: 0;
+	padding: 10px;
+	border: 1px solid var(--border-interactive-warning);
+	border-radius: var(--radius-sm);
+	background: var(--surface-interactive-warning);
+	color: var(--text-warning-muted);
+	font-size: 0.86rem;
+}
+
+css host_import_dropzone() {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 18px;
+	border: 1px dashed var(--border-interactive-subtle-strong);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
+	cursor: pointer;
+}
+
+css host_import_dropzone_title() {
+	color: var(--text);
+	font-weight: 700;
+}
+
+css host_import_dropzone_hint() {
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+css host_import_file_input() {
+	margin-top: 6px;
+	color: var(--text-neutral-soft);
+}
+
+css host_import_summary() {
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-overlay-muted);
+}
+
+css host_import_summary_grid() {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+	gap: 8px;
+}
+
+css host_import_summary_item() {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+css host_import_summary_label() {
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
+css host_import_status() {
+	margin: 0;
+	min-height: 1.2em;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+css host_management_method_select() {
+	width: 100%;
+}
+
+css host_management_method_key_fields() {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+css host_management_method_textarea() {
+	resize: vertical;
+	min-height: 98px;
+}

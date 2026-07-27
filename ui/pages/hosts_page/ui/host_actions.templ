@@ -1,0 +1,37 @@
+package hosts_page_ui
+
+import "github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+
+templ HostActions(hostID string, updateDialogID string, detailsDialogID string) {
+	<div class={ host_actions() }>
+		<form
+			class={ host_ping_form() }
+			method="post"
+			action={ "/hosts/" + hostID + "/ping" }
+			hx-post={ "/hosts/" + hostID + "/ping" }
+			hx-target={ "#host-ping-result-" + hostID }
+			hx-swap="outerHTML"
+		>
+			@button.Button(button.ButtonProps{Type: "submit"}) {
+				Ping
+			}
+		</form>
+		<details class={ host_actions_menu(), "host-actions-menu" }>
+			<summary class={ host_actions_menu_trigger() }>⋯</summary>
+			<div class={ host_actions_menu_panel() }>
+				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", detailsDialogID)}) {
+					Details
+				}
+				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", updateDialogID)}) {
+					Update
+				}
+				<form class={ host_delete_form() } method="post" action={ "/hosts/" + hostID + "/delete" }>
+					@button.Button(button.ButtonProps{Type: "submit", Variant: "danger"}) {
+						Delete
+					}
+				</form>
+			</div>
+		</details>
+	</div>
+	@HostPingResult(hostID, nil)
+}

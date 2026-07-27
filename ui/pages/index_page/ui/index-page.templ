@@ -1,0 +1,22 @@
+package index_page_ui
+
+import (
+	"github.com/yazmeyaa/hosthalla/internal/authentication"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
+)
+
+
+
+type IndexPageProps struct {
+	Profile authentication.Profile
+}
+
+templ IndexPage(props IndexPageProps) {
+	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{GenericLayoutProps: layout.GenericLayoutProps{Title: "Home"}, Profile: props.Profile}) {
+		@IndexPageContent(props)
+	}
+}
+
+templ IndexPageContent(props IndexPageProps) {
+	<h1>Home Page</h1>
+}

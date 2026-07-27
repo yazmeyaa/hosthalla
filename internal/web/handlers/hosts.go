@@ -16,10 +16,8 @@ import (
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
-	"github.com/yazmeyaa/hosthalla/ui/app/layout"
-	"github.com/yazmeyaa/hosthalla/ui/features/host_actions"
 	"github.com/yazmeyaa/hosthalla/ui/pages/hosts_page"
-	"github.com/yazmeyaa/hosthalla/ui/widgets/hosts_list"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
 )
 
 type HostsHandler struct {
@@ -124,7 +122,7 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 
 	hostManagementMethodsByHostID := make(map[string][]host.HostManagementMethod, len(hosts))
 	hostSystemInfoByHostID := make(map[string]host.HostSystemInfo, len(hosts))
-	hostLatestMetricsByHostID := make(map[string]hosts_list.HostLatestMetricsBadges, len(hosts))
+	hostLatestMetricsByHostID := make(map[string]hosts_page.HostLatestMetricsBadges, len(hosts))
 	for _, listedHost := range hosts {
 		hostIDStr := listedHost.ID.String()
 		if methods, ok := hostManagementMethodsByUUID[listedHost.ID]; ok {
@@ -139,9 +137,9 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if hasSystemInfo {
-			hostLatestMetricsByHostID[hostIDStr] = hosts_list.BuildHostLatestMetricsBadges(latestSnapshot.Metrics[0], &systemInfo)
+			hostLatestMetricsByHostID[hostIDStr] = hosts_page.BuildHostLatestMetricsBadges(latestSnapshot.Metrics[0], &systemInfo)
 		} else {
-			hostLatestMetricsByHostID[hostIDStr] = hosts_list.BuildHostLatestMetricsBadges(latestSnapshot.Metrics[0], nil)
+			hostLatestMetricsByHostID[hostIDStr] = hosts_page.BuildHostLatestMetricsBadges(latestSnapshot.Metrics[0], nil)
 		}
 	}
 
@@ -277,13 +275,13 @@ func (h *HostsHandler) PingHost(w http.ResponseWriter, r *http.Request) {
 	}
 	h.logger.Debug("ping host request completed", slog.String("host_id", hostID.String()), slog.Bool("reachable", result.Reachable), slog.Int64("duration_ms", result.Duration.Milliseconds()))
 
-	pingResult := &host_actions.PingResult{
+	pingResult := &hosts_page.PingResult{
 		HostID:     result.HostID.String(),
 		Reachable:  result.Reachable,
 		DurationMS: result.Duration.Milliseconds(),
 		Message:    result.ErrorMessage,
 	}
-	if err := host_actions.HostPingResult(result.HostID.String(), pingResult).Render(r.Context(), w); err != nil {
+	if err := hosts_page.HostPingResult(result.HostID.String(), pingResult).Render(r.Context(), w); err != nil {
 		h.logger.Error("failed to render ping host result", slog.String("host_id", result.HostID.String()), slog.String("error", err.Error()))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -297,9 +295,9 @@ func (h *HostsHandler) PingAllHosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pageResults := make([]host_actions.PingResult, 0, len(results))
+	pageResults := make([]hosts_page.PingResult, 0, len(results))
 	for _, result := range results {
-		pageResults = append(pageResults, host_actions.PingResult{
+		pageResults = append(pageResults, hosts_page.PingResult{
 			HostID:     result.HostID.String(),
 			Reachable:  result.Reachable,
 			DurationMS: result.Duration.Milliseconds(),
@@ -307,7 +305,7 @@ func (h *HostsHandler) PingAllHosts(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if err := host_actions.HostPingResultsBatch(pageResults).Render(r.Context(), w); err != nil {
+	if err := hosts_page.HostPingResultsBatch(pageResults).Render(r.Context(), w); err != nil {
 		h.logger.Error("failed to render ping all results", slog.String("error", err.Error()))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

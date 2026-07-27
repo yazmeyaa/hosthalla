@@ -1,0 +1,119 @@
+package hosts_page_ui
+
+import (
+	"net/url"
+
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	host_entity "github.com/yazmeyaa/hosthalla/ui/entities/host"
+	hosts_page_model "github.com/yazmeyaa/hosthalla/ui/pages/hosts_page/model"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/dropdown"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
+)
+
+type HostsPageProps struct {
+	Hosts                         []host.Host
+	AvailableTags                 []host.Tag
+	SelectedTags                  []string
+	HostManagementMethodsByHostID map[string][]host.HostManagementMethod
+	HostSystemInfoByHostID        map[string]host.HostSystemInfo
+	HostLatestMetricsByHostID     map[string]hosts_page_model.HostLatestMetricsBadges
+	AuthLayoutProps               layout.AuthenticatedLayoutProps
+}
+
+templ HostsPage(props HostsPageProps) {
+	@layout.AuthenticatedLayout(props.AuthLayoutProps) {
+		@HostsPageContent(props)
+	}
+}
+
+templ HostsPageContent(props HostsPageProps) {
+	@dropdown.Styles()
+	<div class={ hosts_page_header() }>
+		<h1 class={ hosts_page_title() }>Hosts Page</h1>
+		<div class={ hosts_page_actions() }>
+			@dropdown.Menu("Import / Export") {
+				@dropdown.LinkItem(dropdown.LinkItemProps{
+					Href:  "/hosts/export",
+					Label: "Export hosts",
+				})
+				@dropdown.ButtonItem(dropdown.ButtonItemProps{
+					Label:       "Import JSON",
+					Description: "Preview first, duplicate IPs are skipped",
+					OnClick:     templ.JSFuncCall("openModalDialog", "hosts-import-export-dialog"),
+				})
+			}
+			<form
+				class={ hosts_page_ping_all_form() }
+				method="post"
+				action="/hosts/ping-all"
+				hx-post="/hosts/ping-all"
+				hx-target="#hosts-ping-all-status"
+				hx-swap="outerHTML"
+			>
+				@button.Button(button.ButtonProps{Type: "submit", Variant: "secondary"}) {
+					Ping All
+				}
+			</form>
+			@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "create-host-dialog")}) {
+				+ Add Host
+			}
+		</div>
+	</div>
+	if len(props.AvailableTags) > 0 {
+		<div class={ hosts_page_tag_filter() }>
+			<span class={ hosts_page_tag_filter_label() }>Filter by tags</span>
+			<div class={ hosts_page_tag_filter_list() }>
+				for _, tag := range props.AvailableTags {
+					<a
+						class={ hosts_page_tag_filter_chip(), templ.KV(hosts_page_tag_filter_chip_selected(), hostTagSelected(tag.Name, props.SelectedTags)) }
+						href={ hostTagFilterHref(tag.Name, props.SelectedTags) }
+					>
+						{ "#" + tag.Name }
+					</a>
+				}
+				if len(props.SelectedTags) > 0 {
+					@button.Link(button.LinkProps{Href: "/hosts", Variant: "secondary"}) {
+						Clear
+					}
+				}
+			</div>
+		</div>
+	}
+	<div id="hosts-ping-all-status" class={ hosts_page_ping_all_status_slot() }></div>
+	@HostsList(props.Hosts, props.HostManagementMethodsByHostID, props.HostSystemInfoByHostID, props.HostLatestMetricsByHostID, props.AvailableTags)
+	@CreateHostDialog(props.AvailableTags)
+	@HostImportExportDialog(props.Hosts)
+	@HostActionsScripts()
+	@HostDialogScripts()
+	@host_entity.HostDetailsScripts()
+	@dropdown.Scripts()
+}
+
+func hostTagSelected(tag string, selectedTags []string) bool {
+	for _, selectedTag := range selectedTags {
+		if selectedTag == tag {
+			return true
+		}
+	}
+	return false
+}
+
+func hostTagFilterHref(tag string, selectedTags []string) string {
+	query := url.Values{}
+	shouldAdd := true
+	for _, selectedTag := range selectedTags {
+		if selectedTag == tag {
+			shouldAdd = false
+			continue
+		}
+		query.Add("tag", selectedTag)
+	}
+	if shouldAdd {
+		query.Add("tag", tag)
+	}
+	if len(query) == 0 {
+		return "/hosts"
+	}
+	return "/hosts?" + query.Encode()
+}

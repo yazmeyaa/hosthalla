@@ -5,8 +5,6 @@ import (
 	dashboard_ui "github.com/yazmeyaa/hosthalla/ui/pages/dashboard/ui"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
-	dashboard_hosts "github.com/yazmeyaa/hosthalla/ui/widgets/dashboard_hosts"
-	dashboard_overview "github.com/yazmeyaa/hosthalla/ui/widgets/dashboard_overview"
 )
 
 type DashboardData = dashboard_ui.DashboardData
@@ -24,8 +22,6 @@ var DashboardHostRowLiveUpdate = dashboard_ui.DashboardHostRowLiveUpdate
 
 func CSSClasses() []templ.CSSClass {
 	classes := dashboard_ui.CSSClasses()
-	classes = append(classes, dashboard_overview.CSSClasses()...)
-	classes = append(classes, dashboard_hosts.CSSClasses()...)
 	classes = append(classes, card.CSSClasses()...)
 	classes = append(classes, badge.CSSClasses()...)
 	return classes
