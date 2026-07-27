@@ -254,6 +254,15 @@ func (s *Service) ListHostMetricSnapshots(ctx context.Context, hostID uuid.UUID)
 	return snapshots, nil
 }
 
+func (s *Service) ListRecentHostMetricSnapshotsByHostIDs(ctx context.Context, hostIDs []uuid.UUID, limitPerHost int) (map[uuid.UUID][]HostMetricSnapshot, error) {
+	result, err := s.hostMetricSnapshotRepository.ListRecentHostMetricSnapshotsByHostIDs(ctx, hostIDs, limitPerHost)
+	if err != nil {
+		s.logger.Error("failed to list recent host metric snapshots by host ids", slog.Int("host_ids", len(hostIDs)), slog.Int("limit_per_host", limitPerHost), slog.String("error", err.Error()))
+		return nil, err
+	}
+	return result, nil
+}
+
 func (s *Service) ListLatestHostMetricSnapshotsByHostIDs(ctx context.Context, hostIDs []uuid.UUID) (map[uuid.UUID]HostMetricSnapshot, error) {
 	result, err := s.hostMetricSnapshotRepository.ListLatestHostMetricSnapshotsByHostIDs(ctx, hostIDs)
 	if err != nil {

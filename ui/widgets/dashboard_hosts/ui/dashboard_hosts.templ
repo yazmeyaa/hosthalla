@@ -1,7 +1,10 @@
 package dashboard_hosts_ui
 
 import (
+	"fmt"
+	"math"
 	"strconv"
+	"strings"
 
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
@@ -20,7 +23,9 @@ type HostRow struct {
 	StatusVariant         string
 	LastMetricLabel       string
 	CPUUsageLabel         string
+	CPUUsageSeries        []float64
 	MemoryUsageLabel      string
+	MemoryUsageSeries     []float64
 	DiskUsageLabel        string
 	NetworkUsageLabel     string
 	SystemLabel           string
@@ -93,24 +98,42 @@ templ DashboardHostItemContent(host HostRow) {
 			<span>{ host.SystemLabel }</span>
 			<span>{ host.LastMetricLabel }</span>
 		</div>
-		<dl class={ dashboard_hosts_metrics() }>
+		<div class={ dashboard_hosts_metrics() }>
 			<div class={ dashboard_hosts_metric() }>
-				<dt class={ dashboard_hosts_metric_label() }>CPU</dt>
-				<dd class={ dashboard_hosts_metric_value() }>{ host.CPUUsageLabel }</dd>
+				<div class={ dashboard_hosts_metric_summary() }>
+					<span class={ dashboard_hosts_metric_label() }>CPU</span>
+					<span class={ dashboard_hosts_metric_compact_value() }>{ host.CPUUsageLabel }</span>
+				</div>
+				@UsageSparkline(UsageSparklineProps{
+					Label:   "CPU usage",
+					Values:  host.CPUUsageSeries,
+					Variant: "cpu",
+				})
 			</div>
 			<div class={ dashboard_hosts_metric() }>
-				<dt class={ dashboard_hosts_metric_label() }>Memory</dt>
-				<dd class={ dashboard_hosts_metric_value() }>{ host.MemoryUsageLabel }</dd>
+				<div class={ dashboard_hosts_metric_summary() }>
+					<span class={ dashboard_hosts_metric_label() }>Memory</span>
+					<span class={ dashboard_hosts_metric_compact_value() }>{ host.MemoryUsageLabel }</span>
+				</div>
+				@UsageSparkline(UsageSparklineProps{
+					Label:   "Memory usage",
+					Values:  host.MemoryUsageSeries,
+					Variant: "memory",
+				})
 			</div>
 			<div class={ dashboard_hosts_metric() }>
-				<dt class={ dashboard_hosts_metric_label() }>Disk</dt>
-				<dd class={ dashboard_hosts_metric_value() }>{ host.DiskUsageLabel }</dd>
+				<div class={ dashboard_hosts_metric_summary() }>
+					<span class={ dashboard_hosts_metric_label() }>Disk</span>
+					<span class={ dashboard_hosts_metric_compact_value() }>{ host.DiskUsageLabel }</span>
+				</div>
 			</div>
 			<div class={ dashboard_hosts_metric() }>
-				<dt class={ dashboard_hosts_metric_label() }>Network</dt>
-				<dd class={ dashboard_hosts_metric_value() }>{ host.NetworkUsageLabel }</dd>
+				<div class={ dashboard_hosts_metric_summary() }>
+					<span class={ dashboard_hosts_metric_label() }>Network</span>
+					<span class={ dashboard_hosts_metric_compact_value() }>{ host.NetworkUsageLabel }</span>
+				</div>
 			</div>
-		</dl>
+		</div>
 		<div class={ dashboard_hosts_tags() }>
 			if host.HasMonitoringAgent {
 				@badge.Badge(badge.BadgeProps{Variant: "info"}) {
@@ -129,6 +152,42 @@ templ DashboardHostItemContent(host HostRow) {
 	}
 }
 
+type UsageSparklineProps struct {
+	Label   string
+	Values  []float64
+	Variant string
+}
+
+templ UsageSparkline(props UsageSparklineProps) {
+	{{
+		variantClass := dashboard_hosts_sparkline_cpu()
+		if props.Variant == "memory" {
+			variantClass = dashboard_hosts_sparkline_memory()
+		}
+	}}
+	<div class={ dashboard_hosts_sparkline_shell() }>
+		<div class={ dashboard_hosts_sparkline_scale() } aria-hidden="true">
+			<span>100%</span>
+			<span>0%</span>
+		</div>
+		<svg
+			class={ dashboard_hosts_sparkline(), variantClass }
+			viewBox="0 0 100 28"
+			preserveAspectRatio="none"
+			role="img"
+			aria-label={ props.Label }
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<line class={ dashboard_hosts_sparkline_rule() } x1="0" y1="4" x2="100" y2="4"></line>
+			<line class={ dashboard_hosts_sparkline_mid_rule() } x1="0" y1="14" x2="100" y2="14"></line>
+			<line class={ dashboard_hosts_sparkline_rule() } x1="0" y1="24" x2="100" y2="24"></line>
+			if len(props.Values) > 0 {
+				<polyline class={ dashboard_hosts_sparkline_line() } points={ sparklinePoints(props.Values) }></polyline>
+			}
+		</svg>
+	</div>
+}
+
 func hostItemID(hostID string) string {
 	return "dashboard-host-" + hostID
 }
@@ -142,4 +201,43 @@ func formatCount(value int, noun string) string {
 		return "1 " + noun
 	}
 	return strconv.Itoa(value) + " " + noun + "s"
+}
+
+func sparklinePoints(values []float64) string {
+	if len(values) == 0 {
+		return ""
+	}
+
+	const (
+		width    = 100.0
+		height   = 28.0
+		paddingX = 2.0
+		paddingY = 4.0
+	)
+
+	if len(values) == 1 {
+		y := sparklineY(values[0], height, paddingY)
+		return fmt.Sprintf("%.1f,%.1f %.1f,%.1f", paddingX, y, width-paddingX, y)
+	}
+
+	var builder strings.Builder
+	step := (width - paddingX*2) / float64(len(values)-1)
+	for idx, value := range values {
+		if idx > 0 {
+			builder.WriteByte(' ')
+		}
+		x := paddingX + float64(idx)*step
+		y := sparklineY(value, height, paddingY)
+		builder.WriteString(fmt.Sprintf("%.1f,%.1f", x, y))
+	}
+
+	return builder.String()
+}
+
+func sparklineY(value float64, height float64, paddingY float64) float64 {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		value = 0
+	}
+	value = math.Max(0, math.Min(100, value))
+	return paddingY + ((100-value)/100)*(height-paddingY*2)
 }
