@@ -57,7 +57,7 @@ templ DashboardHostItem(host HostRow) {
 }
 
 templ DashboardHostItemOOB(host HostRow) {
-	<li id={ hostItemID(host.ID) } class={ dashboard_hosts_item() } hx-swap-oob="outerHTML">
+	<li id={ hostItemID(host.ID) } class={ dashboardHostsItemClass() } hx-swap-oob="outerHTML">
 		@DashboardHostItemContent(host)
 	</li>
 }
@@ -131,6 +131,10 @@ templ DashboardHostItemContent(host HostRow) {
 
 func hostItemID(hostID string) string {
 	return "dashboard-host-" + hostID
+}
+
+func dashboardHostsItemClass() string {
+	return dashboard_hosts_item().ClassName()
 }
 
 func formatCount(value int, noun string) string {
