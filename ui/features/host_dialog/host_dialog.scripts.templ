@@ -380,9 +380,206 @@ templ HostDialogScripts() {
 
 		window.syncHostManagementMethodForm = syncHostManagementMethodForm;
 
+		function readImportHostsPayload(rawPayload) {
+			const payload = JSON.parse(rawPayload);
+			if (Array.isArray(payload)) {
+				return payload;
+			}
+			if (payload !== null && typeof payload === "object" && Array.isArray(payload.hosts)) {
+				return payload.hosts;
+			}
+			throw new Error("JSON must contain a hosts array.");
+		}
+
+		function normalizeImportHost(value) {
+			if (value === null || typeof value !== "object") {
+				return { name: "", ip: "", methods: [], valid: false };
+			}
+			const name = typeof value.Name === "string" ? value.Name : String(value.name || "");
+			const ip = typeof value.IP === "string" ? value.IP : String(value.ip || "");
+			const methods = Array.isArray(value.managementMethods) ? value.managementMethods : (Array.isArray(value.ManagementMethods) ? value.ManagementMethods : []);
+			return {
+				name: name.trim(),
+				ip: ip.trim(),
+				methods: methods,
+				valid: name.trim() !== "" && ip.trim() !== "" && methods.every(isValidImportManagementMethod),
+			};
+		}
+
+		function readImportManagementMethodType(method) {
+			return typeof method.type === "string" ? method.type : String(method.Type || "");
+		}
+
+		function readImportManagementMethodUsername(method) {
+			return typeof method.username === "string" ? method.username : String(method.Username || "");
+		}
+
+		function readImportManagementMethodSecret(method) {
+			if (method.secret !== null && typeof method.secret === "object") {
+				return method.secret;
+			}
+			if (method.Secret !== null && typeof method.Secret === "object") {
+				return method.Secret;
+			}
+			return {};
+		}
+
+		function readImportSecretValue(secret, lowerName, upperName) {
+			return typeof secret[lowerName] === "string" ? secret[lowerName] : String(secret[upperName] || "");
+		}
+
+		function isValidImportManagementMethod(method) {
+			if (method === null || typeof method !== "object") {
+				return false;
+			}
+			if (readImportManagementMethodUsername(method).trim() === "") {
+				return false;
+			}
+			const type = readImportManagementMethodType(method);
+			const secret = readImportManagementMethodSecret(method);
+			if (type === "ssh_password") {
+				return readImportSecretValue(secret, "password", "Password").trim() !== "";
+			}
+			if (type === "ssh_key") {
+				return readImportSecretValue(secret, "publicKey", "PublicKey").trim() !== "" && readImportSecretValue(secret, "privateKey", "PrivateKey").trim() !== "";
+			}
+			return false;
+		}
+
+		function readExistingImportIPs(form) {
+			const ips = new Set();
+			form.querySelectorAll("[data-existing-host-ip]").forEach(function(element) {
+				if (element instanceof HTMLElement && element.dataset.existingHostIp) {
+					ips.add(element.dataset.existingHostIp);
+				}
+			});
+			return ips;
+		}
+
+		function setHostsImportStatus(form, message) {
+			const status = form.querySelector("[data-hosts-import-status]");
+			if (status instanceof HTMLElement) {
+				status.textContent = message;
+			}
+		}
+
+		function setHostsImportCount(form, selector, count) {
+			const element = form.querySelector(selector);
+			if (element instanceof HTMLElement) {
+				element.textContent = String(count);
+			}
+		}
+
+		function setHostsImportReady(form, isReady) {
+			const submitButton = form.querySelector("button[type='submit']");
+			if (submitButton instanceof HTMLButtonElement) {
+				submitButton.disabled = !isReady;
+			}
+		}
+
+		async function previewHostsImport(form) {
+			const fileInput = form.querySelector("[data-hosts-import-file]");
+			const summary = form.querySelector("[data-hosts-import-summary]");
+			if (!(fileInput instanceof HTMLInputElement) || !(summary instanceof HTMLElement)) {
+				return;
+			}
+
+			setHostsImportReady(form, false);
+			summary.hidden = true;
+
+			const file = fileInput.files && fileInput.files[0];
+			if (!(file instanceof File)) {
+				setHostsImportStatus(form, "Select a JSON file exported from Hosts.");
+				return;
+			}
+
+			try {
+				const hosts = readImportHostsPayload(await file.text());
+				const existingIPs = readExistingImportIPs(form);
+				const seenIPs = new Set();
+				let newCount = 0;
+				let duplicateCount = 0;
+				let invalidCount = 0;
+				let methodCount = 0;
+
+				hosts.forEach(function(rawHost) {
+					const importedHost = normalizeImportHost(rawHost);
+					if (!importedHost.valid) {
+						invalidCount += 1;
+						return;
+					}
+					if (existingIPs.has(importedHost.ip) || seenIPs.has(importedHost.ip)) {
+						duplicateCount += 1;
+						return;
+					}
+					seenIPs.add(importedHost.ip);
+					newCount += 1;
+					methodCount += importedHost.methods.length;
+				});
+
+				setHostsImportCount(form, "[data-hosts-import-new-count]", newCount);
+				setHostsImportCount(form, "[data-hosts-import-method-count]", methodCount);
+				setHostsImportCount(form, "[data-hosts-import-duplicate-count]", duplicateCount);
+				setHostsImportCount(form, "[data-hosts-import-invalid-count]", invalidCount);
+				summary.hidden = false;
+
+				if (invalidCount > 0) {
+					setHostsImportStatus(form, "Fix invalid host records before importing.");
+					return;
+				}
+				if (newCount === 0) {
+					setHostsImportStatus(form, duplicateCount > 0 ? "All hosts in this file already exist." : "No hosts found in this file.");
+					return;
+				}
+
+				setHostsImportStatus(form, duplicateCount > 0 ? "Duplicates will be skipped." : "Ready to import.");
+				setHostsImportReady(form, true);
+			} catch (error) {
+				setHostsImportStatus(form, error instanceof Error ? error.message : "Failed to read JSON file.");
+			}
+		}
+
+		async function submitHostsImport(form) {
+			setHostsImportReady(form, false);
+			setHostsImportStatus(form, "Importing hosts...");
+			try {
+				const response = await fetch(form.action, {
+					method: "POST",
+					headers: {
+						"Accept": "application/json",
+					},
+					body: new FormData(form),
+				});
+				if (!response.ok) {
+					const text = (await response.text()).trim();
+					throw new Error(text || ("Import failed with status " + response.status));
+				}
+
+				const payload = await response.json();
+				const imported = Number(payload.imported || 0);
+				const skipped = Number(payload.skipped || 0);
+				setHostsImportStatus(form, "Imported " + imported + " host" + (imported === 1 ? "" : "s") + ". Skipped " + skipped + ".");
+				if (imported > 0) {
+					window.setTimeout(function() {
+						window.location.href = "/hosts";
+					}, 700);
+				} else {
+					setHostsImportReady(form, true);
+				}
+			} catch (error) {
+				setHostsImportReady(form, true);
+				setHostsImportStatus(form, error instanceof Error ? error.message : "Failed to import hosts.");
+			}
+		}
+
 		if (!window.__hostManagementMethodFormBound) {
 			window.__hostManagementMethodFormBound = true;
 			document.querySelectorAll("[data-host-tags-field]").forEach(initHostTagsField);
+			document.querySelectorAll("[data-hosts-import-form]").forEach(function(form) {
+				if (form instanceof HTMLFormElement) {
+					setHostsImportReady(form, false);
+				}
+			});
 
 			document.addEventListener("click", function(event) {
 				const target = event.target;
@@ -441,9 +638,52 @@ templ HostDialogScripts() {
 				}
 			});
 
+			document.addEventListener("change", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLInputElement) || !target.matches("[data-hosts-import-file]")) {
+					return;
+				}
+				const form = target.closest("[data-hosts-import-form]");
+				if (form instanceof HTMLFormElement) {
+					previewHostsImport(form);
+				}
+			});
+
+			document.addEventListener("dragover", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLElement) || target.closest("[data-hosts-import-form]") === null) {
+					return;
+				}
+				event.preventDefault();
+			});
+
+			document.addEventListener("drop", function(event) {
+				const target = event.target;
+				if (!(target instanceof HTMLElement)) {
+					return;
+				}
+				const form = target.closest("[data-hosts-import-form]");
+				if (!(form instanceof HTMLFormElement)) {
+					return;
+				}
+				const fileInput = form.querySelector("[data-hosts-import-file]");
+				if (!(fileInput instanceof HTMLInputElement) || event.dataTransfer === null || event.dataTransfer.files.length === 0) {
+					return;
+				}
+				event.preventDefault();
+				fileInput.files = event.dataTransfer.files;
+				previewHostsImport(form);
+			});
+
 			document.addEventListener("submit", function(event) {
 				const form = event.target;
 				if (!(form instanceof HTMLFormElement)) {
+					return;
+				}
+
+				if (form.matches("[data-hosts-import-form]")) {
+					event.preventDefault();
+					submitHostsImport(form);
 					return;
 				}
 

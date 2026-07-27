@@ -9,6 +9,7 @@ import (
 	"github.com/yazmeyaa/hosthalla/ui/features/host_actions"
 	"github.com/yazmeyaa/hosthalla/ui/features/host_dialog"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/dropdown"
 	"github.com/yazmeyaa/hosthalla/ui/widgets/hosts_list"
 )
 
@@ -29,9 +30,21 @@ templ HostsPage(props HostsPageProps) {
 }
 
 templ HostsPageContent(props HostsPageProps) {
+	@dropdown.Styles()
 	<div class={ hosts_page_header() }>
 		<h1 class={ hosts_page_title() }>Hosts Page</h1>
 		<div class={ hosts_page_actions() }>
+			@dropdown.Menu("Import / Export") {
+				@dropdown.LinkItem(dropdown.LinkItemProps{
+					Href:  "/hosts/export",
+					Label: "Export hosts",
+				})
+				@dropdown.ButtonItem(dropdown.ButtonItemProps{
+					Label:       "Import JSON",
+					Description: "Preview first, duplicate IPs are skipped",
+					OnClick:     templ.JSFuncCall("openModalDialog", "hosts-import-export-dialog"),
+				})
+			}
 			<form
 				class={ hosts_page_ping_all_form() }
 				method="post"
@@ -72,9 +85,11 @@ templ HostsPageContent(props HostsPageProps) {
 	<div id="hosts-ping-all-status" class={ hosts_page_ping_all_status_slot() }></div>
 	@hosts_list.HostsList(props.Hosts, props.HostManagementMethodsByHostID, props.HostSystemInfoByHostID, props.HostLatestMetricsByHostID, props.AvailableTags)
 	@host_dialog.CreateHostDialog(props.AvailableTags)
+	@host_dialog.HostImportExportDialog(props.Hosts)
 	@host_actions.HostActionsScripts()
 	@host_dialog.HostDialogScripts()
 	@host_details.HostDetailsScripts()
+	@dropdown.Scripts()
 }
 
 func hostTagSelected(tag string, selectedTags []string) bool {

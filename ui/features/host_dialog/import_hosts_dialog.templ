@@ -1,0 +1,57 @@
+package host_dialog
+
+import (
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
+)
+
+templ HostImportExportDialog(hosts []host.Host) {
+	@modal.Modal(modal.ModalProps{ID: "hosts-import-export-dialog", AriaLabel: "Import and Export Hosts"}) {
+		@modal.Content() {
+			@modal.Title("Import Hosts")
+			<form class={ host_import_form() } method="post" action="/hosts/import" enctype="multipart/form-data" data-hosts-import-form>
+				<p class={ host_import_warning() }>Exports include management method secrets in plain JSON. Store and transfer the file carefully.</p>
+				<div class={ host_import_existing_ips() } aria-hidden="true">
+					for _, existingHost := range hosts {
+						<span data-existing-host-ip={ existingHost.IP.String() }></span>
+					}
+				</div>
+				<label class={ host_import_dropzone() }>
+					<span class={ host_import_dropzone_title() }>JSON file</span>
+					<span class={ host_import_dropzone_hint() }>Drop a hosts export here or choose a file.</span>
+					<input class={ host_import_file_input() } type="file" name="hosts" accept="application/json,.json" required data-hosts-import-file/>
+				</label>
+				<div class={ host_import_summary() } data-hosts-import-summary hidden>
+					<div class={ host_import_summary_grid() }>
+						<div class={ host_import_summary_item() }>
+							<span class={ host_import_summary_label() }>New</span>
+							<strong data-hosts-import-new-count>0</strong>
+						</div>
+						<div class={ host_import_summary_item() }>
+							<span class={ host_import_summary_label() }>Methods</span>
+							<strong data-hosts-import-method-count>0</strong>
+						</div>
+						<div class={ host_import_summary_item() }>
+							<span class={ host_import_summary_label() }>Duplicates</span>
+							<strong data-hosts-import-duplicate-count>0</strong>
+						</div>
+						<div class={ host_import_summary_item() }>
+							<span class={ host_import_summary_label() }>Invalid</span>
+							<strong data-hosts-import-invalid-count>0</strong>
+						</div>
+					</div>
+				</div>
+				<p class={ host_import_status() } data-hosts-import-status>Select a JSON file exported from Hosts.</p>
+				@modal.Actions() {
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", "hosts-import-export-dialog")}) {
+						Cancel
+					}
+					@button.Button(button.ButtonProps{Type: "submit"}) {
+						Import New Hosts
+					}
+				}
+			</form>
+		}
+	}
+}

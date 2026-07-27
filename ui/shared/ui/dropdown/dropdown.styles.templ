@@ -1,0 +1,108 @@
+package dropdown
+
+templ Styles() {
+	<style>
+	.ui-dropdown {
+		position: relative;
+	}
+
+	.ui-dropdown__trigger {
+		box-sizing: border-box;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem;
+		padding: 0.55rem 0.85rem;
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--border);
+		background: transparent;
+		color: var(--text);
+		font-size: 0.9rem;
+		font-weight: 600;
+		line-height: 1;
+		list-style: none;
+		cursor: pointer;
+		user-select: none;
+		transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 180ms ease;
+	}
+
+	.ui-dropdown__trigger::-webkit-details-marker {
+		display: none;
+	}
+
+	.ui-dropdown__trigger:hover,
+	.ui-dropdown__trigger:focus-visible {
+		border-color: var(--border-interactive-info);
+		background: var(--surface-interactive-subtle);
+		outline: none;
+	}
+
+	.ui-dropdown[open] > .ui-dropdown__trigger {
+		border-color: var(--border-interactive-info-strong);
+		background: var(--surface-interactive-info);
+	}
+
+	.ui-dropdown__chevron {
+		font-size: 0.72rem;
+		line-height: 1;
+		transition: transform 150ms ease;
+	}
+
+	.ui-dropdown[open] .ui-dropdown__chevron {
+		transform: rotate(180deg);
+	}
+
+	.ui-dropdown__panel {
+		box-sizing: border-box;
+		position: absolute;
+		right: 0;
+		top: calc(100% + var(--space-6));
+		z-index: 10;
+		display: grid;
+		gap: var(--space-4);
+		min-width: 238px;
+		padding: var(--space-8);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-lg);
+		background: var(--surface-overlay);
+		box-shadow: var(--shadow-overlay);
+	}
+
+	.ui-dropdown__item {
+		box-sizing: border-box;
+		display: grid;
+		gap: 3px;
+		width: 100%;
+		padding: 9px 10px;
+		border: 1px solid transparent;
+		border-radius: var(--radius-sm);
+		background: transparent;
+		color: var(--text);
+		font: inherit;
+		text-align: left;
+		text-decoration: none;
+		cursor: pointer;
+		user-select: none;
+		transition: background-color 140ms ease, border-color 140ms ease;
+	}
+
+	.ui-dropdown__item:hover,
+	.ui-dropdown__item:focus-visible {
+		border-color: var(--border-interactive-info);
+		background: var(--surface-interactive-subtle);
+		outline: none;
+	}
+
+	.ui-dropdown__item-label {
+		font-size: 0.9rem;
+		font-weight: 650;
+		line-height: 1.2;
+	}
+
+	.ui-dropdown__item-description {
+		color: var(--muted);
+		font-size: 0.78rem;
+		line-height: 1.25;
+	}
+	</style>
+}
