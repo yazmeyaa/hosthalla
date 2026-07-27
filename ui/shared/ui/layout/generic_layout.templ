@@ -19,6 +19,7 @@ templ GenericLayout(props GenericLayoutProps) {
 			<script src="/assets/htmx.min.js"></script>
 			<script src="/assets/htmx-ext-ws.min.js"></script>
 			@layout_styles()
+			<link rel="stylesheet" href="/styles/templ.css"/>
 		</head>
 		<body hx-ext="ws" class={ generic_layout_styles() }>
 			@icons.EyeIconSymbols()

@@ -1,5 +1,26 @@
 package layout
 
+func CSSClasses() []templ.CSSClass {
+	return []templ.CSSClass{
+		generic_layout_styles(),
+		generic_layout_main(),
+		generic_layout_footer(),
+		generic_layout_footer_inner(),
+		generic_layout_footer_brand(),
+		generic_layout_footer_version(),
+		generic_layout_footer_link(),
+		authenticated_shell(),
+		authenticated_header(),
+		authenticated_brand(),
+		authenticated_title(),
+		authenticated_subtitle(),
+		authenticated_nav_list(),
+		authenticated_nav_link(),
+		authenticated_profile(),
+		authenticated_profile_text(),
+	}
+}
+
 templ layout_styles() {
 	<style>
 		@font-face {

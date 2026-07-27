@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/a-h/templ"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage"
 	"github.com/yazmeyaa/hosthalla/internal/events"
@@ -12,6 +13,8 @@ import (
 	"github.com/yazmeyaa/hosthalla/internal/web/handlers"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
 	ui_assets "github.com/yazmeyaa/hosthalla/ui/app/assets"
+	dashboard_page "github.com/yazmeyaa/hosthalla/ui/pages/dashboard"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
 )
 
 type NewRouterParams struct {
@@ -73,7 +76,13 @@ func NewRouter(params NewRouterParams) http.Handler {
 	)
 	rootMux.Handle("/", protectedRoutes)
 
-	return rootMux
+	return templ.NewCSSMiddleware(rootMux, cssClasses()...)
+}
+
+func cssClasses() []templ.CSSClass {
+	classes := layout.CSSClasses()
+	classes = append(classes, dashboard_page.CSSClasses()...)
+	return classes
 }
 
 func staticAssetsHandler(next http.Handler) http.Handler {

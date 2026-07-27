@@ -1,5 +1,16 @@
 package badge
 
+func CSSClasses() []templ.CSSClass {
+	return []templ.CSSClass{
+		badge_base(),
+		badge_variant_neutral(),
+		badge_variant_info(),
+		badge_variant_success(),
+		badge_variant_warning(),
+		badge_variant_danger(),
+	}
+}
+
 css badge_base() {
 	display: inline-flex;
 	align-items: center;
