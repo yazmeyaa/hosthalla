@@ -50,6 +50,7 @@ type HostSystemInfoRepository interface {
 
 type HostMetricSnapshotRepository interface {
 	ListHostMetricSnapshots(ctx context.Context, hostID uuid.UUID) ([]HostMetricSnapshot, error)
+	ListRecentHostMetricSnapshotsByHostIDs(ctx context.Context, hostIDs []uuid.UUID, limitPerHost int) (map[uuid.UUID][]HostMetricSnapshot, error)
 	ListLatestHostMetricSnapshotsByHostIDs(ctx context.Context, hostIDs []uuid.UUID) (map[uuid.UUID]HostMetricSnapshot, error)
 	CreateHostMetricSnapshot(ctx context.Context, data HostMetricSnapshot) (HostMetricSnapshot, error)
 }

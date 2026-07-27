@@ -44,7 +44,7 @@ func TestRenderLiveUpdateCanRenderSingleHostRow(t *testing.T) {
 						ID:            otherHostID.String(),
 						Name:          "quiet-host",
 						IP:            "10.0.0.20",
-						StatusLabel:   "Waiting data",
+						StatusLabel:   "No agent",
 						StatusVariant: "neutral",
 						SystemLabel:   "Unknown system",
 					},

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"sort"
 	"sync"
@@ -22,7 +23,10 @@ import (
 	dashboard_page "github.com/yazmeyaa/hosthalla/ui/pages/dashboard"
 )
 
-const dashboardCacheTTL = 30 * time.Second
+const (
+	dashboardCacheTTL             = 30 * time.Second
+	dashboardHostSparklineSamples = 12
+)
 
 type DashboardHandler struct {
 	logger         *slog.Logger
@@ -223,7 +227,7 @@ func (h *DashboardHandler) collectDashboardData(ctx context.Context, now time.Ti
 	if err != nil {
 		return dashboard_page.DashboardData{}, err
 	}
-	latestSnapshotsByHostID, err := h.hostService.ListLatestHostMetricSnapshotsByHostIDs(ctx, hostIDs)
+	recentSnapshotsByHostID, err := h.hostService.ListRecentHostMetricSnapshotsByHostIDs(ctx, hostIDs, dashboardHostSparklineSamples)
 	if err != nil {
 		return dashboard_page.DashboardData{}, err
 	}
@@ -250,8 +254,8 @@ func (h *DashboardHandler) collectDashboardData(ctx context.Context, now time.Ti
 			Tags:                  listedHost.Tags,
 			ManagementMethodCount: len(methods),
 			HasMonitoringAgent:    listedHost.MonitoringAgentID != uuid.Nil,
-			Status:                "waiting",
-			StatusLabel:           "Waiting data",
+			Status:                hostMonitoringStatus(listedHost),
+			StatusLabel:           hostMonitoringStatusLabel(listedHost),
 			StatusVariant:         "neutral",
 			LastMetricLabel:       "No metrics yet",
 			CPUUsageLabel:         "n/a",
@@ -266,12 +270,16 @@ func (h *DashboardHandler) collectDashboardData(ctx context.Context, now time.Ti
 			row.SystemLabel = formatSystemLabel(systemInfo)
 		}
 
-		if snapshot, ok := latestSnapshotsByHostID[listedHost.ID]; ok && len(snapshot.Metrics) > 0 {
+		if snapshots := recentSnapshotsByHostID[listedHost.ID]; len(snapshots) > 0 && len(snapshots[0].Metrics) > 0 {
+			snapshot := snapshots[0]
 			metric := snapshot.Metrics[0]
+			systemInfo := systemInfoByHostID[listedHost.ID]
 			row.LastMetricLabel = formatMetricAge(now, snapshot.Timestamp)
 			row.CPUUsageLabel = fmt.Sprintf("%.1f%%", metric.CPUUsagePercentage)
-			row.MemoryUsageLabel = formatUsageBytes(metric.MemoryUsageBytes, systemInfoByHostID[listedHost.ID].TotalMemoryBytes)
-			row.DiskUsageLabel = formatUsageBytes(metric.DiskUsageBytes, systemInfoByHostID[listedHost.ID].TotalDiskBytes)
+			row.CPUUsageSeries = cpuUsageSeries(snapshots)
+			row.MemoryUsageLabel = formatUsageBytes(metric.MemoryUsageBytes, systemInfo.TotalMemoryBytes)
+			row.MemoryUsageSeries = memoryUsageSeries(snapshots, systemInfo.TotalMemoryBytes)
+			row.DiskUsageLabel = formatUsageBytes(metric.DiskUsageBytes, systemInfo.TotalDiskBytes)
 			row.NetworkUsageLabel = fmt.Sprintf("%s in / %s out", formatBytes(metric.NetworkRxBytes), formatBytes(metric.NetworkTxBytes))
 			if latestMetricTime.IsZero() || snapshot.Timestamp.After(latestMetricTime) {
 				latestMetricTime = snapshot.Timestamp
@@ -509,6 +517,20 @@ func formatSystemLabel(info host.HostSystemInfo) string {
 	return "System info received"
 }
 
+func hostMonitoringStatus(value host.Host) string {
+	if value.MonitoringAgentID == uuid.Nil {
+		return "no_agent"
+	}
+	return "waiting"
+}
+
+func hostMonitoringStatusLabel(value host.Host) string {
+	if value.MonitoringAgentID == uuid.Nil {
+		return "No agent"
+	}
+	return "Awaiting metrics"
+}
+
 func formatMetricAge(now time.Time, value time.Time) string {
 	if value.IsZero() {
 		return "No metrics yet"
@@ -531,6 +553,44 @@ func formatUsageBytes(used uint64, total uint64) string {
 		return formatBytes(used)
 	}
 	return fmt.Sprintf("%s / %s", formatBytes(used), formatBytes(total))
+}
+
+func usagePercentage(used uint64, total uint64) (float64, bool) {
+	if total == 0 {
+		return 0, false
+	}
+	value := float64(used) / float64(total) * 100
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return 0, false
+	}
+	return math.Max(0, math.Min(100, value)), true
+}
+
+func cpuUsageSeries(snapshots []host.HostMetricSnapshot) []float64 {
+	values := make([]float64, 0, len(snapshots))
+	for idx := len(snapshots) - 1; idx >= 0; idx-- {
+		if len(snapshots[idx].Metrics) == 0 {
+			continue
+		}
+		values = append(values, snapshots[idx].Metrics[0].CPUUsagePercentage)
+	}
+	return values
+}
+
+func memoryUsageSeries(snapshots []host.HostMetricSnapshot, total uint64) []float64 {
+	if total == 0 {
+		return nil
+	}
+	values := make([]float64, 0, len(snapshots))
+	for idx := len(snapshots) - 1; idx >= 0; idx-- {
+		if len(snapshots[idx].Metrics) == 0 {
+			continue
+		}
+		if value, ok := usagePercentage(snapshots[idx].Metrics[0].MemoryUsageBytes, total); ok {
+			values = append(values, value)
+		}
+	}
+	return values
 }
 
 func formatBytes(bytes uint64) string {

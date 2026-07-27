@@ -59,6 +59,126 @@ order by timestamp desc`
 	return snapshots, nil
 }
 
+func (h HostMetricSnapshotRepositoryPostgresImpl) ListRecentHostMetricSnapshotsByHostIDs(ctx context.Context, hostIDs []uuid.UUID, limitPerHost int) (map[uuid.UUID][]host.HostMetricSnapshot, error) {
+	if len(hostIDs) == 0 || limitPerHost <= 0 {
+		return map[uuid.UUID][]host.HostMetricSnapshot{}, nil
+	}
+
+	rows, err := h.pool.Query(ctx, `
+select id, host_id, timestamp
+from (
+    select id,
+           host_id,
+           timestamp,
+           row_number() over (partition by host_id order by timestamp desc) as snapshot_rank
+    from host_metric_snapshot
+    where host_id = any($1)
+) ranked_snapshots
+where snapshot_rank <= $2
+order by host_id asc, timestamp desc`, hostIDs, limitPerHost)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type snapshotPosition struct {
+		HostID uuid.UUID
+		Index  int
+	}
+
+	result := make(map[uuid.UUID][]host.HostMetricSnapshot, len(hostIDs))
+	snapshotIDs := make([]int64, 0, len(hostIDs)*limitPerHost)
+	snapshotPositions := make(map[int64]snapshotPosition, len(hostIDs)*limitPerHost)
+	for rows.Next() {
+		var (
+			snapshotID int64
+			snapshot   host.HostMetricSnapshot
+		)
+		if err := rows.Scan(&snapshotID, &snapshot.HostID, &snapshot.Timestamp); err != nil {
+			return nil, err
+		}
+		hostID := uuid.UUID(snapshot.HostID)
+		result[hostID] = append(result[hostID], snapshot)
+		snapshotIDs = append(snapshotIDs, snapshotID)
+		snapshotPositions[snapshotID] = snapshotPosition{
+			HostID: hostID,
+			Index:  len(result[hostID]) - 1,
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(snapshotIDs) == 0 {
+		return result, nil
+	}
+
+	metricRows, err := h.pool.Query(ctx, `
+select snapshot_id,
+       cpu_usage_percentage,
+       memory_usage_bytes,
+       disk_usage_bytes,
+       network_rx_bytes,
+       network_tx_bytes
+from host_metric
+where snapshot_id = any($1)
+order by snapshot_id asc, position asc`, snapshotIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer metricRows.Close()
+
+	for metricRows.Next() {
+		var (
+			snapshotID       int64
+			metric           host.HostMetric
+			memoryUsageBytes int64
+			diskUsageBytes   int64
+			networkRxBytes   int64
+			networkTxBytes   int64
+		)
+		if err := metricRows.Scan(
+			&snapshotID,
+			&metric.CPUUsagePercentage,
+			&memoryUsageBytes,
+			&diskUsageBytes,
+			&networkRxBytes,
+			&networkTxBytes,
+		); err != nil {
+			return nil, err
+		}
+		position, ok := snapshotPositions[snapshotID]
+		if !ok {
+			continue
+		}
+
+		metric.MemoryUsageBytes, err = nonNegativeMetricInt64ToUint64(memoryUsageBytes, "memory_usage_bytes")
+		if err != nil {
+			return nil, err
+		}
+		metric.DiskUsageBytes, err = nonNegativeMetricInt64ToUint64(diskUsageBytes, "disk_usage_bytes")
+		if err != nil {
+			return nil, err
+		}
+		metric.NetworkRxBytes, err = nonNegativeMetricInt64ToUint64(networkRxBytes, "network_rx_bytes")
+		if err != nil {
+			return nil, err
+		}
+		metric.NetworkTxBytes, err = nonNegativeMetricInt64ToUint64(networkTxBytes, "network_tx_bytes")
+		if err != nil {
+			return nil, err
+		}
+
+		snapshots := result[position.HostID]
+		snapshots[position.Index].Metrics = append(snapshots[position.Index].Metrics, metric)
+		result[position.HostID] = snapshots
+	}
+	if err := metricRows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (h HostMetricSnapshotRepositoryPostgresImpl) ListLatestHostMetricSnapshotsByHostIDs(ctx context.Context, hostIDs []uuid.UUID) (map[uuid.UUID]host.HostMetricSnapshot, error) {
 	if len(hostIDs) == 0 {
 		return map[uuid.UUID]host.HostMetricSnapshot{}, nil

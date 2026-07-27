@@ -36,6 +36,7 @@ css dashboard_hosts_list() {
 	list-style: none;
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	grid-auto-rows: 1fr;
 	gap: 12px;
 }
 
@@ -131,10 +132,20 @@ css dashboard_hosts_metrics() {
 
 css dashboard_hosts_metric() {
 	min-width: 0;
+	min-height: 66px;
+	box-sizing: border-box;
 	padding: 8px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
 	background: var(--surface-overlay-muted);
+}
+
+css dashboard_hosts_metric_summary() {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 8px;
+	min-width: 0;
 }
 
 css dashboard_hosts_metric_label() {
@@ -144,12 +155,79 @@ css dashboard_hosts_metric_label() {
 	line-height: 1.3;
 }
 
+css dashboard_hosts_metric_compact_value() {
+	margin: 0;
+	color: var(--text);
+	font-size: 0.84rem;
+	line-height: 1.35;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	max-width: 68%;
+	overflow-wrap: anywhere;
+}
+
 css dashboard_hosts_metric_value() {
 	margin: 4px 0 0;
 	color: var(--text);
 	font-size: 0.84rem;
 	line-height: 1.35;
 	overflow-wrap: anywhere;
+}
+
+css dashboard_hosts_sparkline_shell() {
+	display: grid;
+	grid-template-columns: 28px minmax(0, 1fr);
+	align-items: stretch;
+	gap: 6px;
+	height: 32px;
+	margin-top: 7px;
+}
+
+css dashboard_hosts_sparkline_scale() {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	color: var(--muted);
+	font-size: 0.62rem;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+}
+
+css dashboard_hosts_sparkline() {
+	display: block;
+	width: 100%;
+	height: 32px;
+	color: var(--primary);
+}
+
+css dashboard_hosts_sparkline_cpu() {
+	color: var(--primary);
+}
+
+css dashboard_hosts_sparkline_memory() {
+	color: var(--success);
+}
+
+css dashboard_hosts_sparkline_rule() {
+	stroke: rgba(255, 255, 255, 0.13);
+	stroke-width: 1;
+	vector-effect: non-scaling-stroke;
+}
+
+css dashboard_hosts_sparkline_mid_rule() {
+	stroke: rgba(255, 255, 255, 0.06);
+	stroke-width: 1;
+	vector-effect: non-scaling-stroke;
+}
+
+css dashboard_hosts_sparkline_line() {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	vector-effect: non-scaling-stroke;
 }
 
 css dashboard_hosts_tags() {
