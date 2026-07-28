@@ -18,7 +18,7 @@ type AdministrationPageProps struct {
 }
 
 templ AdministrationPage(props AdministrationPageProps) {
-	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{GenericLayoutProps: layout.GenericLayoutProps{Title: "Administration"}, Profile: props.Profile}) {
+	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{GenericLayoutProps: layout.GenericLayoutProps{Title: "Administration"}, Profile: props.Profile, Path: "/administration"}) {
 		@AdministrationPageContent(props)
 	}
 }

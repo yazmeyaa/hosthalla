@@ -127,6 +127,7 @@ func (h *DashboardHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
 			GenericLayoutProps: layout.GenericLayoutProps{Title: "Dashboard"},
 			Profile:            profile,
+			Path:               r.URL.Path,
 		},
 	}
 

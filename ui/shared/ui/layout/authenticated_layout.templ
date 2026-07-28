@@ -1,11 +1,13 @@
 package layout
 
+import "strings"
 import "github.com/yazmeyaa/hosthalla/internal/authentication"
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 
 type AuthenticatedLayoutProps struct {
 	GenericLayoutProps
 	Profile authentication.Profile
+	Path    string
 }
 
 templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
@@ -17,6 +19,8 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 					<p class={ authenticated_subtitle() }>Infrastructure dashboard</p>
 				</div>
 				<nav
+					data-authenticated-nav
+					data-nav-active-class={ authenticated_nav_link_active().ClassName() }
 					hx-boost="true"
 					hx-target="#app-content"
 					hx-select="#app-content"
@@ -24,9 +28,9 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 					hx-push-url="true"
 				>
 					<ul class={ authenticated_nav_list() }>
-						<li><a class={ authenticated_nav_link() } href="/dashboard">Dashboard</a></li>
-						<li><a class={ authenticated_nav_link() } href="/hosts">Hosts</a></li>
-						<li><a class={ authenticated_nav_link() } href="/administration">Administration</a></li>
+						<li>@AuthenticatedNavLink(props.Path, "/dashboard", "Dashboard")</li>
+						<li>@AuthenticatedNavLink(props.Path, "/hosts", "Hosts")</li>
+						<li>@AuthenticatedNavLink(props.Path, "/administration", "Administration")</li>
 					</ul>
 				</nav>
 				<div class={ authenticated_profile() }>
@@ -38,9 +42,89 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 					</form>
 				</div>
 			</header>
+			@AuthenticatedNavScripts()
 			@AppContent() {
 				{ children... }
 			}
 		</div>
 	}
+}
+
+templ AuthenticatedNavLink(currentPath string, href string, label string) {
+	if authenticatedRouteActive(currentPath, href) {
+		<a class={ authenticated_nav_link(), authenticated_nav_link_active() } href={ href } data-nav-href={ href } aria-current="page">{ label }</a>
+	} else {
+		<a class={ authenticated_nav_link() } href={ href } data-nav-href={ href }>{ label }</a>
+	}
+}
+
+templ AuthenticatedNavScripts() {
+	<script>
+		(function() {
+			function normalizeRoutePath(path) {
+				if (typeof path !== "string" || path === "") {
+					return "/";
+				}
+				if (path.length > 1 && path.endsWith("/")) {
+					return path.slice(0, -1);
+				}
+				return path;
+			}
+
+			function routeMatches(path, href) {
+				const normalizedPath = normalizeRoutePath(path);
+				const normalizedHref = normalizeRoutePath(href);
+				return normalizedPath === normalizedHref || normalizedPath.startsWith(normalizedHref + "/");
+			}
+
+			function updateAuthenticatedNav() {
+				const currentPath = window.location.pathname || "/";
+				document.querySelectorAll("[data-authenticated-nav]").forEach(function(nav) {
+					const activeClass = nav.getAttribute("data-nav-active-class");
+					if (!activeClass) {
+						return;
+					}
+
+					nav.querySelectorAll("[data-nav-href]").forEach(function(link) {
+						const href = link.getAttribute("data-nav-href") || link.getAttribute("href") || "";
+						const isActive = routeMatches(currentPath, href);
+						link.classList.toggle(activeClass, isActive);
+						if (isActive) {
+							link.setAttribute("aria-current", "page");
+						} else {
+							link.removeAttribute("aria-current");
+						}
+					});
+				});
+			}
+
+			updateAuthenticatedNav();
+
+			if (!window.__authenticatedNavBound) {
+				window.__authenticatedNavBound = true;
+				document.addEventListener("DOMContentLoaded", updateAuthenticatedNav);
+				document.body.addEventListener("htmx:pushedIntoHistory", updateAuthenticatedNav);
+				document.body.addEventListener("htmx:afterSettle", updateAuthenticatedNav);
+				window.addEventListener("popstate", function() {
+					window.setTimeout(updateAuthenticatedNav, 0);
+				});
+			}
+		})();
+	</script>
+}
+
+func authenticatedRouteActive(currentPath string, href string) bool {
+	currentPath = normalizedRoutePath(currentPath)
+	href = normalizedRoutePath(href)
+	return currentPath == href || strings.HasPrefix(currentPath, href+"/")
+}
+
+func normalizedRoutePath(path string) string {
+	if path == "" {
+		return "/"
+	}
+	if len(path) > 1 {
+		return strings.TrimSuffix(path, "/")
+	}
+	return path
 }

@@ -175,6 +175,7 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
 			GenericLayoutProps: layout.GenericLayoutProps{Title: "Hosts"},
 			Profile:            profile,
+			Path:               r.URL.Path,
 		},
 	}
 	if isHTMXBoostedNavigationRequest(r) {
