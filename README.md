@@ -1,187 +1,197 @@
 # Hosthalla
 
-Self-hosted infrastructure dashboard for managing hosts, SSH credentials, and monitoring agents.
+A self-hosted dashboard for tracking servers, storing access methods, and keeping a lightweight eye on your infrastructure.
 
-- **Host inventory** — add hosts by IP, group them with tags, store SSH access methods
-- **ICMP monitoring** — ping individual hosts or all at once directly from the UI
-- **Remote agents** — install a lightweight agent on any Linux machine; it streams system info and live metrics (CPU, memory, disk, network) back to the dashboard
-- **API tokens** — issue scoped tokens for agent registration and API access
+<p align="center">
+  <img src="./docs/hosthalla_dashboard_1.jpg" alt="Hosthalla dashboard" width="900">
+</p>
 
-## Tech Stack
+Hosthalla brings hosts, tags, SSH access methods, availability checks, and live machine metrics into one small web interface. It is built for self-hosted setups, homelabs, personal servers, and small teams that need a practical internal inventory without running a full CMDB.
+
+## Features
+
+- **Host inventory**: store name, description, IP address, tags, and filter hosts by tags.
+- **Management methods**: store SSH password and SSH key access methods, with secrets encrypted by `security.secret_encryption_key`.
+- **Availability checks**: run ICMP ping for a single host or all hosts from the web UI.
+- **Monitoring agents**: run a lightweight local agent that sends heartbeat, system information, and CPU, memory, disk, and network metrics.
+- **Live dashboard**: view infrastructure overview, agent status, latest metrics, and live updates through WebSocket/HTMX.
+- **Import and export**: move hosts and management methods through JSON.
+- **Users and API tokens**: cookie sessions for the UI, `hht_` API tokens for API access and agent registration.
+- **Unified CLI**: server, migrations, bootstrap, users, tokens, hosts, and agents are managed through one `hosthalla` binary.
+
+## Why Use It
+
+Hosthalla answers a practical day-to-day question: what machines do I have, how do I access them, are they reachable, and what resources are they using right now? It is not a replacement for Prometheus, Ansible, or a full asset-management platform. It is a compact operational entry point for a small server fleet.
+
+## Stack
 
 | Layer | Technology |
-|---|---|
-| Language | Go 1.26 |
-| HTTP | `net/http` (Go 1.22+ routing) |
+| --- | --- |
+| Backend | Go 1.26, `net/http` |
 | Database | PostgreSQL 18 |
-| UI | [Templ](https://templ.guide) + [HTMX](https://htmx.org) |
-| Auth | Cookie sessions + bcrypt |
-| API auth | `hht_`-prefixed tokens (SHA-256 stored) |
+| UI | Templ, HTMX, WebSocket |
+| Auth | Cookie sessions, bcrypt |
+| API auth | Bearer tokens with the `hht_` prefix, SHA-256 hash stored in DB |
 | Agent metrics | `gopsutil/v4` |
+| Dev infra | Docker Compose |
 
-## Requirements
+## Development Quick Start
 
-- PostgreSQL 18+ (for running the app)
-- Go 1.26+ (only if you build from source)
-
-## Install Script
+Requirements: Go 1.26+, Docker, and Docker Compose.
 
 ```sh
-#!/usr/bin/env bash
-set -euo pipefail
-
-REPO="yazmeyaa/hosthalla"
-ARCHIVE_PATTERN="linux_amd64"
-
-URL=$(curl -s https://api.github.com/repos/$REPO/releases/latest \
-  | jq -r --arg pattern "$ARCHIVE_PATTERN" '.assets[] | select(.name | test($pattern)) | .browser_download_url' \
-  | head -n 1)
-
-if [ -z "$URL" ] || [ "$URL" = "null" ]; then
-  echo "Could not find release asset for pattern: $ARCHIVE_PATTERN" >&2
-  exit 1
-fi
-
-TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
-
-curl -L -o "$TMP/pkg.tar.gz" "$URL"
-tar -xzf "$TMP/pkg.tar.gz" -C "$TMP"
-
-for bin in hosthalla; do
-  if [ -f "$TMP/$bin" ]; then
-    sudo install -m 0755 "$TMP/$bin" "/usr/local/bin/$bin"
-  fi
-done
+make dev-up
+go run ./cmd/hosthalla config generate
+go run ./cmd/hosthalla bootstrap --username admin --password admin
+go run ./cmd/hosthalla serve
 ```
 
-## Quick Start
+The web UI will be available at:
 
-### 1. Install binary
+```text
+http://localhost:8080
+```
 
-Run the install script above, or download the latest release asset and place `hosthalla` in your `PATH`.
+For regular local development, use:
 
-### 2. Generate app config
+```sh
+make dev-up
+make dev-web
+```
+
+`make dev-web` regenerates Templ views and starts the server with `go run ./cmd/hosthalla serve`. Before the first run, create the config and run `bootstrap` once.
+
+## Install Binary
+
+Use the install script from the repository:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/yazmeyaa/hosthalla/main/scripts/install_hosthalla.sh | bash
+```
+
+The script requires `curl`, `jq`, `tar`, and `sudo`. You can also download a release asset manually and place the `hosthalla` binary somewhere in your `PATH`.
+
+## Configuration
+
+The default application config path is `~/.hosthalla/config.yaml`.
+
+Generate a config:
 
 ```sh
 hosthalla config generate
 ```
 
-Default path: `~/.hosthalla/config.yaml`.
+Example config:
 
-### 3. Fill the config
-
-```yml
+```yaml
 web:
   host: 0.0.0.0
   port: 8080
 database:
-  host: <postgres-host>
+  host: localhost
   port: 5432
-  user: <postgres-user>
-  password: <postgres-password>
-  database: <postgres-database>
-log_level: warning   # debug | info | warning | error
+  user: hosthalla
+  password: hosthalla
+  database: hosthalla
 security:
-  secret_encryption_key: <secret_encryption_key>
+  secret_encryption_key: <base64-encoded-32-byte-key>
+log_level: warning
 ```
 
-### 4. Apply migrations
+`secret_encryption_key` is used to encrypt host management secrets. It is generated automatically when the config is created.
+
+Validate the config:
 
 ```sh
-hosthalla db migrate
+hosthalla config validate
 ```
 
-### 5. Start Hosthalla
+## First Run
+
+Once PostgreSQL is available and the config is filled in, run bootstrap:
+
+```sh
+hosthalla bootstrap --username admin --password <strong-password>
+```
+
+This applies migrations and creates the first user. Then start the server:
 
 ```sh
 hosthalla serve
 ```
 
-The UI is available at `http://localhost:8080`.
-
-### 6. (Optional) Create first user from CLI
+Manual setup is also supported:
 
 ```sh
-hosthalla users create <username> <password>
+hosthalla db migrate
+hosthalla users create admin <strong-password>
+hosthalla serve
 ```
 
-## Building
+## Monitoring Agent
 
-```bash
-make build
+The agent runs on the machine you want to monitor. It registers with Hosthalla, stores its local config in `~/.hosthalla/agent.yaml`, then periodically sends heartbeat and metrics.
+
+Recommended flow:
+
+1. Open Hosthalla in the browser.
+2. Create a host or open an existing one.
+3. Click **Register Agent**.
+4. Run the generated command on the target machine.
+5. Start the agent:
+
+```sh
+hosthalla agent run
 ```
 
-Builds the binary locally:
-- `dist/hosthalla`
+Manual registration looks like this:
 
-Release binaries include version, commit, and build timestamp via ldflags.
+```sh
+hosthalla agent register \
+  --host https://hosthalla.example.com \
+  --host-id <host-uuid> \
+  --token <hht_...>
 
-## CLI Reference
+hosthalla agent run
+```
 
-The `hosthalla` binary exposes the server, local agent, and administration
-commands through one explicit command tree. Legacy command aliases are not
-supported.
+Current agent defaults: heartbeat every `2s`, metrics every `4s`. These intervals are saved in the agent config and can be updated through the server-side agent configuration.
 
-### Help
+## CLI
+
+General form:
+
+```sh
+hosthalla [--config <file>] [--json] <command> [arguments]
+```
+
+Common commands:
 
 ```sh
 hosthalla help
-# or
-hosthalla --help
-```
+hosthalla version
 
-### Config commands
-
-```sh
-# Generate default config at ~/.hosthalla/config.yaml
 hosthalla config generate [--path <file>] [--overwrite]
-
-# Print the current config
 hosthalla config show [--path <file>]
-
-# Validate the current config
 hosthalla config validate [--path <file>]
-```
 
-### User management
+hosthalla bootstrap [--username <username> --password <password>]
 
-```sh
+hosthalla db migrate
+hosthalla db status [--json]
+hosthalla db rollback
+
 hosthalla users create <username> <password>
 hosthalla users list [--json]
 hosthalla users show <user-id-or-username> [--json]
 hosthalla users password set <user-id-or-username> <password>
 hosthalla users delete <user-id-or-username>
-```
 
-### Database commands
-
-```sh
-# Apply all pending migrations
-hosthalla db migrate
-
-# Print current migration version
-hosthalla db status [--json]
-
-# Roll back one migration
-hosthalla db rollback
-```
-
-### Token management
-
-```sh
-hosthalla tokens list [--user <user-id-or-username>] [--json]
 hosthalla tokens create --user <user-id-or-username> --name <name> [--scope <scope>] [--ttl <duration>] [--json]
+hosthalla tokens list [--user <user-id-or-username>] [--json]
 hosthalla tokens show <token-id> [--json]
 hosthalla tokens revoke <token-id>
-```
 
-`tokens create` prints the plain token once. Store it immediately; later
-commands show only token metadata.
-
-### Host and agent administration
-
-```sh
 hosthalla hosts list [--json]
 hosthalla hosts show <host-id> [--json]
 hosthalla hosts delete <host-id>
@@ -189,84 +199,68 @@ hosthalla hosts delete <host-id>
 hosthalla agents list [--json]
 hosthalla agents show <agent-id> [--json]
 hosthalla agents delete <agent-id>
-```
 
-### Agent commands
-
-```sh
-# Register this machine as an agent for a host
-# (The recommended way is to use the "Register Agent" button in the UI,
-#  which generates the full command with a pre-filled token.)
-hosthalla agent register \
-  --host <server-url> \
-  --host-id <uuid> \
-  --token <hht_...>
-
-# Start the agent worker (heartbeat + metrics loop)
+hosthalla agent register --host <server-url> --host-id <uuid> --token <hht_...>
 hosthalla agent run [--config <file>]
 ```
 
-Agent config is saved to `~/.hosthalla/agent.yaml` by default.
-The agent sends a heartbeat every **5 seconds** and metrics every **30 seconds**.
-
-## Monitoring Agents
-
-1. Open the dashboard and navigate to a host.
-2. Click **Register Agent** — a shell command with a scoped API token is generated.
-3. Run `hosthalla agent register ...` on the target machine.
-4. Run `hosthalla agent run` on the target machine (or set it up as a systemd service).
-
-The dashboard then shows live CPU, memory, disk, and network metrics for the host.
-
-## Agent Quick Start
-
-```sh
-# 1) Register agent on target host
-hosthalla agent register --host <server-url> --host-id <uuid> --token <hht_...>
-
-# 2) Start agent loop
-hosthalla agent run
-```
+`tokens create` prints the plain token only once. Store it immediately.
 
 ## Make Targets
 
 | Target | Description |
-|---|---|
-| `make migrate-up` | Apply all pending migrations |
-| `make migrate-down` | Roll back the last migration |
-| `make templ-generate` | Regenerate `*_templ.go` files |
+| --- | --- |
 | `make help` | Show available Make targets |
-| `make build` | Build Hosthalla binary |
-| `make build-hosthalla` | Build binary to `dist/hosthalla` |
-| `make dev-web` | Regenerate Templ files + run the web server |
+| `make dev-up` | Start PostgreSQL for development |
+| `make dev-down` | Stop development infrastructure |
+| `make dev-logs` | Stream development infrastructure logs |
+| `make dev-ps` | Show development service status |
+| `make dev-reset` | Stop development infrastructure and remove volumes |
+| `make migrate-up` | Apply migrations in the Docker network |
+| `make migrate-down` | Roll back one migration in the Docker network |
+| `make templ-generate` | Regenerate Templ Go files |
+| `make build` | Build the binary |
+| `make dev-web` | Regenerate Templ files and run the web server |
 
 ## Project Structure
 
+```text
+cmd/hosthalla/          # unified CLI entry point
+internal/agent/         # agent, API client, system info, and metrics collection
+internal/api/           # agent API: registration, heartbeat, metrics, config
+internal/authentication/# users, sessions, API tokens
+internal/commands/      # CLI command implementations
+internal/config/        # config.yaml loading, generation, and validation
+internal/host/          # host, metrics, and management method domain model
+internal/web/           # web router, handlers, middleware
+migrations/             # SQL migrations up/down
+ui/                     # Templ UI using Feature-Sliced Design
+infra/dev/              # Docker Compose files for local development
+scripts/                # helper installation scripts
+docs/                   # images and documentation
 ```
-cmd/
-  hosthalla/    # Unified CLI entry point
-internal/
-  agent/        # Agent model, config, gopsutil metrics, worker loop
-  api/          # REST API for agents (/api/v1/...)
-  authentication/ # Sessions, API tokens, bcrypt passwords
-  cli/          # CLI command tree runner
-  commands/     # Hosthalla command implementations
-  config/       # App config struct, load/save
-  host/         # Host domain: model, service, repository interfaces
-  logger/       # slog setup
-  version/      # Version string injected via ldflags
-  web/          # Server-rendered UI handlers and middleware
-migrations/     # SQL migration pairs (up/down)
-ui/             # Templ components (Feature-Sliced Design)
-  app/layout/
-  entities/
-  features/
-  pages/
-  shared/ui/
-  widgets/
-infra/dev/      # local development infrastructure files
+
+## Security
+
+- User passwords are hashed with bcrypt.
+- API tokens are stored as SHA-256 hashes.
+- SSH management secrets are encrypted with `security.secret_encryption_key`.
+- Host exports may include decrypted secrets when they can be read successfully. Treat exported JSON files as sensitive data.
+
+## Build
+
+```sh
+make build
 ```
+
+The binary is written to:
+
+```text
+dist/hosthalla
+```
+
+Release builds receive version, commit, and build timestamp through `ldflags`.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
