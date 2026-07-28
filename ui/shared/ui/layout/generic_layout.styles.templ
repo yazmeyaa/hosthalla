@@ -16,6 +16,7 @@ func CSSClasses() []templ.CSSClass {
 		authenticated_subtitle(),
 		authenticated_nav_list(),
 		authenticated_nav_link(),
+		authenticated_nav_link_active(),
 		authenticated_profile(),
 		authenticated_profile_text(),
 	}
@@ -80,6 +81,7 @@ templ layout_styles() {
             --surface-interactive-subtle-strong: rgba(148, 163, 184, 0.16);
             --surface-interactive-info: rgba(59, 130, 246, 0.2);
             --surface-interactive-info-strong: rgba(59, 130, 246, 0.28);
+            --surface-interactive-danger-strong: rgba(127, 29, 29, 0.9);
 
             --border-interactive-subtle: rgba(148, 163, 184, 0.35);
             --border-interactive-subtle-strong: rgba(148, 163, 184, 0.45);
@@ -185,19 +187,62 @@ templ layout_styles() {
 			letter-spacing: 0;
 		}
 
-		.ui-button:hover {
-			filter: brightness(1.06);
-			transform: translateY(-1px);
+		.ui-button:not(:disabled):not([aria-disabled="true"]):hover {
+			border-color: rgba(147, 197, 253, 0.72);
+			box-shadow: 0 6px 16px rgba(2, 6, 23, 0.24);
+			filter: brightness(1.07);
 		}
 
-		.ui-button:active {
-			transform: translateY(0);
-			filter: brightness(0.98);
+		.ui-button[data-ui-button-variant="secondary"]:not(:disabled):not([aria-disabled="true"]):hover {
+			background: var(--surface-interactive-subtle);
+			border-color: var(--border-interactive-info);
+			color: var(--text-info-soft);
+		}
+
+		.ui-button[data-ui-button-variant="danger"]:not(:disabled):not([aria-disabled="true"]):hover {
+			border-color: rgba(248, 113, 113, 0.72);
+			background: var(--surface-interactive-danger-strong);
+		}
+
+		.ui-button:not(:disabled):not([aria-disabled="true"]):active {
+			box-shadow: 0 2px 8px rgba(2, 6, 23, 0.22);
+			filter: brightness(0.95);
 		}
 
 		.ui-button:focus-visible {
 			outline: none;
-			box-shadow: 0 0 0 3px var(--focus-ring);
+			border-color: var(--input-border-focus);
+			box-shadow: 0 0 0 3px var(--focus-ring), 0 6px 16px rgba(2, 6, 23, 0.24);
+		}
+
+		.ui-button:disabled,
+		.ui-button[aria-disabled="true"] {
+			cursor: not-allowed;
+			opacity: 0.58;
+			box-shadow: none;
+			filter: none;
+			transform: none;
+		}
+
+		.ui-interactive-control {
+			transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms ease, box-shadow 180ms ease;
+		}
+
+		.ui-interactive-control:hover {
+			border-color: var(--border-interactive-info);
+			background: var(--surface-interactive-subtle);
+			color: var(--text-info-soft);
+			box-shadow: 0 6px 16px rgba(2, 6, 23, 0.22);
+		}
+
+		.ui-interactive-control:active {
+			box-shadow: 0 2px 8px rgba(2, 6, 23, 0.2);
+		}
+
+		.ui-interactive-control:focus-visible {
+			outline: none;
+			border-color: var(--input-border-focus);
+			box-shadow: 0 0 0 3px var(--focus-ring), 0 6px 16px rgba(2, 6, 23, 0.22);
 		}
 
 		.ui-modal::backdrop {

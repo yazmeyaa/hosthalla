@@ -46,7 +46,7 @@ templ HostFormFields(idPrefix string, name string, description string, ip string
 				for _, tag := range availableTags {
 					<button
 						type="button"
-						class={ host_tags_suggestion() }
+						class={ host_tags_suggestion(), "ui-interactive-control" }
 						data-host-tag-suggestion
 						data-tag-name={ tag.Name }
 					>
@@ -61,7 +61,7 @@ templ HostFormFields(idPrefix string, name string, description string, ip string
 templ HostTagFormChip(tag string) {
 	<button
 		type="button"
-		class={ host_tag_chip(), "host-tag-chip" }
+		class={ host_tag_chip(), "host-tag-chip", "ui-interactive-control" }
 		data-host-tag-remove
 		data-tag-name={ tag }
 		aria-label={ "Remove tag " + tag }

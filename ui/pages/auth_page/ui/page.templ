@@ -3,6 +3,7 @@ package auth_page_ui
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/input"
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
+import "github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 
 templ AuthPage() {
 	@layout.GenericLayout(layout.GenericLayoutProps{Title: "Auth"}) {
@@ -21,7 +22,9 @@ templ AuthPage() {
 								<label class={ auth_label() } for="password">Password</label>
 								@input.Input(input.InputProps{Id: "password", Type: "password", Name: "password"})
 							</div>
-							<button class={ auth_button() } type="submit">Sign In</button>
+							@button.Button(button.ButtonProps{Type: "submit"}) {
+								Sign In
+							}
 						</form>
 						<p class={ auth_footer_text() }>Only authorized users can access this area.</p>
 					</div>

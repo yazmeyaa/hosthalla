@@ -42,7 +42,7 @@ templ DashboardPageContent(props DashboardPageProps) {
 				<h1 class={ dashboard_page_title() }>Dashboard</h1>
 				@DashboardGeneratedAtMeta(props.Data.GeneratedAtLabel)
 			</div>
-			<a class={ dashboard_page_refresh_link() } href="/dashboard">Refresh</a>
+			<a class={ dashboard_page_refresh_link(), "ui-interactive-control" } href="/dashboard">Refresh</a>
 		</header>
 		@DashboardOverviewSection(props.Data)
 		@DashboardHostsSection(props.Data)
