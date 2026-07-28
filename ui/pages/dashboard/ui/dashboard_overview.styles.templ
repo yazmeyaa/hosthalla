@@ -1,14 +1,46 @@
 package dashboard_ui
 
 css dashboard_overview() {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+css dashboard_overview_primary() {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 	gap: 12px;
 }
 
 css dashboard_overview_card() {
 	min-width: 0;
 	display: grid;
+}
+
+css dashboard_overview_card_total() {
+	--dashboard-overview-accent: var(--primary);
+}
+
+css dashboard_overview_card_success() {
+	--dashboard-overview-accent: var(--success);
+}
+
+css dashboard_overview_card_warning() {
+	--dashboard-overview-accent: var(--warn);
+}
+
+css dashboard_overview_card_neutral() {
+	--dashboard-overview-accent: var(--muted);
+}
+
+css dashboard_overview_tile() {
+	height: 100%;
+	box-sizing: border-box;
+	padding: 12px;
+	border: 1px solid var(--border);
+	border-top: 3px solid var(--dashboard-overview-accent);
+	border-radius: var(--radius-card);
+	background: linear-gradient(180deg, rgba(17, 28, 45, 0.95), rgba(12, 24, 39, 0.95));
 }
 
 css dashboard_overview_label() {
@@ -21,15 +53,19 @@ css dashboard_overview_label() {
 css dashboard_overview_value() {
 	display: block;
 	margin-top: 7px;
-	font-size: 1.55rem;
+	color: var(--text);
+	font-size: 1.85rem;
 	line-height: 1;
+	font-variant-numeric: tabular-nums;
 }
 
 css dashboard_overview_value_text() {
 	display: block;
-	margin-top: 8px;
-	font-size: 1rem;
-	line-height: 1.2;
+	color: var(--text);
+	font-size: 0.92rem;
+	line-height: 1.25;
+	font-variant-numeric: tabular-nums;
+	overflow-wrap: anywhere;
 }
 
 css dashboard_overview_hint() {
@@ -38,4 +74,23 @@ css dashboard_overview_hint() {
 	color: var(--muted);
 	font-size: 0.78rem;
 	line-height: 1.3;
+}
+
+css dashboard_overview_secondary() {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+	gap: 8px;
+	padding: 9px 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+	background: rgba(17, 28, 45, 0.54);
+}
+
+css dashboard_overview_compact_metric() {
+	min-width: 0;
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+	padding-inline: 2px;
 }

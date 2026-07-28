@@ -3,7 +3,7 @@ package layout
 css authenticated_shell() {
 	display: flex;
 	flex-direction: column;
-	gap: 18px;
+	gap: 20px;
 }
 
 css authenticated_header() {
@@ -11,16 +11,47 @@ css authenticated_header() {
 	align-items: center;
 	justify-content: space-between;
 	gap: 14px;
-	padding: 14px 16px;
+	padding: 12px 14px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-xl);
 	background: var(--surface-header-gradient);
+	box-shadow: 0 14px 36px rgba(2, 6, 23, 0.18);
+	position: relative;
+	overflow: hidden;
+}
+
+css authenticated_header_motif() {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background:
+		linear-gradient(135deg, transparent 0 46%, rgba(34, 211, 238, 0.08) 46% 48%, transparent 48% 100%),
+		linear-gradient(45deg, transparent 0 56%, rgba(34, 211, 238, 0.045) 56% 58%, transparent 58% 100%);
+	mask-image: linear-gradient(90deg, transparent, #000 22%, transparent 72%);
 }
 
 css authenticated_brand() {
 	display: flex;
-	flex-direction: column;
-	gap: 2px;
+	align-items: center;
+	gap: 10px;
+	min-width: 180px;
+}
+
+css authenticated_brand_mark() {
+	display: inline-grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border: 1px solid var(--border-interactive-info);
+	border-radius: 8px 3px 8px 3px;
+	background: rgba(34, 211, 238, 0.1);
+	color: var(--text-info-soft);
+	font-family: var(--font-mono);
+	font-size: 0.78rem;
+	font-weight: 800;
+	line-height: 1;
+	letter-spacing: 0;
+	box-shadow: inset 0 -2px 0 rgba(34, 211, 238, 0.16);
 }
 
 css authenticated_title() {
@@ -50,7 +81,7 @@ css authenticated_nav_link() {
 	justify-content: center;
 	padding: 0.45rem 0.7rem;
 	border: 1px solid var(--border);
-	border-radius: var(--radius-md);
+	border-radius: 9px 4px 9px 4px;
 	color: var(--text-neutral-soft);
 	text-decoration: none;
 	font-size: 0.9rem;
@@ -59,10 +90,10 @@ css authenticated_nav_link() {
 }
 
 css authenticated_nav_link_active() {
-	border-color: var(--border-interactive-info-strong);
-	background: var(--surface-interactive-info);
+	border-color: rgba(34, 211, 238, 0.5);
+	background: rgba(34, 211, 238, 0.12);
 	color: var(--text-info-soft);
-	box-shadow: inset 0 -2px 0 rgba(147, 197, 253, 0.55);
+	box-shadow: inset 0 -2px 0 rgba(34, 211, 238, 0.58);
 }
 
 css authenticated_profile() {

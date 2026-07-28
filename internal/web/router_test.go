@@ -66,8 +66,8 @@ func TestDashboardCSSClassesIncludeSparklineStyles(t *testing.T) {
 
 	body := response.Body.String()
 	for _, expected := range []string{
-		`height:32px`,
-		`grid-template-columns:28px minmax(0, 1fr)`,
+		`height:28px`,
+		`grid-template-columns:repeat(auto-fit, minmax(118px, 1fr))`,
 		`stroke:currentColor`,
 	} {
 		if !strings.Contains(body, expected) {

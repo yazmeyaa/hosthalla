@@ -11,7 +11,9 @@ func CSSClasses() []templ.CSSClass {
 		generic_layout_footer_link(),
 		authenticated_shell(),
 		authenticated_header(),
+		authenticated_header_motif(),
 		authenticated_brand(),
+		authenticated_brand_mark(),
 		authenticated_title(),
 		authenticated_subtitle(),
 		authenticated_nav_list(),
@@ -52,19 +54,19 @@ templ layout_styles() {
             --font-sans: "Adwaita Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
             --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
 
-            --bg: #0F172A;
-            --surface: #111827;
-            --card: #1F2937;
+            --bg: #07111f;
+            --surface: #0b1626;
+            --card: #111c2d;
             --text: #E5E7EB;
-            --muted: #9CA3AF;
-            --primary: #3B82F6;
+            --muted: #96a4b7;
+            --primary: #22d3ee;
             --success: #22C55E;
             --warn: #F59E0B;
             --danger: #EF4444;
             --border: rgba(255, 255, 255, 0.08);
-            --text-link: #93c5fd;
+            --text-link: #67e8f9;
             --text-neutral-soft: #e2e8f0;
-            --text-info-soft: #bfdbfe;
+            --text-info-soft: #a5f3fc;
             --text-success-soft: #86efac;
             --text-danger-soft: #fca5a5;
             --text-success-muted: #bbf7d0;
@@ -72,21 +74,21 @@ templ layout_styles() {
             --text-danger-muted: #fecaca;
             --text-danger-on: #fee2e2;
 
-            --surface-footer: rgba(17, 24, 39, 0.72);
-            --surface-overlay: rgba(17, 24, 39, 0.98);
-            --surface-overlay-muted: rgba(17, 24, 39, 0.65);
-            --surface-header-gradient: linear-gradient(180deg, rgba(59, 130, 246, 0.1), rgba(17, 24, 39, 0.6));
+            --surface-footer: rgba(7, 17, 31, 0.82);
+            --surface-overlay: rgba(11, 22, 38, 0.98);
+            --surface-overlay-muted: rgba(17, 28, 45, 0.58);
+            --surface-header-gradient: linear-gradient(180deg, rgba(34, 211, 238, 0.09), rgba(11, 22, 38, 0.84));
             --surface-sensitive-mask: rgba(255, 255, 255, 0.1);
             --surface-interactive-subtle: rgba(148, 163, 184, 0.12);
             --surface-interactive-subtle-strong: rgba(148, 163, 184, 0.16);
-            --surface-interactive-info: rgba(59, 130, 246, 0.2);
-            --surface-interactive-info-strong: rgba(59, 130, 246, 0.28);
+            --surface-interactive-info: rgba(34, 211, 238, 0.15);
+            --surface-interactive-info-strong: rgba(34, 211, 238, 0.22);
             --surface-interactive-danger-strong: rgba(127, 29, 29, 0.9);
 
             --border-interactive-subtle: rgba(148, 163, 184, 0.35);
             --border-interactive-subtle-strong: rgba(148, 163, 184, 0.45);
-            --border-interactive-info: rgba(59, 130, 246, 0.45);
-            --border-interactive-info-strong: rgba(59, 130, 246, 0.65);
+            --border-interactive-info: rgba(34, 211, 238, 0.38);
+            --border-interactive-info-strong: rgba(34, 211, 238, 0.62);
             --border-interactive-success: rgba(34, 197, 94, 0.45);
             --border-interactive-warning: rgba(245, 158, 11, 0.45);
             --border-interactive-danger: rgba(239, 68, 68, 0.45);
@@ -97,12 +99,12 @@ templ layout_styles() {
             --surface-danger-strong: #7f1d1d;
 
             --input-placeholder: rgba(156, 163, 175, 0.9);
-            --input-border-hover: rgba(59, 130, 246, 0.45);
-            --input-bg-hover: rgba(31, 41, 55, 0.92);
-            --input-border-focus: rgba(96, 165, 250, 0.95);
-            --input-focus-ring: rgba(59, 130, 246, 0.22);
-            --input-bg-focus: rgba(31, 41, 55, 0.96);
-            --focus-ring: rgba(59, 130, 246, 0.24);
+            --input-border-hover: rgba(34, 211, 238, 0.45);
+            --input-bg-hover: rgba(17, 28, 45, 0.94);
+            --input-border-focus: rgba(103, 232, 249, 0.95);
+            --input-focus-ring: rgba(34, 211, 238, 0.2);
+            --input-bg-focus: rgba(17, 28, 45, 0.98);
+            --focus-ring: rgba(34, 211, 238, 0.22);
 
             --overlay-backdrop: rgba(2, 6, 23, 0.78);
             --blur-backdrop: 3px;
@@ -249,6 +251,17 @@ templ layout_styles() {
 			background: var(--overlay-backdrop);
 			backdrop-filter: blur(var(--blur-backdrop));
 		}
+
+		[data-dashboard-host-card]:hover {
+			border-color: color-mix(in srgb, var(--dashboard-host-accent) 42%, var(--border));
+			box-shadow: 0 14px 30px rgba(2, 6, 23, 0.22);
+		}
+
+		@media (max-width: 760px) {
+			[data-dashboard-host-card] {
+				padding: 12px;
+			}
+		}
 	</style>
 }
 
@@ -272,9 +285,9 @@ css generic_layout_styles() {
 
 css generic_layout_main() {
 	width: 100%;
-	max-width: 1100px;
+	max-width: 1520px;
 	margin: 0 auto;
-	padding: 12px;
+	padding: 14px clamp(12px, 2vw, 24px);
 	box-sizing: border-box;
 	flex: 1;
 }
@@ -286,9 +299,9 @@ css generic_layout_footer() {
 }
 
 css generic_layout_footer_inner() {
-	max-width: 1100px;
+	max-width: 1520px;
 	margin: 0 auto;
-	padding: 14px 12px;
+	padding: 18px clamp(12px, 2vw, 24px);
 	display: flex;
 	align-items: center;
 	justify-content: center;

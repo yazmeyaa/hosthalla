@@ -56,47 +56,26 @@ templ DashboardHosts(props DashboardHostsProps) {
 }
 
 templ DashboardHostItem(host HostRow) {
-	<li id={ hostItemID(host.ID) } class={ dashboard_hosts_item() }>
+	<li id={ hostItemID(host.ID) } class={ dashboard_hosts_item(), hostStatusClass(host.Status) }>
 		@DashboardHostItemContent(host)
 	</li>
 }
 
 templ DashboardHostItemOOB(host HostRow) {
-	<li id={ hostItemID(host.ID) } class={ dashboardHostsItemClass() } hx-swap-oob="outerHTML">
+	<li id={ hostItemID(host.ID) } class={ dashboardHostsItemClass(), hostStatusClass(host.Status) } hx-swap-oob="outerHTML">
 		@DashboardHostItemContent(host)
 	</li>
 }
 
 templ DashboardHostItemContent(host HostRow) {
-	@card.Card() {
+	<article class={ dashboard_hosts_card() } data-dashboard-host-card>
 		<div class={ dashboard_hosts_item_header() }>
 			<div class={ dashboard_hosts_identity() }>
 				<h3 class={ dashboard_hosts_name() }>{ host.Name }</h3>
-				<div class={ dashboard_hosts_ip_disclosure() } data-host-ip-disclosure>
-					<button
-						type="button"
-						class={ dashboard_hosts_ip_toggle(), "ui-interactive-control" }
-						aria-expanded="false"
-						aria-label="Show IP"
-						data-host-ip-toggle
-					>
-						<span class={ dashboard_hosts_ip_toggle_icon() } data-host-ip-icon-hidden>
-							@icons.EyeClosedIcon()
-						</span>
-						<span class={ dashboard_hosts_ip_toggle_icon() } data-host-ip-icon-visible style="display: none;">
-							@icons.EyeOpenIcon()
-						</span>
-					</button>
-					<span class={ dashboard_hosts_ip(), dashboard_hosts_ip_masked() } data-host-ip-value>{ host.IP }</span>
-				</div>
 			</div>
 			@badge.Badge(badge.BadgeProps{Variant: host.StatusVariant}) {
 				{ host.StatusLabel }
 			}
-		</div>
-		<div class={ dashboard_hosts_meta() }>
-			<span>{ host.SystemLabel }</span>
-			<span>{ host.LastMetricLabel }</span>
 		</div>
 		<div class={ dashboard_hosts_metrics() }>
 			<div class={ dashboard_hosts_metric() }>
@@ -134,6 +113,27 @@ templ DashboardHostItemContent(host HostRow) {
 				</div>
 			</div>
 		</div>
+		<div class={ dashboard_hosts_meta() }>
+			<span>{ host.SystemLabel }</span>
+			<span>{ host.LastMetricLabel }</span>
+			<div class={ dashboard_hosts_ip_disclosure() } data-host-ip-disclosure>
+				<button
+					type="button"
+					class={ dashboard_hosts_ip_toggle(), "ui-interactive-control" }
+					aria-expanded="false"
+					aria-label="Show IP"
+					data-host-ip-toggle
+				>
+					<span class={ dashboard_hosts_ip_toggle_icon() } data-host-ip-icon-hidden>
+						@icons.EyeClosedIcon()
+					</span>
+					<span class={ dashboard_hosts_ip_toggle_icon() } data-host-ip-icon-visible style="display: none;">
+						@icons.EyeOpenIcon()
+					</span>
+				</button>
+				<span class={ dashboard_hosts_ip(), dashboard_hosts_ip_masked() } data-host-ip-value>{ host.IP }</span>
+			</div>
+		</div>
 		<div class={ dashboard_hosts_tags() }>
 			if host.HasMonitoringAgent {
 				@badge.Badge(badge.BadgeProps{Variant: "info"}) {
@@ -149,7 +149,7 @@ templ DashboardHostItemContent(host HostRow) {
 				}
 			}
 		</div>
-	}
+	</article>
 }
 
 type UsageSparklineProps struct {
@@ -194,6 +194,23 @@ func hostItemID(hostID string) string {
 
 func dashboardHostsItemClass() string {
 	return dashboard_hosts_item().ClassName()
+}
+
+func hostStatusClass(status string) string {
+	switch status {
+	case "reporting", "healthy":
+		return dashboard_hosts_item_reporting().ClassName()
+	case "stale":
+		return dashboard_hosts_item_stale().ClassName()
+	case "waiting":
+		return dashboard_hosts_item_waiting().ClassName()
+	case "offline", "unavailable":
+		return dashboard_hosts_item_offline().ClassName()
+	case "warning":
+		return dashboard_hosts_item_warning().ClassName()
+	default:
+		return dashboard_hosts_item_neutral().ClassName()
+	}
 }
 
 func formatCount(value int, noun string) string {

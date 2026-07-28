@@ -14,9 +14,13 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 	@GenericLayout(GenericLayoutProps{Title: props.Title}) {
 		<div class={ authenticated_shell() }>
 			<header class={ authenticated_header() }>
+				<span class={ authenticated_header_motif() } aria-hidden="true"></span>
 				<div class={ authenticated_brand() }>
-					<h1 class={ authenticated_title() }>Hosthalla</h1>
-					<p class={ authenticated_subtitle() }>Infrastructure dashboard</p>
+					<span class={ authenticated_brand_mark() } aria-hidden="true">HH</span>
+					<div>
+						<h1 class={ authenticated_title() }>Hosthalla</h1>
+						<p class={ authenticated_subtitle() }>Infrastructure dashboard</p>
+					</div>
 				</div>
 				<nav
 					data-authenticated-nav
