@@ -1,69 +1,621 @@
 package hosts_page_ui
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
 	"github.com/yazmeyaa/hosthalla/internal/host"
-	host_entity "github.com/yazmeyaa/hosthalla/ui/entities/host"
 	hosts_page_model "github.com/yazmeyaa/hosthalla/ui/pages/hosts_page/model"
-	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
-	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
-	"github.com/yazmeyaa/hosthalla/ui/shared/ui/icons"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/checkbox"
 )
 
-templ HostsList(
+const (
+	hostCPULoadWarningThreshold    = 85
+	hostMemoryLoadWarningThreshold = 90
+	hostDiskLoadWarningThreshold   = 90
+)
+
+type hostInventoryRow struct {
+	Host                    host.Host
+	ManagementMethods       []host.HostManagementMethod
+	SystemInfo              *host.HostSystemInfo
+	Metrics                 *hosts_page_model.HostLatestMetricsBadges
+	Status                  string
+	StatusLabel             string
+	StatusRank              int
+	ManagementFilter        string
+	ManagementLabel         string
+	UpdateDialogID          string
+	DetailsDialogID         string
+	AddManagementDialogID   string
+	SearchText              string
+	TagsText                string
+	HighCPU                 bool
+	HighMemory              bool
+	HighDisk                bool
+	UpdatedAtRelative       string
+	UpdatedAtTitle          string
+	UpdatedAtStale          bool
+	SecondaryIdentity       string
+	AddressSystem           string
+	CreatedAtUnix          int64
+	UpdatedAtUnix          int64
+	CPUUsagePercentage      float64
+	MemoryUsageBytes        uint64
+	MemoryUsagePercentage   float64
+	DiskUsageBytes          uint64
+	DiskUsagePercentage     float64
+	ExportJSON              string
+}
+
+templ HostsInventory(
+	props HostsPageProps,
+) {
+	{{
+		rows := buildHostInventoryRows(props.Hosts, props.HostManagementMethodsByHostID, props.HostSystemInfoByHostID, props.HostLatestMetricsByHostID)
+	}}
+	<section class={ hosts_inventory() } data-hosts-inventory data-hosts-total={ fmt.Sprintf("%d", len(rows)) }>
+		@HostsInventoryStyles()
+		@checkbox.Styles()
+		@HostsInventoryToolbar(rows, props)
+		if len(rows) == 0 {
+			@HostsInventoryEmpty(props)
+		} else {
+			@HostsBulkToolbar()
+			@HostsInventoryTable(rows, props)
+			@HostsInventoryCards(rows, props)
+		}
+	</section>
+}
+
+templ HostsInventoryToolbar(rows []hostInventoryRow, props HostsPageProps) {
+	<form class={ hosts_inventory_toolbar() } method="get" action="/hosts" data-hosts-toolbar data-hosts-filter-form>
+		<input type="hidden" name="sort" value={ props.SortKey }/>
+		<input type="hidden" name="direction" value={ props.SortDirection }/>
+		<label class={ hosts_inventory_search() }>
+			<span class={ hosts_inventory_control_label() }>Search</span>
+			<input class="ui-input" type="search" name="q" value={ props.SearchQuery } placeholder="Name, hostname, IP, description" data-hosts-search/>
+		</label>
+		@HostsMultiFilter("Status", "status", []string{"reporting", "stale", "waiting", "offline", "warning"}, props.SelectedStatuses)
+		@HostsTagMultiFilter(props.AvailableTags, props.SelectedTags)
+		if len(props.AvailableManagementFilters) > 0 {
+			@HostsMultiFilter("Managed by", "management", props.AvailableManagementFilters, props.SelectedManagementFilters)
+		}
+		<a class={ hosts_inventory_reset(), "ui-interactive-control" } href="/hosts">
+			Reset
+		</a>
+		<span class={ hosts_inventory_result_count() } data-hosts-result-count>{ fmt.Sprintf("%d found", len(rows)) }</span>
+	</form>
+	if len(props.AvailableTags) > 0 {
+		<div class={ hosts_inventory_quick_tags() }>
+			for _, tag := range props.AvailableTags {
+				<a
+					class={ hosts_inventory_tag_filter_chip(), "ui-interactive-control", templ.KV(hosts_inventory_tag_filter_chip_selected(), hostTagSelected(tag.Name, props.SelectedTags)) }
+					href={ hostTagFilterHref(tag.Name, props) }
+				>
+					{ "#" + tag.Name }
+				</a>
+			}
+			if len(props.SelectedTags) > 0 {
+				<a class={ hosts_inventory_tag_filter_clear(), "ui-interactive-control" } href={ hostsURL(hostsPageQueryWithout(props, "tag")) }>
+					Clear
+				</a>
+			}
+		</div>
+	}
+}
+
+templ HostsMultiFilter(label string, filterName string, options []string, selectedValues []string) {
+	<div class={ hosts_inventory_filter() }>
+		<span class={ hosts_inventory_control_label() }>{ label }</span>
+		<details class={ hosts_multi_filter(), "hosts-multi-filter" } data-hosts-multi-filter={ filterName }>
+			<summary class={ hosts_multi_filter_trigger(), "ui-interactive-control" } data-hosts-multi-filter-summary>{ hostsMultiFilterSummary(label, selectedValues) }</summary>
+			<div class={ hosts_multi_filter_panel() }>
+				for _, option := range options {
+					<label class={ hosts_multi_filter_option() }>
+						@checkbox.FilterCheckbox(checkbox.FilterCheckboxProps{Name: filterName, Value: option, Checked: hostTagSelected(option, selectedValues), FilterName: filterName})
+						<span>{ hostFilterOptionLabel(option) }</span>
+					</label>
+				}
+			</div>
+		</details>
+	</div>
+}
+
+templ HostsTagMultiFilter(availableTags []host.Tag, selectedTags []string) {
+	<div class={ hosts_inventory_filter() }>
+		<span class={ hosts_inventory_control_label() }>Tags</span>
+		<details class={ hosts_multi_filter(), "hosts-multi-filter" } data-hosts-multi-filter="tag">
+			<summary class={ hosts_multi_filter_trigger(), "ui-interactive-control" } data-hosts-multi-filter-summary>{ hostsMultiFilterSummary("Tags", selectedTags) }</summary>
+			<div class={ hosts_multi_filter_panel() }>
+				for _, tag := range availableTags {
+					<label class={ hosts_multi_filter_option() }>
+						@checkbox.FilterCheckbox(checkbox.FilterCheckboxProps{Name: "tag", Value: tag.Name, Checked: hostTagSelected(tag.Name, selectedTags), FilterName: "tag"})
+						<span>{ "#" + tag.Name }</span>
+					</label>
+				}
+			</div>
+		</details>
+	</div>
+}
+
+templ HostsBulkToolbar() {
+	<div class={ hosts_bulk_toolbar() } data-hosts-bulk-toolbar hidden>
+		<span class={ hosts_bulk_count() } data-hosts-selected-count>0 selected</span>
+		<button class={ hosts_bulk_action(), "ui-interactive-control" } type="button" data-hosts-ping-selected>Ping selected</button>
+		<button class={ hosts_bulk_action(), "ui-interactive-control" } type="button" data-hosts-export-selected>Export selected</button>
+		<button class={ hosts_bulk_clear(), "ui-interactive-control" } type="button" data-hosts-clear-selection>Clear selection</button>
+	</div>
+}
+
+templ HostsInventoryTable(rows []hostInventoryRow, props HostsPageProps) {
+	<div class={ hosts_inventory_table_shell() }>
+		<table class={ hosts_inventory_table() }>
+			<thead>
+				<tr>
+					<th class={ hosts_inventory_selection_cell() } scope="col">
+						@checkbox.SelectAllCheckbox(checkbox.SelectionCheckboxProps{AriaLabel: "Select all hosts"})
+					</th>
+					@HostsSortableHeader("Host", "name", props)
+					@HostsSortableHeader("Status", "status", props)
+					@HostsSortableHeader("Address / System", "address", props)
+					@HostsSortableHeader("CPU", "cpu", props)
+					@HostsSortableHeader("Memory", "memory", props)
+					@HostsSortableHeader("Disk", "disk", props)
+					@HostsSortableHeader("Last update", "updated", props)
+					<th scope="col">Tags</th>
+					<th class={ hosts_inventory_ping_header() } scope="col">Ping</th>
+					<th class={ hosts_inventory_actions_header() } scope="col">Actions</th>
+				</tr>
+			</thead>
+			<tbody data-hosts-table-body>
+				for _, row := range rows {
+					@HostsInventoryTableRow(row, props)
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+templ HostsSortableHeader(label string, sortKey string, props HostsPageProps) {
+	<th scope="col">
+		<a class={ hosts_sort_button(), "ui-interactive-control", templ.KV("hosts-sort-active", props.SortKey == sortKey) } href={ hostsSortHref(props, sortKey) } aria-label={ "Sort by " + label }>
+			<span>{ label }</span>
+			<span class={ hosts_sort_indicator() } aria-hidden="true">{ sortIndicator(props, sortKey) }</span>
+		</a>
+	</th>
+}
+
+templ HostsInventoryTableRow(row hostInventoryRow, props HostsPageProps) {
+	<tr
+		class={ hosts_inventory_row() }
+		data-host-row
+		data-host-id={ row.Host.ID.String() }
+		data-host-search={ row.SearchText }
+		data-host-status={ row.Status }
+		data-host-tags={ row.TagsText }
+		data-host-management={ row.ManagementFilter }
+		data-sort-name={ strings.ToLower(row.Host.Name) }
+		data-sort-status={ fmt.Sprintf("%d", row.StatusRank) }
+		data-sort-address={ row.Host.IP.String() }
+		data-sort-cpu={ fmt.Sprintf("%.4f", row.CPUUsagePercentage) }
+		data-sort-memory={ fmt.Sprintf("%.4f", row.MemoryUsagePercentage) }
+		data-sort-disk={ fmt.Sprintf("%.4f", row.DiskUsagePercentage) }
+		data-sort-updated={ fmt.Sprintf("%d", row.UpdatedAtUnix) }
+		data-sort-created={ fmt.Sprintf("%d", row.CreatedAtUnix) }
+		data-host-export={ row.ExportJSON }
+		data-open-details={ row.DetailsDialogID }
+	>
+		<td class={ hosts_inventory_selection_cell() }>
+			@checkbox.RowCheckbox(checkbox.SelectionCheckboxProps{AriaLabel: "Select " + row.Host.Name})
+		</td>
+		<td class={ hosts_inventory_host_cell() }>
+			<button class={ hosts_inventory_host_link(), "ui-interactive-control" } type="button" onclick={ templ.JSFuncCall("openModalDialog", row.DetailsDialogID) }>
+				<span class={ hosts_inventory_host_name() }>{ row.Host.Name }</span>
+				<span class={ hosts_inventory_host_subtitle() }>{ row.SecondaryIdentity }</span>
+			</button>
+		</td>
+		<td>@HostStatusBadge(row)</td>
+		<td>
+			<span class={ hosts_inventory_primary_text(), "ui-mono-text" }>{ row.Host.IP.String() }</span>
+			<span class={ hosts_inventory_secondary_text() }>{ row.AddressSystem }</span>
+		</td>
+		<td>@HostsMetricValue("CPU", row.metricsCPUText(), row.CPUUsagePercentage, row.HighCPU)</td>
+		<td>@HostsMetricValue("Memory", row.metricsMemoryText(), row.MemoryUsagePercentage, row.HighMemory)</td>
+		<td>@HostsMetricValue("Disk", row.metricsDiskText(), row.DiskUsagePercentage, row.HighDisk)</td>
+		<td>
+			<time class={ hosts_inventory_time(), templ.KV(hosts_inventory_time_stale(), row.UpdatedAtStale) } datetime={ row.Host.UpdatedAt.Format(time.RFC3339) } title={ row.UpdatedAtTitle }>
+				{ row.UpdatedAtRelative }
+			</time>
+		</td>
+		<td>@HostsTags(row.Host.Tags, 3, props)</td>
+		<td class={ hosts_inventory_ping_cell() }>
+			@HostPingResult(row.Host.ID.String(), nil)
+		</td>
+		<td class={ hosts_inventory_actions_cell() }>
+			@HostActions(row.Host.ID.String(), row.UpdateDialogID, row.DetailsDialogID, "host-ping-result-"+row.Host.ID.String())
+		</td>
+	</tr>
+	@UpdateHostDialog(row.Host, props.AvailableTags)
+	@HostDetailsDialog(row.Host, row.ManagementMethods, row.SystemInfo, row.DetailsDialogID, row.AddManagementDialogID)
+	@AddHostManagementMethodDialog(row.Host, row.AddManagementDialogID)
+}
+
+templ HostsInventoryCards(rows []hostInventoryRow, props HostsPageProps) {
+	<div class={ hosts_inventory_cards() } data-hosts-cards>
+		for _, row := range rows {
+			<article
+				class={ hosts_inventory_card() }
+				data-host-row
+				data-host-id={ row.Host.ID.String() }
+				data-host-search={ row.SearchText }
+				data-host-status={ row.Status }
+				data-host-tags={ row.TagsText }
+				data-host-management={ row.ManagementFilter }
+				data-sort-name={ strings.ToLower(row.Host.Name) }
+				data-sort-status={ fmt.Sprintf("%d", row.StatusRank) }
+				data-sort-address={ row.Host.IP.String() }
+				data-sort-cpu={ fmt.Sprintf("%.4f", row.CPUUsagePercentage) }
+				data-sort-memory={ fmt.Sprintf("%.4f", row.MemoryUsagePercentage) }
+				data-sort-disk={ fmt.Sprintf("%.4f", row.DiskUsagePercentage) }
+				data-sort-updated={ fmt.Sprintf("%d", row.UpdatedAtUnix) }
+				data-sort-created={ fmt.Sprintf("%d", row.CreatedAtUnix) }
+				data-host-export={ row.ExportJSON }
+				data-open-details={ row.DetailsDialogID }
+			>
+				<div class={ hosts_inventory_card_header() }>
+					@checkbox.RowCheckbox(checkbox.SelectionCheckboxProps{AriaLabel: "Select " + row.Host.Name})
+					<button class={ hosts_inventory_host_link(), "ui-interactive-control" } type="button" onclick={ templ.JSFuncCall("openModalDialog", row.DetailsDialogID) }>
+						<span class={ hosts_inventory_host_name() }>{ row.Host.Name }</span>
+						<span class={ hosts_inventory_host_subtitle() }>{ row.SecondaryIdentity }</span>
+					</button>
+					@HostStatusBadge(row)
+				</div>
+				<div class={ hosts_inventory_card_meta() }>
+					<span class="ui-mono-text">{ row.Host.IP.String() }</span>
+					<span>{ row.AddressSystem }</span>
+				</div>
+				<div class={ hosts_inventory_card_metrics() }>
+					@HostsMetricValue("CPU", row.metricsCPUText(), row.CPUUsagePercentage, row.HighCPU)
+					@HostsMetricValue("Memory", row.metricsMemoryText(), row.MemoryUsagePercentage, row.HighMemory)
+					@HostsMetricValue("Disk", row.metricsDiskText(), row.DiskUsagePercentage, row.HighDisk)
+				</div>
+				<div class={ hosts_inventory_card_footer() }>
+					<time class={ hosts_inventory_time(), templ.KV(hosts_inventory_time_stale(), row.UpdatedAtStale) } datetime={ row.Host.UpdatedAt.Format(time.RFC3339) } title={ row.UpdatedAtTitle }>
+						{ row.UpdatedAtRelative }
+					</time>
+					@HostsTags(row.Host.Tags, 2, props)
+					@HostPingResultSlot("host-ping-result-card-"+row.Host.ID.String(), row.Host.ID.String(), nil)
+					@HostActions(row.Host.ID.String(), row.UpdateDialogID, row.DetailsDialogID, "host-ping-result-card-"+row.Host.ID.String())
+				</div>
+			</article>
+		}
+	</div>
+}
+
+templ HostStatusBadge(row hostInventoryRow) {
+	<span class={ hosts_status_badge(), hostStatusClass(row.Status) }>{ row.StatusLabel }</span>
+}
+
+templ HostsMetricValue(label string, value string, percent float64, warning bool) {
+	if value == "" {
+		<span class={ hosts_metric_empty() } aria-label={ label + " is unavailable" }>—</span>
+	} else {
+		<span class={ hosts_metric(), templ.KV(hosts_metric_warning(), warning) }>
+			<span class={ hosts_metric_value() }>{ value }</span>
+			if percent > 0 {
+				<span class={ hosts_metric_bar() } aria-hidden="true">
+					<span class={ hosts_metric_bar_fill() } style={ fmt.Sprintf("width: %.1f%%", percent) }></span>
+				</span>
+			}
+		</span>
+	}
+}
+
+templ HostsTags(tags []string, limit int, props HostsPageProps) {
+	if len(tags) == 0 {
+		<span class={ hosts_tags_empty() }>—</span>
+	} else {
+		<div class={ hosts_tags() }>
+			for index, tag := range tags {
+				if index < limit {
+					<a class={ hosts_tag(), "ui-interactive-control", templ.KV(hosts_inventory_tag_filter_chip_selected(), hostTagSelected(tag, props.SelectedTags)) } href={ hostTagFilterHref(tag, props) }>{ "#" + tag }</a>
+				}
+			}
+			if len(tags) > limit {
+				<span class={ hosts_tag_overflow() } title={ strings.Join(tags[limit:], ", ") }>{ fmt.Sprintf("+%d", len(tags)-limit) }</span>
+			}
+		</div>
+	}
+}
+
+templ HostsInventoryEmpty(props HostsPageProps) {
+	<div class={ hosts_inventory_empty() }>
+		if hostsFiltersActive(props) {
+			<h2>No hosts match these filters</h2>
+			<p>Adjust the query, status, tags, or management filters to widen the result set.</p>
+			@button.Link(button.LinkProps{Href: "/hosts", Variant: "secondary"}) {
+				Reset filters
+			}
+		} else {
+			<h2>Nothing in inventory yet</h2>
+			<p>Add a host to start tracking addresses, management methods, and system metrics.</p>
+			@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "create-host-dialog")}) {
+				Add Host
+			}
+		}
+	</div>
+}
+
+func buildHostInventoryRows(
 	hosts []host.Host,
 	hostManagementMethodsByHostID map[string][]host.HostManagementMethod,
 	hostSystemInfoByHostID map[string]host.HostSystemInfo,
 	hostLatestMetricsByHostID map[string]hosts_page_model.HostLatestMetricsBadges,
-	availableTags []host.Tag,
-) {
-	<ul class={ hosts_list() }>
-		for _, listedHost := range hosts {
-			{{
-				updateDialogID := "update-host-dialog-" + listedHost.ID.String()
-				detailsDialogID := "host-details-dialog-" + listedHost.ID.String()
-				addManagementMethodDialogID := "add-host-management-method-dialog-" + listedHost.ID.String()
-				hostManagementMethods := hostManagementMethodsByHostID[listedHost.ID.String()]
-				var hostSystemInfo *host.HostSystemInfo
-				if value, ok := hostSystemInfoByHostID[listedHost.ID.String()]; ok {
-					hostSystemInfo = &value
-				}
-			}}
-			<li class={ host_list_item() }>
-				<div class={ host_list_item_card() }>
-					@card.Card() {
-						@host_entity.HostDetails(listedHost)
-						if metrics, ok := hostLatestMetricsByHostID[listedHost.ID.String()]; ok {
-							<div class={ host_latest_metrics() }>
-								@badge.Badge(badge.BadgeProps{Variant: "info"}) {
-									<span class={ host_metric_badge_content() }>
-										@icons.CPUIcon()
-										{ metrics.CPU }
-									</span>
-								}
-								@badge.Badge(badge.BadgeProps{Variant: "info"}) {
-									<span class={ host_metric_badge_content() }>
-										@icons.RAMIcon()
-										{ metrics.MemoryUsed }
-										if metrics.MemoryTotal != "" {
-											{ "/" + metrics.MemoryTotal }
-										}
-									</span>
-								}
-								@badge.Badge(badge.BadgeProps{Variant: "info"}) {
-									<span class={ host_metric_badge_content() }>
-										@icons.HardDriveIcon()
-										{ metrics.Disk }
-									</span>
-								}
-							</div>
-						}
-						@HostActions(listedHost.ID.String(), updateDialogID, detailsDialogID)
-					}
-				</div>
-				@UpdateHostDialog(listedHost, availableTags)
-				@HostDetailsDialog(listedHost, hostManagementMethods, hostSystemInfo, detailsDialogID, addManagementMethodDialogID)
-				@AddHostManagementMethodDialog(listedHost, addManagementMethodDialogID)
-			</li>
+) []hostInventoryRow {
+	now := time.Now()
+	rows := make([]hostInventoryRow, 0, len(hosts))
+	for _, listedHost := range hosts {
+		hostID := listedHost.ID.String()
+		methods := hostManagementMethodsByHostID[hostID]
+		var systemInfo *host.HostSystemInfo
+		if value, ok := hostSystemInfoByHostID[hostID]; ok {
+			systemInfo = &value
 		}
-	</ul>
+		var metrics *hosts_page_model.HostLatestMetricsBadges
+		if value, ok := hostLatestMetricsByHostID[hostID]; ok {
+			metrics = &value
+		}
+
+		status, label, rank := hostInventoryStatus(listedHost, methods, metrics, now)
+		secondaryIdentity := strings.TrimSpace(listedHost.Description)
+		if secondaryIdentity == "" && systemInfo != nil {
+			secondaryIdentity = strings.TrimSpace(systemInfo.Hostname)
+		}
+		if secondaryIdentity == "" {
+			secondaryIdentity = "No description"
+		}
+		addressSystem := managementMethodLabel(listedHost, methods)
+		if systemInfo != nil && strings.TrimSpace(systemInfo.OS.Name) != "" {
+			addressSystem = strings.TrimSpace(systemInfo.OS.Name + " " + systemInfo.OS.Version)
+		}
+		managementFilter := managementMethodFilter(listedHost, methods)
+		searchParts := []string{listedHost.Name, listedHost.Description, listedHost.IP.String(), strings.Join(listedHost.Tags, " "), managementFilter}
+		if systemInfo != nil {
+			searchParts = append(searchParts, systemInfo.Hostname, systemInfo.OS.Name, systemInfo.OS.Version)
+		}
+		row := hostInventoryRow{
+			Host:                  listedHost,
+			ManagementMethods:     methods,
+			SystemInfo:            systemInfo,
+			Metrics:               metrics,
+			Status:                status,
+			StatusLabel:           label,
+			StatusRank:            rank,
+			ManagementFilter:      managementFilter,
+			ManagementLabel:       addressSystem,
+			UpdateDialogID:        "update-host-dialog-" + hostID,
+			DetailsDialogID:       "host-details-dialog-" + hostID,
+			AddManagementDialogID: "add-host-management-method-dialog-" + hostID,
+			SearchText:            strings.ToLower(strings.Join(searchParts, " ")),
+			TagsText:              strings.ToLower(strings.Join(listedHost.Tags, ",")),
+			UpdatedAtRelative:     relativeTime(listedHost.UpdatedAt, now),
+			UpdatedAtTitle:        listedHost.UpdatedAt.Local().Format("02 Jan 2006 15:04:05"),
+			UpdatedAtStale:        now.Sub(listedHost.UpdatedAt) > 24*time.Hour,
+			SecondaryIdentity:     secondaryIdentity,
+			AddressSystem:         addressSystem,
+			CreatedAtUnix:         listedHost.CreatedAt.Unix(),
+			UpdatedAtUnix:         listedHost.UpdatedAt.Unix(),
+			ExportJSON:            hostExportJSON(listedHost),
+		}
+		if metrics != nil {
+			row.CPUUsagePercentage = metrics.CPUUsagePercentage
+			row.MemoryUsageBytes = metrics.MemoryUsageBytes
+			row.MemoryUsagePercentage = metrics.MemoryUsagePercentage
+			row.DiskUsageBytes = metrics.DiskUsageBytes
+			row.DiskUsagePercentage = metrics.DiskUsagePercentage
+			row.HighCPU = metrics.CPUUsagePercentage >= hostCPULoadWarningThreshold
+			row.HighMemory = metrics.MemoryUsagePercentage >= hostMemoryLoadWarningThreshold
+			row.HighDisk = metrics.DiskUsagePercentage >= hostDiskLoadWarningThreshold
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+func hostInventoryStatus(listedHost host.Host, methods []host.HostManagementMethod, metrics *hosts_page_model.HostLatestMetricsBadges, now time.Time) (string, string, int) {
+	if metrics != nil && (metrics.CPUUsagePercentage >= hostCPULoadWarningThreshold || metrics.MemoryUsagePercentage >= hostMemoryLoadWarningThreshold || metrics.DiskUsagePercentage >= hostDiskLoadWarningThreshold) {
+		return "warning", "Warning", 4
+	}
+	if metrics != nil && now.Sub(listedHost.UpdatedAt) > 24*time.Hour {
+		return "stale", "Stale", 3
+	}
+	if metrics != nil {
+		return "reporting", "Reporting", 1
+	}
+	if listedHost.MonitoringAgentID != uuid.Nil || len(methods) > 0 {
+		return "waiting", "Waiting", 2
+	}
+	return "offline", "Offline", 5
+}
+
+func hostStatusClass(status string) templ.CSSClass {
+	switch status {
+	case "reporting":
+		return hosts_status_badge_reporting()
+	case "stale":
+		return hosts_status_badge_stale()
+	case "waiting":
+		return hosts_status_badge_waiting()
+	case "offline":
+		return hosts_status_badge_offline()
+	case "warning":
+		return hosts_status_badge_warning()
+	default:
+		return hosts_status_badge_offline()
+	}
+}
+
+func (row hostInventoryRow) metricsCPUText() string {
+	if row.Metrics == nil {
+		return ""
+	}
+	return row.Metrics.CPU
+}
+
+func (row hostInventoryRow) metricsMemoryText() string {
+	if row.Metrics == nil {
+		return ""
+	}
+	if row.Metrics.MemoryTotal != "" {
+		return row.Metrics.MemoryUsed + " / " + row.Metrics.MemoryTotal
+	}
+	return row.Metrics.MemoryUsed
+}
+
+func (row hostInventoryRow) metricsDiskText() string {
+	if row.Metrics == nil {
+		return ""
+	}
+	if row.Metrics.DiskTotalBytes > 0 {
+		return row.Metrics.Disk + " / " + formatInventoryBytes(row.Metrics.DiskTotalBytes)
+	}
+	return row.Metrics.Disk
+}
+
+func managementMethodFilter(listedHost host.Host, methods []host.HostManagementMethod) string {
+	labels := make([]string, 0, len(methods)+1)
+	if listedHost.MonitoringAgentID != uuid.Nil {
+		labels = append(labels, "agent")
+	}
+	for _, method := range methods {
+		labels = append(labels, string(method.Type))
+	}
+	if len(labels) == 0 {
+		return "unmanaged"
+	}
+	return strings.Join(labels, ",")
+}
+
+func managementMethodLabel(listedHost host.Host, methods []host.HostManagementMethod) string {
+	if listedHost.MonitoringAgentID != uuid.Nil {
+		return "agent"
+	}
+	if len(methods) == 0 {
+		return "unmanaged"
+	}
+	labels := make([]string, 0, len(methods))
+	for _, method := range methods {
+		labels = append(labels, strings.ReplaceAll(string(method.Type), "_", " "))
+	}
+	return strings.Join(labels, ", ")
+}
+
+func hostManagementFilterOptions(rows []hostInventoryRow) []string {
+	seen := map[string]bool{}
+	for _, row := range rows {
+		for _, option := range strings.Split(row.ManagementFilter, ",") {
+			option = strings.TrimSpace(option)
+			if option == "" {
+				continue
+			}
+			seen[option] = true
+		}
+	}
+	options := make([]string, 0, len(seen))
+	for option := range seen {
+		options = append(options, option)
+	}
+	sort.Strings(options)
+	return options
+}
+
+func hostFilterOptionLabel(option string) string {
+	switch option {
+	case "reporting":
+		return "Reporting"
+	case "stale":
+		return "Stale"
+	case "waiting":
+		return "Waiting"
+	case "offline":
+		return "Offline"
+	case "warning":
+		return "Warning"
+	case "agent":
+		return "Agent"
+	case "unmanaged":
+		return "Unmanaged"
+	default:
+		return strings.ReplaceAll(option, "_", " ")
+	}
+}
+
+func hostsMultiFilterSummary(label string, selectedValues []string) string {
+	if len(selectedValues) == 0 {
+		switch label {
+		case "Status":
+			return "All statuses"
+		case "Tags":
+			return "All tags"
+		case "Managed by":
+			return "Any method"
+		default:
+			return "All " + strings.ToLower(label)
+		}
+	}
+	if len(selectedValues) == 1 {
+		if label == "Tags" {
+			return "#" + selectedValues[0]
+		}
+		return hostFilterOptionLabel(selectedValues[0])
+	}
+	return fmt.Sprintf("%d selected", len(selectedValues))
+}
+
+func relativeTime(value time.Time, now time.Time) string {
+	if value.IsZero() {
+		return "—"
+	}
+	diff := now.Sub(value)
+	if diff < time.Minute {
+		return "just now"
+	}
+	if diff < time.Hour {
+		return fmt.Sprintf("%d min ago", int(diff.Minutes()))
+	}
+	if diff < 24*time.Hour {
+		return fmt.Sprintf("%d h ago", int(diff.Hours()))
+	}
+	days := int(diff.Hours() / 24)
+	if days < 30 {
+		return fmt.Sprintf("%d d ago", days)
+	}
+	return value.Local().Format("02 Jan 2006")
+}
+
+func hostExportJSON(listedHost host.Host) string {
+	tags := make([]string, 0, len(listedHost.Tags))
+	for _, tag := range listedHost.Tags {
+		tags = append(tags, fmt.Sprintf("%q", tag))
+	}
+	return fmt.Sprintf(`{"name":%q,"description":%q,"ip":%q,"tags":[%s]}`, listedHost.Name, listedHost.Description, listedHost.IP.String(), strings.Join(tags, ","))
+}
+
+func formatInventoryBytes(bytes uint64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := uint64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	suffix := [...]string{"KB", "MB", "GB", "TB", "PB", "EB"}
+	return fmt.Sprintf("%.1f %s", float64(bytes)/float64(div), suffix[exp])
 }

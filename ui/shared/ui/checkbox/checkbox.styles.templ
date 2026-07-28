@@ -1,0 +1,26 @@
+package checkbox
+
+func CSSClasses() []templ.CSSClass {
+	return []templ.CSSClass{
+		checkbox_input(),
+	}
+}
+
+css checkbox_input() {
+	appearance: none;
+	-webkit-appearance: none;
+	box-sizing: border-box;
+	display: inline-grid;
+	place-content: center;
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	border: 1px solid var(--border-interactive-subtle-strong);
+	border-radius: var(--radius-xs);
+	background: rgba(7, 17, 31, 0.76);
+	color: var(--primary);
+	cursor: pointer;
+	outline: none;
+	vertical-align: middle;
+	transition: background-color 150ms ease, border-color 150ms ease, box-shadow 180ms ease;
+}

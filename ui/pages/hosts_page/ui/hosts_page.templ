@@ -1,7 +1,9 @@
 package hosts_page_ui
 
 import (
+	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/yazmeyaa/hosthalla/internal/host"
 	host_entity "github.com/yazmeyaa/hosthalla/ui/entities/host"
@@ -13,8 +15,15 @@ import (
 
 type HostsPageProps struct {
 	Hosts                         []host.Host
+	TotalHosts                    int
 	AvailableTags                 []host.Tag
+	AvailableManagementFilters    []string
+	SearchQuery                   string
 	SelectedTags                  []string
+	SelectedStatuses              []string
+	SelectedManagementFilters     []string
+	SortKey                       string
+	SortDirection                 string
 	HostManagementMethodsByHostID map[string][]host.HostManagementMethod
 	HostSystemInfoByHostID        map[string]host.HostSystemInfo
 	HostLatestMetricsByHostID     map[string]hosts_page_model.HostLatestMetricsBadges
@@ -29,8 +38,11 @@ templ HostsPage(props HostsPageProps) {
 
 templ HostsPageContent(props HostsPageProps) {
 	@dropdown.Styles()
+	@HostsPagePolishStyles()
 	<div class={ hosts_page_header() }>
-		<h1 class={ hosts_page_title() }>Hosts Page</h1>
+		<h1 class={ hosts_page_title() }>
+			Hosts <span class={ hosts_page_title_count() }>{ "· " + hostCountLabel(props.TotalHosts) }</span>
+		</h1>
 		<div class={ hosts_page_actions() }>
 			@dropdown.Menu("Import / Export") {
 				@dropdown.LinkItem(dropdown.LinkItemProps{
@@ -56,53 +68,50 @@ templ HostsPageContent(props HostsPageProps) {
 				}
 			</form>
 			@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "create-host-dialog")}) {
-				+ Add Host
+				Add Host
 			}
 		</div>
 	</div>
-	if len(props.AvailableTags) > 0 {
-		<div class={ hosts_page_tag_filter() }>
-			<span class={ hosts_page_tag_filter_label() }>Filter by tags</span>
-			<div class={ hosts_page_tag_filter_list() }>
-				for _, tag := range props.AvailableTags {
-					<a
-						class={ hosts_page_tag_filter_chip(), "ui-interactive-control", templ.KV(hosts_page_tag_filter_chip_selected(), hostTagSelected(tag.Name, props.SelectedTags)) }
-						href={ hostTagFilterHref(tag.Name, props.SelectedTags) }
-					>
-						{ "#" + tag.Name }
-					</a>
-				}
-				if len(props.SelectedTags) > 0 {
-					@button.Link(button.LinkProps{Href: "/hosts", Variant: "secondary"}) {
-						Clear
-					}
-				}
-			</div>
-		</div>
-	}
 	<div id="hosts-ping-all-status" class={ hosts_page_ping_all_status_slot() }></div>
-	@HostsList(props.Hosts, props.HostManagementMethodsByHostID, props.HostSystemInfoByHostID, props.HostLatestMetricsByHostID, props.AvailableTags)
+	@HostsInventory(props)
 	@CreateHostDialog(props.AvailableTags)
 	@HostImportExportDialog(props.Hosts)
+	@HostsInventoryScripts()
 	@HostActionsScripts()
 	@HostDialogScripts()
 	@host_entity.HostDetailsScripts()
 	@dropdown.Scripts()
 }
 
+templ HostsPagePolishStyles() {
+	<style>
+		[class*="hosts_page_actions"] .ui-button[data-ui-button-variant="primary"] {
+			background: rgba(34, 211, 238, 0.16);
+			border-color: var(--border-interactive-info-strong);
+			color: var(--text-info-soft);
+		}
+	</style>
+}
+
+func hostCountLabel(count int) string {
+	return fmt.Sprintf("%d", count)
+}
+
 func hostTagSelected(tag string, selectedTags []string) bool {
+	normalizedTag := strings.ToLower(strings.TrimSpace(tag))
 	for _, selectedTag := range selectedTags {
-		if selectedTag == tag {
+		if strings.ToLower(strings.TrimSpace(selectedTag)) == normalizedTag {
 			return true
 		}
 	}
 	return false
 }
 
-func hostTagFilterHref(tag string, selectedTags []string) string {
-	query := url.Values{}
+func hostTagFilterHref(tag string, props HostsPageProps) string {
+	query := hostsPageQuery(props)
+	query.Del("tag")
 	shouldAdd := true
-	for _, selectedTag := range selectedTags {
+	for _, selectedTag := range props.SelectedTags {
 		if selectedTag == tag {
 			shouldAdd = false
 			continue
@@ -112,8 +121,69 @@ func hostTagFilterHref(tag string, selectedTags []string) string {
 	if shouldAdd {
 		query.Add("tag", tag)
 	}
+	return hostsURL(query)
+}
+
+func hostsPageQuery(props HostsPageProps) url.Values {
+	query := url.Values{}
+	if props.SearchQuery != "" {
+		query.Set("q", props.SearchQuery)
+	}
+	for _, status := range props.SelectedStatuses {
+		query.Add("status", status)
+	}
+	for _, tag := range props.SelectedTags {
+		query.Add("tag", tag)
+	}
+	for _, method := range props.SelectedManagementFilters {
+		query.Add("management", method)
+	}
+	if props.SortKey != "" {
+		query.Set("sort", props.SortKey)
+	}
+	if props.SortDirection != "" {
+		query.Set("direction", props.SortDirection)
+	}
+	return query
+}
+
+func hostsURL(query url.Values) string {
 	if len(query) == 0 {
 		return "/hosts"
 	}
 	return "/hosts?" + query.Encode()
+}
+
+func hostsSortHref(props HostsPageProps, sortKey string) string {
+	query := hostsPageQuery(props)
+	direction := "asc"
+	if props.SortKey == sortKey && props.SortDirection == "asc" {
+		direction = "desc"
+	}
+	query.Set("sort", sortKey)
+	query.Set("direction", direction)
+	return hostsURL(query)
+}
+
+func hostsPageQueryWithout(props HostsPageProps, key string) url.Values {
+	query := hostsPageQuery(props)
+	query.Del(key)
+	return query
+}
+
+func sortIndicator(props HostsPageProps, sortKey string) string {
+	if props.SortKey != sortKey {
+		return "↕"
+	}
+	if props.SortDirection == "desc" {
+		return "↓"
+	}
+	return "↑"
+}
+
+func hostsFiltersActive(props HostsPageProps) bool {
+	return props.SearchQuery != "" ||
+		len(props.SelectedStatuses) > 0 ||
+		len(props.SelectedTags) > 0 ||
+		len(props.SelectedManagementFilters) > 0
 }

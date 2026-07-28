@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/netip"
+	"sort"
 	"strings"
 	"time"
 
@@ -87,10 +88,9 @@ func NewHostsHandler(hostService *host.Service, profileService *auth_service.Ser
 }
 
 func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
-	tags := parseHostTagsValues(r.URL.Query()["tag"])
-	tags = append(tags, parseHostTagsValues(r.URL.Query()["tags"])...)
+	hostsQuery := parseHostsPageQuery(r)
 
-	hosts, err := h.hostService.ListHosts(r.Context(), host.ListHostsFilter{Tags: tags})
+	hosts, err := h.hostService.ListHosts(r.Context(), host.ListHostsFilter{Tags: hostsQuery.Tags})
 	if err != nil {
 		h.logger.Error("failed to list hosts in handler", slog.String("error", err.Error()))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -142,6 +142,9 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 			hostLatestMetricsByHostID[hostIDStr] = hosts_page.BuildHostLatestMetricsBadges(latestSnapshot.Metrics[0], nil)
 		}
 	}
+	availableManagementFilters := availableHostManagementFilters(hosts, hostManagementMethodsByHostID)
+	hosts = filterHostsForHostsPage(hosts, hostsQuery, hostManagementMethodsByHostID, hostSystemInfoByHostID, hostLatestMetricsByHostID)
+	sortHostsForHostsPage(hosts, hostsQuery, hostManagementMethodsByHostID, hostSystemInfoByHostID, hostLatestMetricsByHostID)
 
 	availableTags, err := h.hostService.ListTags(r.Context())
 	if err != nil {
@@ -167,8 +170,15 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 
 	pageProps := hosts_page.HostsPageProps{
 		Hosts:                         hosts,
+		TotalHosts:                    len(hosts),
 		AvailableTags:                 availableTags,
-		SelectedTags:                  tags,
+		AvailableManagementFilters:    availableManagementFilters,
+		SearchQuery:                   hostsQuery.Search,
+		SelectedTags:                  hostsQuery.Tags,
+		SelectedStatuses:              hostsQuery.Statuses,
+		SelectedManagementFilters:     hostsQuery.ManagementFilters,
+		SortKey:                       hostsQuery.SortKey,
+		SortDirection:                 hostsQuery.SortDirection,
 		HostManagementMethodsByHostID: hostManagementMethodsByHostID,
 		HostSystemInfoByHostID:        hostSystemInfoByHostID,
 		HostLatestMetricsByHostID:     hostLatestMetricsByHostID,
@@ -184,6 +194,263 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hosts_page.HostsPage(pageProps).Render(r.Context(), w)
+}
+
+type hostsPageQuery struct {
+	Search            string
+	Tags              []string
+	Statuses          []string
+	ManagementFilters []string
+	SortKey           string
+	SortDirection     string
+}
+
+func parseHostsPageQuery(r *http.Request) hostsPageQuery {
+	query := r.URL.Query()
+	sortKey := strings.TrimSpace(query.Get("sort"))
+	if !validHostsSortKey(sortKey) {
+		sortKey = "created"
+	}
+	direction := strings.ToLower(strings.TrimSpace(query.Get("direction")))
+	if direction != "asc" && direction != "desc" {
+		direction = "desc"
+	}
+	tags := parseHostTagsValues(query["tag"])
+	tags = append(tags, parseHostTagsValues(query["tags"])...)
+	return hostsPageQuery{
+		Search:            strings.TrimSpace(query.Get("q")),
+		Tags:              tags,
+		Statuses:          normalizeHostsQueryValues(query["status"], validHostsStatus),
+		ManagementFilters: normalizeHostsQueryValues(query["management"], validHostsManagementFilter),
+		SortKey:           sortKey,
+		SortDirection:     direction,
+	}
+}
+
+func normalizeHostsQueryValues(values []string, valid func(string) bool) []string {
+	seen := map[string]bool{}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		for _, part := range strings.Split(value, ",") {
+			normalized := strings.ToLower(strings.TrimSpace(part))
+			if normalized == "" || seen[normalized] || !valid(normalized) {
+				continue
+			}
+			seen[normalized] = true
+			result = append(result, normalized)
+		}
+	}
+	return result
+}
+
+func validHostsStatus(status string) bool {
+	switch status {
+	case "reporting", "stale", "waiting", "offline", "warning":
+		return true
+	default:
+		return false
+	}
+}
+
+func validHostsManagementFilter(value string) bool {
+	switch value {
+	case "agent", "ssh_password", "ssh_key", "unmanaged":
+		return true
+	default:
+		return false
+	}
+}
+
+func validHostsSortKey(sortKey string) bool {
+	switch sortKey {
+	case "name", "status", "address", "cpu", "memory", "disk", "updated", "created":
+		return true
+	default:
+		return false
+	}
+}
+
+func filterHostsForHostsPage(
+	hosts []host.Host,
+	query hostsPageQuery,
+	hostManagementMethodsByHostID map[string][]host.HostManagementMethod,
+	hostSystemInfoByHostID map[string]host.HostSystemInfo,
+	hostLatestMetricsByHostID map[string]hosts_page.HostLatestMetricsBadges,
+) []host.Host {
+	filtered := make([]host.Host, 0, len(hosts))
+	search := strings.ToLower(query.Search)
+	for _, listedHost := range hosts {
+		hostID := listedHost.ID.String()
+		methods := hostManagementMethodsByHostID[hostID]
+		metrics, hasMetrics := hostLatestMetricsByHostID[hostID]
+		status := hostStatusForHostsPage(listedHost, methods, metrics, hasMetrics, time.Now())
+		if len(query.Statuses) > 0 && !stringInSlice(status, query.Statuses) {
+			continue
+		}
+		managementFilters := hostManagementFiltersForHostsPage(listedHost, methods)
+		if len(query.ManagementFilters) > 0 && !anyStringInSlice(managementFilters, query.ManagementFilters) {
+			continue
+		}
+		if search != "" && !strings.Contains(hostSearchTextForHostsPage(listedHost, hostSystemInfoByHostID[hostID], managementFilters), search) {
+			continue
+		}
+		filtered = append(filtered, listedHost)
+	}
+	return filtered
+}
+
+func sortHostsForHostsPage(
+	hosts []host.Host,
+	query hostsPageQuery,
+	hostManagementMethodsByHostID map[string][]host.HostManagementMethod,
+	hostSystemInfoByHostID map[string]host.HostSystemInfo,
+	hostLatestMetricsByHostID map[string]hosts_page.HostLatestMetricsBadges,
+) {
+	now := time.Now()
+	desc := query.SortDirection == "desc"
+	sort.SliceStable(hosts, func(i, j int) bool {
+		left := hosts[i]
+		right := hosts[j]
+		compare := 0
+		switch query.SortKey {
+		case "name":
+			compare = strings.Compare(strings.ToLower(left.Name), strings.ToLower(right.Name))
+		case "status":
+			leftMetrics, leftHasMetrics := hostLatestMetricsByHostID[left.ID.String()]
+			rightMetrics, rightHasMetrics := hostLatestMetricsByHostID[right.ID.String()]
+			compare = hostStatusRankForHostsPage(hostStatusForHostsPage(left, hostManagementMethodsByHostID[left.ID.String()], leftMetrics, leftHasMetrics, now)) - hostStatusRankForHostsPage(hostStatusForHostsPage(right, hostManagementMethodsByHostID[right.ID.String()], rightMetrics, rightHasMetrics, now))
+		case "address":
+			compare = strings.Compare(left.IP.String(), right.IP.String())
+		case "cpu":
+			compare = compareFloat(hostLatestMetricsByHostID[left.ID.String()].CPUUsagePercentage, hostLatestMetricsByHostID[right.ID.String()].CPUUsagePercentage)
+		case "memory":
+			compare = compareFloat(hostLatestMetricsByHostID[left.ID.String()].MemoryUsagePercentage, hostLatestMetricsByHostID[right.ID.String()].MemoryUsagePercentage)
+		case "disk":
+			compare = compareFloat(hostLatestMetricsByHostID[left.ID.String()].DiskUsagePercentage, hostLatestMetricsByHostID[right.ID.String()].DiskUsagePercentage)
+		case "updated":
+			compare = compareTime(left.UpdatedAt, right.UpdatedAt)
+		default:
+			compare = compareTime(left.CreatedAt, right.CreatedAt)
+		}
+		if compare == 0 {
+			compare = strings.Compare(strings.ToLower(left.Name), strings.ToLower(right.Name))
+		}
+		if desc {
+			return compare > 0
+		}
+		return compare < 0
+	})
+}
+
+func compareFloat(left float64, right float64) int {
+	if left < right {
+		return -1
+	}
+	if left > right {
+		return 1
+	}
+	return 0
+}
+
+func compareTime(left time.Time, right time.Time) int {
+	if left.Before(right) {
+		return -1
+	}
+	if left.After(right) {
+		return 1
+	}
+	return 0
+}
+
+func availableHostManagementFilters(hosts []host.Host, hostManagementMethodsByHostID map[string][]host.HostManagementMethod) []string {
+	seen := map[string]bool{}
+	for _, listedHost := range hosts {
+		for _, value := range hostManagementFiltersForHostsPage(listedHost, hostManagementMethodsByHostID[listedHost.ID.String()]) {
+			seen[value] = true
+		}
+	}
+	result := make([]string, 0, len(seen))
+	for value := range seen {
+		result = append(result, value)
+	}
+	sort.Strings(result)
+	return result
+}
+
+func hostManagementFiltersForHostsPage(listedHost host.Host, methods []host.HostManagementMethod) []string {
+	result := make([]string, 0, len(methods)+1)
+	if listedHost.MonitoringAgentID != uuid.Nil {
+		result = append(result, "agent")
+	}
+	for _, method := range methods {
+		result = append(result, string(method.Type))
+	}
+	if len(result) == 0 {
+		return []string{"unmanaged"}
+	}
+	return result
+}
+
+func hostSearchTextForHostsPage(listedHost host.Host, systemInfo host.HostSystemInfo, managementFilters []string) string {
+	return strings.ToLower(strings.Join([]string{
+		listedHost.Name,
+		listedHost.Description,
+		listedHost.IP.String(),
+		strings.Join(listedHost.Tags, " "),
+		systemInfo.Hostname,
+		systemInfo.OS.Name,
+		systemInfo.OS.Version,
+		strings.Join(managementFilters, " "),
+	}, " "))
+}
+
+func hostStatusForHostsPage(listedHost host.Host, methods []host.HostManagementMethod, metrics hosts_page.HostLatestMetricsBadges, hasMetrics bool, now time.Time) string {
+	if hasMetrics && (metrics.CPUUsagePercentage >= 85 || metrics.MemoryUsagePercentage >= 90 || metrics.DiskUsagePercentage >= 90) {
+		return "warning"
+	}
+	if hasMetrics && now.Sub(listedHost.UpdatedAt) > 24*time.Hour {
+		return "stale"
+	}
+	if hasMetrics {
+		return "reporting"
+	}
+	if listedHost.MonitoringAgentID != uuid.Nil || len(methods) > 0 {
+		return "waiting"
+	}
+	return "offline"
+}
+
+func hostStatusRankForHostsPage(status string) int {
+	switch status {
+	case "reporting":
+		return 1
+	case "waiting":
+		return 2
+	case "stale":
+		return 3
+	case "warning":
+		return 4
+	default:
+		return 5
+	}
+}
+
+func stringInSlice(value string, values []string) bool {
+	for _, candidate := range values {
+		if candidate == value {
+			return true
+		}
+	}
+	return false
+}
+
+func anyStringInSlice(values []string, candidates []string) bool {
+	for _, value := range values {
+		if stringInSlice(value, candidates) {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *HostsHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
@@ -282,9 +549,21 @@ func (h *HostsHandler) PingHost(w http.ResponseWriter, r *http.Request) {
 		DurationMS: result.Duration.Milliseconds(),
 		Message:    result.ErrorMessage,
 	}
-	if err := hosts_page.HostPingResult(result.HostID.String(), pingResult).Render(r.Context(), w); err != nil {
+	targetID := hostPingResultTargetID(r, result.HostID.String())
+	if err := hosts_page.HostPingResultSlot(targetID, result.HostID.String(), pingResult).Render(r.Context(), w); err != nil {
 		h.logger.Error("failed to render ping host result", slog.String("host_id", result.HostID.String()), slog.String("error", err.Error()))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func hostPingResultTargetID(r *http.Request, hostID string) string {
+	defaultTargetID := "host-ping-result-" + hostID
+	targetID := strings.TrimSpace(r.URL.Query().Get("target"))
+	switch targetID {
+	case defaultTargetID, "host-ping-result-card-" + hostID:
+		return targetID
+	default:
+		return defaultTargetID
 	}
 }
 

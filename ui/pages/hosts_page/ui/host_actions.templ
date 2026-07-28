@@ -2,30 +2,31 @@ package hosts_page_ui
 
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 
-templ HostActions(hostID string, updateDialogID string, detailsDialogID string) {
+templ HostActions(hostID string, updateDialogID string, detailsDialogID string, pingResultTargetID string) {
 	<div class={ host_actions() }>
-		<form
-			class={ host_ping_form() }
-			method="post"
-			action={ "/hosts/" + hostID + "/ping" }
-			hx-post={ "/hosts/" + hostID + "/ping" }
-			hx-target={ "#host-ping-result-" + hostID }
-			hx-swap="outerHTML"
-		>
-			@button.Button(button.ButtonProps{Type: "submit"}) {
-				Ping
-			}
-		</form>
 		<details class={ host_actions_menu(), "host-actions-menu" }>
-			<summary class={ host_actions_menu_trigger(), "ui-interactive-control" }>⋯</summary>
+			<summary class={ host_actions_menu_trigger(), "ui-interactive-control" } aria-label="Host actions">⋯</summary>
 			<div class={ host_actions_menu_panel() }>
+				<form
+					class={ host_ping_form() }
+					method="post"
+					action={ "/hosts/" + hostID + "/ping?target=" + pingResultTargetID }
+					hx-post={ "/hosts/" + hostID + "/ping?target=" + pingResultTargetID }
+					hx-target={ "#" + pingResultTargetID }
+					hx-swap="outerHTML"
+					data-host-ping-form
+				>
+					@button.Button(button.ButtonProps{Type: "submit", Variant: "secondary"}) {
+						Ping
+					}
+				</form>
 				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", detailsDialogID)}) {
 					Details
 				}
 				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", updateDialogID)}) {
 					Update
 				}
-				<form class={ host_delete_form() } method="post" action={ "/hosts/" + hostID + "/delete" }>
+				<form class={ host_delete_form() } method="post" action={ "/hosts/" + hostID + "/delete" } onsubmit="return confirm('Delete this host?')">
 					@button.Button(button.ButtonProps{Type: "submit", Variant: "danger"}) {
 						Delete
 					}
@@ -33,5 +34,4 @@ templ HostActions(hostID string, updateDialogID string, detailsDialogID string) 
 			</div>
 		</details>
 	</div>
-	@HostPingResult(hostID, nil)
 }

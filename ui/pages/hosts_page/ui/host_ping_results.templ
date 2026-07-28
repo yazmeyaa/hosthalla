@@ -8,6 +8,10 @@ type PingResult struct {
 }
 
 templ HostPingResult(hostID string, pingResult *PingResult) {
+	@HostPingResultSlot("host-ping-result-"+hostID, hostID, pingResult)
+}
+
+templ HostPingResultSlot(targetID string, hostID string, pingResult *PingResult) {
 	{{
 		showPingResult := pingResult != nil && pingResult.HostID == hostID
 		pingResultClass := host_ping_result_error()
@@ -17,7 +21,7 @@ templ HostPingResult(hostID string, pingResult *PingResult) {
 			pingStatus = "Reachable"
 		}
 	}}
-	<div id={ "host-ping-result-" + hostID }>
+	<div id={ targetID }>
 		if showPingResult {
 			<p class={ host_ping_result(), pingResultClass }>
 				{ pingStatus } in { pingResult.DurationMS } ms
@@ -25,6 +29,8 @@ templ HostPingResult(hostID string, pingResult *PingResult) {
 					<span>{ " - " + pingResult.Message }</span>
 				}
 			</p>
+		} else {
+			<span class={ host_ping_result_placeholder() }>—</span>
 		}
 	</div>
 }

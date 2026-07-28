@@ -1,0 +1,69 @@
+package checkbox
+
+type FilterCheckboxProps struct {
+	Name       string
+	Value      string
+	Checked    bool
+	FilterName string
+}
+
+type SelectionCheckboxProps struct {
+	AriaLabel string
+}
+
+templ FilterCheckbox(props FilterCheckboxProps) {
+	<input
+		class={ checkbox_input(), "ui-checkbox" }
+		type="checkbox"
+		name={ props.Name }
+		value={ props.Value }
+		checked?={ props.Checked }
+		data-hosts-multi-filter-input={ props.FilterName }
+	/>
+}
+
+templ RowCheckbox(props SelectionCheckboxProps) {
+	<input
+		class={ checkbox_input(), "ui-checkbox" }
+		type="checkbox"
+		aria-label={ props.AriaLabel }
+		data-hosts-row-select
+	/>
+}
+
+templ SelectAllCheckbox(props SelectionCheckboxProps) {
+	<input
+		class={ checkbox_input(), "ui-checkbox" }
+		type="checkbox"
+		aria-label={ props.AriaLabel }
+		data-hosts-select-all
+	/>
+}
+
+templ Styles() {
+	<style>
+		.ui-checkbox::before {
+			content: "";
+			width: 8px;
+			height: 8px;
+			border-radius: 2px;
+			transform: scale(0);
+			background: currentColor;
+			transition: transform 120ms ease;
+		}
+
+		.ui-checkbox:checked {
+			border-color: var(--border-interactive-info-strong);
+			background: rgba(34, 211, 238, 0.13);
+		}
+
+		.ui-checkbox:checked::before {
+			transform: scale(1);
+		}
+
+		.ui-checkbox:focus-visible {
+			border-color: var(--input-border-focus);
+			box-shadow: 0 0 0 3px var(--focus-ring);
+		}
+	</style>
+}

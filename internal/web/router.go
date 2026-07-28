@@ -14,6 +14,7 @@ import (
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
 	ui_assets "github.com/yazmeyaa/hosthalla/ui/app/assets"
 	dashboard_page "github.com/yazmeyaa/hosthalla/ui/pages/dashboard"
+	hosts_page "github.com/yazmeyaa/hosthalla/ui/pages/hosts_page"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
 )
 
@@ -82,6 +83,7 @@ func NewRouter(params NewRouterParams) http.Handler {
 func cssClasses() []templ.CSSClass {
 	classes := layout.CSSClasses()
 	classes = append(classes, dashboard_page.CSSClasses()...)
+	classes = append(classes, hosts_page.CSSClasses()...)
 	return classes
 }
 

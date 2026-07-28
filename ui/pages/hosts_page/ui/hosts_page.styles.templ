@@ -7,10 +7,22 @@ css hosts_page_header() {
 	gap: 12px;
 	margin-bottom: 14px;
 	padding-inline: 12px;
+	flex-wrap: wrap;
 }
 
 css hosts_page_title() {
 	margin: 0;
+	display: inline-flex;
+	align-items: baseline;
+	gap: 6px;
+	font-size: 1.35rem;
+	line-height: 1.2;
+}
+
+css hosts_page_title_count() {
+	color: var(--muted);
+	font-size: 1rem;
+	font-weight: 600;
 }
 
 css hosts_page_actions() {

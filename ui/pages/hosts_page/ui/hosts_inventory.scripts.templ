@@ -1,0 +1,218 @@
+package hosts_page_ui
+
+templ HostsInventoryScripts() {
+	<script>
+		if (!window.__hostsInventoryBound) {
+			window.__hostsInventoryBound = true;
+
+			function getInventory(element) {
+				return element ? element.closest("[data-hosts-inventory]") : null;
+			}
+
+			function getRows(inventory) {
+				return Array.from(inventory.querySelectorAll("[data-host-row]"));
+			}
+
+			function updateMultiFilterSummaries(inventory) {
+				inventory.querySelectorAll("[data-hosts-multi-filter]").forEach(function(filter) {
+					const filterName = filter.dataset.hostsMultiFilter;
+					const summary = filter.querySelector("[data-hosts-multi-filter-summary]");
+					const checked = filter.querySelectorAll("[data-hosts-multi-filter-input='" + filterName + "']:checked");
+					if (!summary) {
+						return;
+					}
+					if (checked.length === 0) {
+						if (filterName === "status") {
+							summary.textContent = "All statuses";
+						} else if (filterName === "tag") {
+							summary.textContent = "All tags";
+						} else {
+							summary.textContent = "Any method";
+						}
+						return;
+					}
+					if (checked.length === 1) {
+						const label = checked[0].closest("label");
+						summary.textContent = label ? label.textContent.trim() : checked[0].value;
+						return;
+					}
+					summary.textContent = checked.length + " selected";
+				});
+			}
+
+			function selectedRows(inventory) {
+				return getRows(inventory).filter(function(row) {
+					const checkbox = row.querySelector("[data-hosts-row-select]");
+					return checkbox && checkbox.checked && row.tagName === "TR";
+				});
+			}
+
+			function syncPeerSelection(inventory, hostID, checked) {
+				getRows(inventory).forEach(function(row) {
+					if (row.dataset.hostId !== hostID) {
+						return;
+					}
+					const checkbox = row.querySelector("[data-hosts-row-select]");
+					if (checkbox) {
+						checkbox.checked = checked;
+					}
+				});
+			}
+
+			function updateSelection(inventory) {
+				const selected = selectedRows(inventory);
+				const toolbar = inventory.querySelector("[data-hosts-bulk-toolbar]");
+				const count = inventory.querySelector("[data-hosts-selected-count]");
+				if (toolbar) {
+					toolbar.hidden = selected.length === 0;
+				}
+				if (count) {
+					count.textContent = selected.length + " selected";
+				}
+				const visibleRows = getRows(inventory).filter(function(row) {
+					return row.tagName === "TR";
+				});
+				const all = inventory.querySelector("[data-hosts-select-all]");
+				if (all) {
+					all.checked = visibleRows.length > 0 && selected.length === visibleRows.length;
+					all.indeterminate = selected.length > 0 && selected.length < visibleRows.length;
+				}
+			}
+
+			function closeHostFilterMenus(exceptMenu) {
+				document.querySelectorAll("details.hosts-multi-filter[open]").forEach(function(menu) {
+					if (exceptMenu && menu === exceptMenu) {
+						return;
+					}
+					menu.removeAttribute("open");
+				});
+			}
+
+			function submitFilterForm(target) {
+				const form = target.closest("[data-hosts-filter-form]");
+				if (form instanceof HTMLFormElement) {
+					form.requestSubmit();
+				}
+			}
+
+			let searchSubmitTimer = 0;
+			document.addEventListener("input", function(event) {
+				if (!event.target.matches("[data-hosts-search]")) {
+					return;
+				}
+				window.clearTimeout(searchSubmitTimer);
+				searchSubmitTimer = window.setTimeout(function() {
+					submitFilterForm(event.target);
+				}, 350);
+			});
+
+			document.addEventListener("change", function(event) {
+				const inventory = getInventory(event.target);
+				if (!inventory) {
+					return;
+				}
+				if (event.target.matches("[data-hosts-multi-filter-input]")) {
+					updateMultiFilterSummaries(inventory);
+					submitFilterForm(event.target);
+					return;
+				}
+				if (event.target.matches("[data-hosts-select-all]")) {
+					const checked = event.target.checked;
+					getRows(inventory).forEach(function(row) {
+						const checkbox = row.querySelector("[data-hosts-row-select]");
+						if (checkbox) {
+							checkbox.checked = checked;
+							syncPeerSelection(inventory, row.dataset.hostId, checked);
+						}
+					});
+					updateSelection(inventory);
+					return;
+				}
+				if (event.target.matches("[data-hosts-row-select]")) {
+					const row = event.target.closest("[data-host-row]");
+					if (row) {
+						syncPeerSelection(inventory, row.dataset.hostId, event.target.checked);
+					}
+					updateSelection(inventory);
+				}
+			});
+
+			document.addEventListener("click", function(event) {
+				const target = event.target;
+				if (!(target instanceof Element)) {
+					closeHostFilterMenus(null);
+					return;
+				}
+
+				const clickedSummary = target.closest("summary");
+				const clickedMenu = clickedSummary ? clickedSummary.parentElement : null;
+				if (clickedMenu instanceof HTMLDetailsElement && clickedMenu.classList.contains("hosts-multi-filter")) {
+					closeHostFilterMenus(clickedMenu);
+					return;
+				}
+
+				if (!target.closest("details.hosts-multi-filter")) {
+					closeHostFilterMenus(null);
+				}
+
+				const inventory = getInventory(target);
+				if (!inventory) {
+					return;
+				}
+				const detailRow = target.closest("[data-open-details]");
+				if (detailRow && !target.closest("a, button, input, select, textarea, summary, details, form, label, [data-hosts-row-select], [data-hosts-select-all]")) {
+					if (typeof window.openModalDialog === "function") {
+						window.openModalDialog(detailRow.dataset.openDetails);
+					}
+					return;
+				}
+				const clearSelection = target.closest("[data-hosts-clear-selection]");
+				if (clearSelection) {
+					getRows(inventory).forEach(function(row) {
+						const checkbox = row.querySelector("[data-hosts-row-select]");
+						if (checkbox) {
+							checkbox.checked = false;
+						}
+					});
+					updateSelection(inventory);
+					return;
+				}
+				const pingSelected = target.closest("[data-hosts-ping-selected]");
+				if (pingSelected) {
+					selectedRows(inventory).forEach(function(row) {
+						const form = row.querySelector("[data-host-ping-form]");
+						if (form) {
+							form.requestSubmit();
+						}
+					});
+					return;
+				}
+				const exportSelected = target.closest("[data-hosts-export-selected]");
+				if (exportSelected) {
+					const hosts = selectedRows(inventory).map(function(row) {
+						return JSON.parse(row.dataset.hostExport || "{}");
+					});
+					const blob = new Blob([JSON.stringify({hosts: hosts}, null, 2)], {type: "application/json"});
+					const link = document.createElement("a");
+					link.href = URL.createObjectURL(blob);
+					link.download = "hosthalla-selected-hosts.json";
+					document.body.appendChild(link);
+					link.click();
+					link.remove();
+					URL.revokeObjectURL(link.href);
+				}
+			});
+
+			document.addEventListener("keydown", function(event) {
+				if (event.key === "Escape") {
+					closeHostFilterMenus(null);
+				}
+			});
+
+			document.querySelectorAll("[data-hosts-inventory]").forEach(function(inventory) {
+				updateMultiFilterSummaries(inventory);
+				updateSelection(inventory);
+			});
+		}
+	</script>
+}
