@@ -17,7 +17,7 @@ templ HostActions(hostID string, updateDialogID string, detailsDialogID string) 
 			}
 		</form>
 		<details class={ host_actions_menu(), "host-actions-menu" }>
-			<summary class={ host_actions_menu_trigger() }>⋯</summary>
+			<summary class={ host_actions_menu_trigger(), "ui-interactive-control" }>⋯</summary>
 			<div class={ host_actions_menu_panel() }>
 				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", detailsDialogID)}) {
 					Details

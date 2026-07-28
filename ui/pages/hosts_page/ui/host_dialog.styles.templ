@@ -44,6 +44,7 @@ css host_tag_chip() {
 	color: var(--text-info-soft);
 	font-size: 0.82rem;
 	cursor: pointer;
+	user-select: none;
 }
 
 css host_tags_input() {
@@ -72,6 +73,7 @@ css host_tags_suggestion() {
 	color: var(--text-neutral-soft);
 	font-size: 0.78rem;
 	cursor: pointer;
+	user-select: none;
 }
 
 css host_tags_section() {
@@ -124,9 +126,11 @@ css host_management_methods_list() {
 
 css host_management_method_details_trigger() {
 	padding: 0;
-	border: none;
+	border: 1px solid transparent;
+	border-radius: var(--radius-pill);
 	background: none;
 	cursor: pointer;
+	user-select: none;
 }
 
 css host_management_method_details_title() {

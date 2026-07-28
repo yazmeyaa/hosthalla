@@ -13,15 +13,18 @@ templ Button(props ButtonProps) {
 			buttonType = "button"
 		}
 
+		buttonVariant := "primary"
 		variantClass := button_variant_primary()
 		switch props.Variant {
 		case "secondary":
+			buttonVariant = "secondary"
 			variantClass = button_variant_secondary()
 		case "danger":
+			buttonVariant = "danger"
 			variantClass = button_variant_danger()
 		}
 	}}
-	<button class={ button_base(), variantClass, "ui-button" } type={ buttonType } onclick={ props.OnClick }>
+	<button class={ button_base(), variantClass, "ui-button" } type={ buttonType } onclick={ props.OnClick } data-ui-button-variant={ buttonVariant }>
 		{ children... }
 	</button>
 }
@@ -33,15 +36,18 @@ type LinkProps struct {
 
 templ Link(props LinkProps) {
 	{{
+		buttonVariant := "primary"
 		variantClass := button_variant_primary()
 		switch props.Variant {
 		case "secondary":
+			buttonVariant = "secondary"
 			variantClass = button_variant_secondary()
 		case "danger":
+			buttonVariant = "danger"
 			variantClass = button_variant_danger()
 		}
 	}}
-	<a class={ button_base(), variantClass, "ui-button" } href={ props.Href }>
+	<a class={ button_base(), variantClass, "ui-button" } href={ props.Href } data-ui-button-variant={ buttonVariant }>
 		{ children... }
 	</a>
 }

@@ -52,9 +52,9 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 
 templ AuthenticatedNavLink(currentPath string, href string, label string) {
 	if authenticatedRouteActive(currentPath, href) {
-		<a class={ authenticated_nav_link(), authenticated_nav_link_active() } href={ href } data-nav-href={ href } aria-current="page">{ label }</a>
+		<a class={ authenticated_nav_link(), authenticated_nav_link_active(), "ui-interactive-control" } href={ href } data-nav-href={ href } aria-current="page">{ label }</a>
 	} else {
-		<a class={ authenticated_nav_link() } href={ href } data-nav-href={ href }>{ label }</a>
+		<a class={ authenticated_nav_link(), "ui-interactive-control" } href={ href } data-nav-href={ href }>{ label }</a>
 	}
 }
 

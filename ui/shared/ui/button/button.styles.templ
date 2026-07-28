@@ -1,18 +1,22 @@
 package button
 
 css button_base() {
+	box-sizing: border-box;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	gap: 0.35rem;
+	min-height: 34px;
 	padding: 0.55rem 0.85rem;
 	border-radius: var(--radius-sm);
 	border: 1px solid transparent;
+	font-family: inherit;
 	font-size: 0.9rem;
 	font-weight: 600;
 	line-height: 1;
 	text-decoration: none;
 	cursor: pointer;
+	user-select: none;
 	transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms ease, box-shadow 180ms ease;
 }
 

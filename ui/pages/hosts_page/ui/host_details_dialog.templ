@@ -50,7 +50,7 @@ templ HostDetailsDialog(
 							}}
 							<button
 								type="button"
-								class={ host_management_method_details_trigger() }
+								class={ host_management_method_details_trigger(), "ui-interactive-control" }
 								aria-label={ "Show connection details for " + method.Username }
 								onclick={ templ.JSFuncCall("openModalDialog", methodDetailsDialogID) }
 							>
