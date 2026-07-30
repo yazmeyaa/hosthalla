@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
+	"github.com/yazmeyaa/hosthalla/internal/agent"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage"
 	"github.com/yazmeyaa/hosthalla/internal/events"
@@ -13,6 +14,7 @@ import (
 	"github.com/yazmeyaa/hosthalla/internal/web/handlers"
 	"github.com/yazmeyaa/hosthalla/internal/web/middlewares"
 	ui_assets "github.com/yazmeyaa/hosthalla/ui/app/assets"
+	administration_page "github.com/yazmeyaa/hosthalla/ui/pages/administration_page"
 	dashboard_page "github.com/yazmeyaa/hosthalla/ui/pages/dashboard"
 	hosts_page "github.com/yazmeyaa/hosthalla/ui/pages/hosts_page"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
@@ -20,6 +22,7 @@ import (
 
 type NewRouterParams struct {
 	HostService       *host.Service
+	AgentService      *agent.Service
 	SessionRepository authentication_repository.SessionRepository
 	AuthService       *auth_service.Service
 	Logger            *slog.Logger
@@ -30,7 +33,12 @@ func NewRouter(params NewRouterParams) http.Handler {
 	indexHandler := handlers.NewIndexHandler(params.HostService, params.Logger, params.AuthService)
 	authHandler := handlers.NewAuthHandler(params.Logger, params.AuthService)
 	hostHandler := handlers.NewHostsHandler(params.HostService, params.AuthService, params.Logger)
-	administrationHandler := handlers.NewAdministrationHandler(params.AuthService, params.Logger)
+	administrationHandler := handlers.NewAdministrationHandler(handlers.NewAdministrationHandlerParams{
+		AuthService:  params.AuthService,
+		AgentService: params.AgentService,
+		HostService:  params.HostService,
+		Logger:       params.Logger,
+	})
 	dashboardHandler := handlers.NewDashboardHandler(handlers.DashboardHandlerParams{
 		Logger:         params.Logger,
 		HostService:    params.HostService,
@@ -61,6 +69,11 @@ func NewRouter(params NewRouterParams) http.Handler {
 	mux.Handle("POST /hosts/ping-all", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(hostHandler.PingAllHosts)))
 
 	mux.Handle("GET /administration", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.Administration)))
+	mux.Handle("GET /administration/{section}", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.Administration)))
+	mux.Handle("POST /administration/users/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.CreateUser)))
+	mux.Handle("POST /administration/users/{id}/update", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.UpdateUser)))
+	mux.Handle("POST /administration/users/{id}/password", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.SetUserPassword)))
+	mux.Handle("POST /administration/users/{id}/delete", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.DeleteUser)))
 	mux.Handle("POST /administration/api-tokens/create", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.CreateAPIToken)))
 	mux.Handle("POST /administration/api-tokens/{id}/revoke", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(administrationHandler.RevokeAPIToken)))
 
@@ -84,6 +97,7 @@ func cssClasses() []templ.CSSClass {
 	classes := layout.CSSClasses()
 	classes = append(classes, dashboard_page.CSSClasses()...)
 	classes = append(classes, hosts_page.CSSClasses()...)
+	classes = append(classes, administration_page.CSSClasses()...)
 	return classes
 }
 

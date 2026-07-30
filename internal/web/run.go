@@ -114,6 +114,7 @@ func Run(ctx context.Context, params RunParams) error {
 	})
 	router := NewRouter(NewRouterParams{
 		HostService:       hostService,
+		AgentService:      agentService,
 		AuthService:       authService,
 		SessionRepository: sessionRepository,
 		Logger:            logger,

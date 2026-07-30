@@ -1,20 +1,75 @@
 package administration_page_ui
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/yazmeyaa/hosthalla/internal/agent"
 	"github.com/yazmeyaa/hosthalla/internal/authentication"
-	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/badge"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/input"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
 )
 
+const (
+	adminSectionOverview = "overview"
+	adminSectionUsers    = "users"
+	adminSectionAgents   = "agents"
+	adminSectionTokens   = "tokens"
+	adminSectionSystem   = "system"
+)
+
+type AdministrationNotice struct {
+	Variant string
+	Message string
+}
+
 type AdministrationPageProps struct {
-	Profile         authentication.Profile
-	APITokens       []authentication.APIToken
-	CreatedAPIToken string
+	Profile                   authentication.Profile
+	CurrentProfileID          string
+	ActiveSection             string
+	Notice                    AdministrationNotice
+	DataErrors                []string
+	Users                     []authentication.Profile
+	LatestSessionsByProfileID map[string]authentication.Session
+	Agents                    []agent.Agent
+	AgentConfigs              map[string]agent.AgentConfig
+	AgentStatusFilter         string
+	AgentSearchQuery          string
+	Hosts                     []host.Host
+	HostsByID                 map[string]host.Host
+	LatestMetricSnapshots     map[string]host.HostMetricSnapshot
+	APITokens                 []authentication.APIToken
+	CreatedAPIToken           string
+	AppVersion                string
+}
+
+type adminNavItem struct {
+	ID          string
+	Href        string
+	Icon        string
+	Label       string
+	Description string
+	Badge       string
+}
+
+type adminAgentRow struct {
+	Agent           agent.Agent
+	Config          *agent.AgentConfig
+	Host            *host.Host
+	Status          string
+	StatusLabel     string
+	StatusVariant   string
+	LastSeenLabel   string
+	HeartbeatLabel  string
+	MetricsLabel    string
+	DetailsDialogID string
 }
 
 templ AdministrationPage(props AdministrationPageProps) {
@@ -24,97 +79,971 @@ templ AdministrationPage(props AdministrationPageProps) {
 }
 
 templ AdministrationPageContent(props AdministrationPageProps) {
-	<div class={ administration_page_header() }>
-		<h1 class={ administration_page_title() }>Administration</h1>
-		<p class={ administration_page_subtitle() }>Manage API tokens for host registration agent.</p>
+	{{
+		activeSection := normalizeAdminSection(props.ActiveSection)
+	}}
+	@AdministrationResponsiveStyles()
+	<div class={ administration_page_shell() }>
+		<header class={ administration_page_header() }>
+			<div>
+				<h1 class={ administration_page_title() }>Administration</h1>
+				<p class={ administration_page_subtitle() }>Manage users, agents, API access, and system state.</p>
+			</div>
+		</header>
+		@AdministrationNoticeBlock(props.Notice)
+		@AdministrationDataErrors(props.DataErrors)
+		<div class={ administration_shell() }>
+			@AdministrationNav(props, activeSection)
+			<main class={ administration_content() } id="administration-section" tabindex="-1">
+				switch activeSection {
+					case adminSectionUsers:
+						@AdministrationUsersSection(props)
+					case adminSectionAgents:
+						@AdministrationAgentsSection(props)
+					case adminSectionTokens:
+						@AdministrationTokensSection(props)
+					case adminSectionSystem:
+						@AdministrationSystemSection(props)
+					default:
+						@AdministrationOverviewSection(props)
+				}
+			</main>
+		</div>
 	</div>
-	if props.CreatedAPIToken != "" {
-		<div class={ administration_token_banner() }>
-			<strong>New token created.</strong>
-			<p>Save it now, it will not be shown again:</p>
-			<code>{ props.CreatedAPIToken }</code>
+	@AdministrationCreateUserDialog()
+	@AdministrationCreateTokenDialog()
+	@AdministrationTokenSuccessDialog(props.CreatedAPIToken)
+	@AdministrationScripts(props.CreatedAPIToken != "")
+}
+
+templ AdministrationResponsiveStyles() {
+	<style>
+		@media (max-width: 980px) {
+			.{ administration_summary_grid().ClassName() } {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+			.{ administration_panel_grid().ClassName() } {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		@media (max-width: 760px) {
+			.{ administration_page_header().ClassName() } {
+				padding-inline: 0;
+			}
+			.{ administration_shell().ClassName() } {
+				display: flex;
+				flex-direction: column;
+				padding-inline: 0;
+			}
+			.{ administration_nav().ClassName() } {
+				width: 100%;
+				display: flex;
+				overflow-x: auto;
+				box-sizing: border-box;
+			}
+			.{ administration_nav_item().ClassName() } {
+				min-width: 150px;
+			}
+			.{ administration_section_header().ClassName() } {
+				align-items: stretch;
+				flex-direction: column;
+			}
+			.{ administration_toolbar().ClassName() } {
+				grid-template-columns: 1fr;
+			}
+			.{ administration_result_count().ClassName() } {
+				padding-bottom: 0;
+			}
+		}
+
+		.{ administration_actions_cell().ClassName() }:has(details[open]) {
+			z-index: 120;
+		}
+
+		.{ administration_action_menu().ClassName() }[open] {
+			z-index: 120;
+		}
+
+		@media (max-width: 520px) {
+			.{ administration_summary_grid().ClassName() } {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+}
+
+templ AdministrationNoticeBlock(notice AdministrationNotice) {
+	if notice.Message != "" {
+		<div class={ administration_notice(), templ.KV(administration_notice_success(), notice.Variant == "success"), templ.KV(administration_notice_danger(), notice.Variant == "danger") } role="status" aria-live="polite">
+			{ notice.Message }
 		</div>
 	}
-	<div class={ administration_page_grid() }>
-		@card.Card() {
-			<div class={ administration_page_section() }>
-				<h2 class={ administration_page_section_title() }>Create API token</h2>
-				<form class={ administration_token_form() } method="post" action="/administration/api-tokens/create">
-					<div class={ administration_form_field() }>
-						<label for="token-name">Name</label>
-						@input.Input(input.InputProps{Id: "token-name", Name: "name", Placeholder: "Production hosts registration", Required: true})
-					</div>
-					<div class={ administration_form_field() }>
-						<label>Scopes</label>
-						<div class={ administration_scopes_list() }>
-							for _, scope := range availableAPITokenScopes() {
-								<label class={ administration_scope_checkbox_label() }>
-									<input type="checkbox" name="scope" value={ scope } checked/>
-									<span>{ scope }</span>
-								</label>
-							}
-						</div>
-						<p class={ administration_form_hint() }>Scopes are predefined and granted via checkboxes.</p>
-					</div>
-					<div class={ administration_form_field() }>
-						<label for="expires-in-days">Expires in (days)</label>
-						@input.Input(input.InputProps{Id: "expires-in-days", Type: "number", Name: "expiresInDays", Placeholder: "0 means never"})
-					</div>
-					@button.Button(button.ButtonProps{Type: "submit"}) {
-						Create token
-					}
-				</form>
-			</div>
-		}
-		@card.Card() {
-			<div class={ administration_page_section() }>
-				<h2 class={ administration_page_section_title() }>Issued tokens</h2>
-				if len(props.APITokens) == 0 {
-					<p class={ administration_empty_state() }>No API tokens yet.</p>
-				} else {
-					<div class={ administration_tokens_list() }>
-						for _, token := range props.APITokens {
-							<div class={ administration_token_row(), templ.KV(administration_token_row_revoked(), token.RevokedAt != nil) }>
-								<div class={ administration_token_info() }>
-									<p class={ administration_token_name() }>{ token.Name }</p>
-									<p class={ administration_token_meta() }>
-										Prefix: <code>{ token.Prefix }</code>
-									</p>
-									<p class={ administration_token_meta() }>
-										Scopes: <code>{ strings.Join(token.Scopes, ", ") }</code>
-									</p>
-									<p class={ administration_token_meta() }>
-										Created: { token.CreatedAt.Format(time.RFC3339) }
-									</p>
-									if token.ExpiresAt != nil {
-										<p class={ administration_token_meta() }>
-											Expires: { token.ExpiresAt.Format(time.RFC3339) }
-										</p>
-									}
-									if token.RevokedAt != nil {
-										<p class={ administration_token_meta() }>
-											Revoked: { token.RevokedAt.Format(time.RFC3339) }
-										</p>
-									}
-								</div>
-								if token.RevokedAt == nil {
-									<form method="post" action={ "/administration/api-tokens/" + token.ID + "/revoke" }>
-										@button.Button(button.ButtonProps{Type: "submit", Variant: "danger"}) {
-											Revoke
-										}
-									</form>
-								}
-							</div>
-						}
-					</div>
+}
+
+templ AdministrationDataErrors(errors []string) {
+	if len(errors) > 0 {
+		<div class={ administration_notice(), administration_notice_danger() } role="alert">
+			<strong>Some data could not be loaded.</strong>
+			<ul class={ administration_error_list() }>
+				for _, message := range errors {
+					<li>{ message }</li>
 				}
+			</ul>
+		</div>
+	}
+}
+
+templ AdministrationNav(props AdministrationPageProps, activeSection string) {
+	<nav class={ administration_nav() } aria-label="Administration sections">
+		for _, item := range administrationNavItems(props) {
+			if activeSection == item.ID {
+				<a class={ administration_nav_item(), administration_nav_item_active(), "ui-interactive-control" } href={ item.Href } aria-current="page">
+					@AdministrationNavItemContent(item)
+				</a>
+			} else {
+				<a class={ administration_nav_item(), "ui-interactive-control" } href={ item.Href }>
+					@AdministrationNavItemContent(item)
+				</a>
+			}
+		}
+	</nav>
+}
+
+templ AdministrationNavItemContent(item adminNavItem) {
+	<span class={ administration_nav_icon() } aria-hidden="true">{ item.Icon }</span>
+	<span class={ administration_nav_text() }>
+		<span class={ administration_nav_label() }>
+			{ item.Label }
+			if item.Badge != "" {
+				<span class={ administration_nav_badge() }>{ item.Badge }</span>
+			}
+		</span>
+		<span class={ administration_nav_description() }>{ item.Description }</span>
+	</span>
+}
+
+templ AdministrationOverviewSection(props AdministrationPageProps) {
+	<section class={ administration_section() } aria-labelledby="administration-overview-title">
+		<header class={ administration_section_header() }>
+			<div>
+				<h2 id="administration-overview-title" class={ administration_section_title() }>Overview</h2>
+				<p class={ administration_section_description() }>Current administrative health from available backend data.</p>
+			</div>
+		</header>
+		<div class={ administration_summary_grid() }>
+			@AdministrationSummaryCard("Users", formatInt(len(props.Users)), "Registered users")
+			@AdministrationSummaryCard("Agents", agentSummaryText(props), "Total / online / stale")
+			@AdministrationSummaryCard("API tokens", tokenSummaryText(props.APITokens), "Active / expiring soon")
+			@AdministrationSummaryCard("Sessions", formatInt(len(props.LatestSessionsByProfileID)), "Users with an active session")
+			@AdministrationSummaryCard("Metrics", latestMetricLabel(props), "Latest snapshot")
+		</div>
+		<div class={ administration_panel_grid() }>
+			@card.Card() {
+				<div class={ administration_panel() }>
+					<h3 class={ administration_panel_title() }>Requires attention</h3>
+					@AdministrationAttentionList(props)
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ AdministrationSummaryCard(label string, value string, hint string) {
+	@card.Card() {
+		<div class={ administration_summary_card() }>
+			<span class={ administration_summary_label() }>{ label }</span>
+			<strong class={ administration_summary_value() }>{ value }</strong>
+			<span class={ administration_summary_hint() }>{ hint }</span>
+		</div>
+	}
+}
+
+templ AdministrationAttentionList(props AdministrationPageProps) {
+	{{
+		items := attentionItems(props)
+	}}
+	if len(items) == 0 {
+		<p class={ administration_empty_state() }>No issues found in the available data.</p>
+	} else {
+		<ul class={ administration_plain_list() }>
+			for _, item := range items {
+				<li>{ item }</li>
+			}
+		</ul>
+	}
+}
+
+templ AdministrationUsersSection(props AdministrationPageProps) {
+	<section class={ administration_section() } aria-labelledby="administration-users-title">
+		<header class={ administration_section_header() }>
+			<div>
+				<h2 id="administration-users-title" class={ administration_section_title() }>Users</h2>
+				<p class={ administration_section_description() }>Manage application users. Profiles are shown as users in the UI.</p>
+			</div>
+			@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "administration-create-user-dialog")}) {
+				Create user
+			}
+		</header>
+		if len(props.Users) == 0 {
+			@AdministrationEmptyState("No users yet.", "Create the first user to allow access.")
+		} else {
+			<div class={ administration_table_shell() }>
+				<table class={ administration_table() }>
+					<thead>
+						<tr>
+							<th class={ administration_table_header_cell() } scope="col">User</th>
+							<th class={ administration_table_header_cell() } scope="col">Access</th>
+							<th class={ administration_table_header_cell() } scope="col">Status</th>
+							<th class={ administration_table_header_cell() } scope="col">Created</th>
+							<th class={ administration_table_header_cell() } scope="col">Last active</th>
+							<th class={ administration_actions_header() } scope="col">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, user := range props.Users {
+							@AdministrationUserRow(user, props)
+						}
+					</tbody>
+				</table>
 			</div>
 		}
+	</section>
+}
+
+templ AdministrationUserRow(user authentication.Profile, props AdministrationPageProps) {
+	{{
+		session, hasSession := props.LatestSessionsByProfileID[user.ID]
+		dialogID := "administration-user-" + user.ID
+		passwordDialogID := dialogID + "-password"
+		deleteDialogID := dialogID + "-delete"
+		isCurrentUser := user.ID == props.CurrentProfileID
+	}}
+	<tr>
+		<td class={ administration_table_cell() }>
+			<span class={ administration_primary_text() }>{ user.Username }</span>
+			<span class={ administration_secondary_text(), "ui-mono-text" } title={ user.ID }>{ truncateMiddle(user.ID, 18) }</span>
+		</td>
+		<td class={ administration_table_cell() }>Authenticated</td>
+		<td class={ administration_table_cell() }>
+			if isCurrentUser {
+				@badge.Badge(badge.BadgeProps{Variant: "info"}) { Current }
+			} else if hasSession {
+				@badge.Badge(badge.BadgeProps{Variant: "success"}) { Active }
+			} else {
+				@badge.Badge(badge.BadgeProps{Variant: "neutral"}) { No session }
+			}
+		</td>
+		<td class={ administration_table_cell() }><time datetime={ user.CreatedAt.Format(time.RFC3339) }>{ formatTime(user.CreatedAt) }</time></td>
+		<td class={ administration_table_cell() }>
+			if hasSession {
+				<time datetime={ session.UpdatedAt.Format(time.RFC3339) }>{ formatRelativeTime(session.UpdatedAt) }</time>
+			} else {
+				<span class={ administration_muted_text() }>Unavailable</span>
+			}
+		</td>
+		<td class={ administration_actions_cell() }>
+			<details class={ administration_action_menu(), "administration-action-menu" }>
+				<summary class={ administration_action_trigger(), "ui-interactive-control" } aria-label={ "Actions for " + user.Username }>...</summary>
+				<div class={ administration_action_panel() }>
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", dialogID)}) { Edit }
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", passwordDialogID)}) { Password }
+					if isCurrentUser {
+						<button class={ administration_inline_button_disabled() } type="button" disabled>Delete</button>
+					} else {
+						@button.Button(button.ButtonProps{Type: "button", Variant: "danger", OnClick: templ.JSFuncCall("openModalDialog", deleteDialogID)}) { Delete }
+					}
+				</div>
+			</details>
+		</td>
+	</tr>
+	@AdministrationEditUserDialog(user, dialogID)
+	@AdministrationPasswordDialog(user, passwordDialogID)
+	if !isCurrentUser {
+		@AdministrationDeleteUserDialog(user, deleteDialogID)
+	}
+}
+
+templ AdministrationAgentsSection(props AdministrationPageProps) {
+	{{
+		rows := administrationAgentRows(props)
+	}}
+	<section class={ administration_section() } aria-labelledby="administration-agents-title">
+		<header class={ administration_section_header() }>
+			<div>
+				<h2 id="administration-agents-title" class={ administration_section_title() }>Agents</h2>
+				<p class={ administration_section_description() }>Operational state for registered monitoring agents.</p>
+			</div>
+		</header>
+		<form class={ administration_toolbar() } method="get" action="/administration/agents">
+			<label class={ administration_filter_field() }>
+				<span>Search</span>
+				<input class="ui-input" type="search" name="agent_q" value={ props.AgentSearchQuery } placeholder="Agent ID, hostname, host name"/>
+			</label>
+			<label class={ administration_filter_field() }>
+				<span>Status</span>
+				<select class="ui-input" name="agent_status">
+					<option value="" selected?={ props.AgentStatusFilter == "" }>Any status</option>
+					<option value="online" selected?={ props.AgentStatusFilter == "online" }>Online</option>
+					<option value="stale" selected?={ props.AgentStatusFilter == "stale" }>Stale</option>
+					<option value="offline" selected?={ props.AgentStatusFilter == "offline" }>Offline</option>
+					<option value="unassigned" selected?={ props.AgentStatusFilter == "unassigned" }>Unassigned</option>
+				</select>
+			</label>
+			<button class={ administration_toolbar_button(), "ui-interactive-control" } type="submit">Apply</button>
+			<a class={ administration_reset_link(), "ui-interactive-control" } href="/administration/agents">Reset</a>
+			<span class={ administration_result_count() }>{ fmt.Sprintf("%d found", len(rows)) }</span>
+		</form>
+		if len(props.Agents) == 0 {
+			@AdministrationEmptyState("No agents registered.", "Register an agent from a host to see it here.")
+		} else if len(rows) == 0 {
+			@AdministrationEmptyState("No agents match the current filters.", "Adjust search or status.")
+		} else {
+			<div class={ administration_table_shell() }>
+				<table class={ administration_table() }>
+					<thead>
+						<tr>
+							<th class={ administration_table_header_cell() } scope="col">Agent</th>
+							<th class={ administration_table_header_cell() } scope="col">Host</th>
+							<th class={ administration_table_header_cell() } scope="col">Status</th>
+							<th class={ administration_table_header_cell() } scope="col">Version</th>
+							<th class={ administration_table_header_cell() } scope="col">Heartbeat</th>
+							<th class={ administration_table_header_cell() } scope="col">Metrics</th>
+							<th class={ administration_table_header_cell() } scope="col">Last seen</th>
+							<th class={ administration_actions_header() } scope="col">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, row := range rows {
+							@AdministrationAgentRow(row)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</section>
+}
+
+templ AdministrationAgentRow(row adminAgentRow) {
+	<tr>
+		<td class={ administration_table_cell() }><span class={ administration_primary_text(), "ui-mono-text" } title={ row.Agent.ID.String() }>{ truncateMiddle(row.Agent.ID.String(), 18) }</span></td>
+		<td class={ administration_table_cell() }>
+			if row.Host != nil {
+				<span class={ administration_primary_text() }>{ row.Host.Name }</span>
+				<span class={ administration_secondary_text(), "ui-mono-text" }>{ row.Host.IP.String() }</span>
+			} else {
+				<span class={ administration_muted_text() }>Unassigned</span>
+			}
+		</td>
+		<td class={ administration_table_cell() }>
+			@badge.Badge(badge.BadgeProps{Variant: row.StatusVariant}) {
+				{ row.StatusLabel }
+			}
+		</td>
+		<td class={ administration_table_cell() }><span class={ administration_mono_cell(), "ui-mono-text" }>{ emptyDash(row.Agent.Version) }</span></td>
+		<td class={ administration_table_cell() }>{ row.HeartbeatLabel }</td>
+		<td class={ administration_table_cell() }>{ row.MetricsLabel }</td>
+		<td class={ administration_table_cell() }><time datetime={ row.Agent.LastSeenAt.Format(time.RFC3339) }>{ row.LastSeenLabel }</time></td>
+		<td class={ administration_actions_cell() }>
+			@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", row.DetailsDialogID)}) { Details }
+		</td>
+	</tr>
+	@AdministrationAgentDetailsDialog(row)
+}
+
+templ AdministrationTokensSection(props AdministrationPageProps) {
+	<section class={ administration_section() } aria-labelledby="administration-tokens-title">
+		<header class={ administration_section_header() }>
+			<div>
+				<h2 id="administration-tokens-title" class={ administration_section_title() }>API tokens</h2>
+				<p class={ administration_section_description() }>Issue host registration tokens and revoke access when it is no longer needed.</p>
+			</div>
+			@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "administration-create-token-dialog")}) {
+				Create token
+			}
+		</header>
+		if len(props.APITokens) == 0 {
+			@AdministrationEmptyState("No API tokens yet.", "Create a token when a host registration flow needs API access.")
+		} else {
+			<div class={ administration_table_shell() }>
+				<table class={ administration_table() }>
+					<thead>
+						<tr>
+							<th class={ administration_table_header_cell() } scope="col">Name</th>
+							<th class={ administration_table_header_cell() } scope="col">Prefix</th>
+							<th class={ administration_table_header_cell() } scope="col">Scopes</th>
+							<th class={ administration_table_header_cell() } scope="col">Created</th>
+							<th class={ administration_table_header_cell() } scope="col">Expires</th>
+							<th class={ administration_table_header_cell() } scope="col">Status</th>
+							<th class={ administration_table_header_cell() } scope="col">Last used</th>
+							<th class={ administration_actions_header() } scope="col">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, token := range props.APITokens {
+							@AdministrationTokenRow(token)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</section>
+}
+
+templ AdministrationTokenRow(token authentication.APIToken) {
+	{{
+		dialogID := "administration-token-" + token.ID + "-revoke"
+		status := apiTokenStatus(token)
+	}}
+	<tr>
+		<td class={ administration_table_cell() }><span class={ administration_primary_text() } title={ token.Name }>{ truncateMiddle(token.Name, 28) }</span></td>
+		<td class={ administration_table_cell() }><code class={ administration_mono_cell(), "ui-mono-text" }>{ token.Prefix }</code></td>
+		<td class={ administration_table_cell() }><span class={ administration_scope_text() } title={ strings.Join(token.Scopes, ", ") }>{ truncateMiddle(strings.Join(token.Scopes, ", "), 36) }</span></td>
+		<td class={ administration_table_cell() }><time datetime={ token.CreatedAt.Format(time.RFC3339) }>{ formatTime(token.CreatedAt) }</time></td>
+		<td class={ administration_table_cell() }>{ formatOptionalTime(token.ExpiresAt) }</td>
+		<td class={ administration_table_cell() }>
+			@badge.Badge(badge.BadgeProps{Variant: tokenStatusVariant(status)}) {
+				{ tokenStatusLabel(status) }
+			}
+		</td>
+		<td class={ administration_table_cell() }>{ formatOptionalTime(token.LastUsedAt) }</td>
+		<td class={ administration_actions_cell() }>
+			if token.RevokedAt == nil {
+				@button.Button(button.ButtonProps{Type: "button", Variant: "danger", OnClick: templ.JSFuncCall("openModalDialog", dialogID)}) { Revoke }
+			} else {
+				<button class={ administration_inline_button_disabled() } type="button" disabled>Revoked</button>
+			}
+		</td>
+	</tr>
+	if token.RevokedAt == nil {
+		@AdministrationRevokeTokenDialog(token, dialogID)
+	}
+}
+
+templ AdministrationSystemSection(props AdministrationPageProps) {
+	<section class={ administration_section() } aria-labelledby="administration-system-title">
+		<header class={ administration_section_header() }>
+			<div>
+				<h2 id="administration-system-title" class={ administration_section_title() }>System</h2>
+				<p class={ administration_section_description() }>Application and system administration surfaces backed by current data.</p>
+			</div>
+		</header>
+		<div class={ administration_panel_grid() }>
+			@card.Card() {
+				<div class={ administration_panel() }>
+					<h3 class={ administration_panel_title() }>Metrics</h3>
+					<dl class={ administration_definition_list() }>
+						@AdministrationDefinitionRow("Latest snapshot", latestMetricLabel(props), "")
+						@AdministrationDefinitionRow("Hosts with snapshots", formatInt(len(props.LatestMetricSnapshots)), "")
+						@AdministrationDefinitionRow("Retention policy", "Latest 500 snapshots per host", "")
+					</dl>
+				</div>
+			}
+			@card.Card() {
+				<div class={ administration_panel() }>
+					<h3 class={ administration_panel_title() }>Sessions</h3>
+					<dl class={ administration_definition_list() }>
+						@AdministrationDefinitionRow("Known active users", formatInt(len(props.LatestSessionsByProfileID)), "")
+						@AdministrationDefinitionRow("Global session list", "Not exposed", "")
+					</dl>
+				</div>
+			}
+			@card.Card() {
+				<div class={ administration_panel() }>
+					<h3 class={ administration_panel_title() }>Application information</h3>
+					<dl class={ administration_definition_list() }>
+						@AdministrationDefinitionRow("Version", props.AppVersion, "ui-mono-text")
+						@AdministrationDefinitionRow("Hosts", formatInt(len(props.Hosts)), "")
+						@AdministrationDefinitionRow("Agents", formatInt(len(props.Agents)), "")
+					</dl>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ AdministrationEmptyState(title string, message string) {
+	<div class={ administration_empty_panel() }>
+		<strong>{ title }</strong>
+		<p class={ administration_empty_panel_text() }>{ message }</p>
 	</div>
 }
 
-func availableAPITokenScopes() []string {
-	return []string{
-		"hosts:register",
+templ AdministrationCreateUserDialog() {
+	@modal.Modal(modal.ModalProps{ID: "administration-create-user-dialog", AriaLabel: "Create user"}) {
+		@modal.Content() {
+			@modal.Title("Create user")
+			<form class={ administration_form() } method="post" action="/administration/users/create" data-administration-form>
+				<label class={ administration_form_field() }>
+					<span>Username</span>
+					@input.Input(input.InputProps{Id: "create-user-username", Name: "username", Placeholder: "operator", Required: true})
+				</label>
+				<label class={ administration_form_field() }>
+					<span>Password</span>
+					@input.Input(input.InputProps{Id: "create-user-password", Type: "password", Name: "password", Required: true})
+				</label>
+				@modal.Actions() {
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", "administration-create-user-dialog")}) { Cancel }
+					@button.Button(button.ButtonProps{Type: "submit"}) { Create }
+				}
+			</form>
+		}
 	}
+}
+
+templ AdministrationEditUserDialog(user authentication.Profile, dialogID string) {
+	@modal.Modal(modal.ModalProps{ID: dialogID, AriaLabel: "Edit user " + user.Username}) {
+		@modal.Content() {
+			@modal.Title("Edit user")
+			<form class={ administration_form() } method="post" action={ "/administration/users/" + user.ID + "/update" } data-administration-form>
+				<label class={ administration_form_field() }>
+					<span>Username</span>
+					@input.Input(input.InputProps{Id: dialogID + "-username", Name: "username", Value: user.Username, Required: true})
+				</label>
+				@modal.Actions() {
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", dialogID)}) { Cancel }
+					@button.Button(button.ButtonProps{Type: "submit"}) { Save }
+				}
+			</form>
+		}
+	}
+}
+
+templ AdministrationPasswordDialog(user authentication.Profile, dialogID string) {
+	@modal.Modal(modal.ModalProps{ID: dialogID, AriaLabel: "Set password for " + user.Username}) {
+		@modal.Content() {
+			@modal.Title("Set password")
+			<form class={ administration_form() } method="post" action={ "/administration/users/" + user.ID + "/password" } data-administration-form>
+				<p class={ administration_form_hint() }>Password must be at least 8 characters.</p>
+				<label class={ administration_form_field() }>
+					<span>New password</span>
+					@input.Input(input.InputProps{Id: dialogID + "-password", Type: "password", Name: "password", Required: true})
+				</label>
+				@modal.Actions() {
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", dialogID)}) { Cancel }
+					@button.Button(button.ButtonProps{Type: "submit"}) { Update password }
+				}
+			</form>
+		}
+	}
+}
+
+templ AdministrationDeleteUserDialog(user authentication.Profile, dialogID string) {
+	@modal.Modal(modal.ModalProps{ID: dialogID, AriaLabel: "Delete user " + user.Username}) {
+		@modal.Content() {
+			@modal.Title("Delete user")
+			<p class={ administration_destructive_text() }>Delete <strong>{ user.Username }</strong>? This removes the user profile.</p>
+			<form class={ administration_form() } method="post" action={ "/administration/users/" + user.ID + "/delete" } data-administration-form>
+				@modal.Actions() {
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", dialogID)}) { Cancel }
+					@button.Button(button.ButtonProps{Type: "submit", Variant: "danger"}) { Delete user }
+				}
+			</form>
+		}
+	}
+}
+
+templ AdministrationCreateTokenDialog() {
+	@modal.Modal(modal.ModalProps{ID: "administration-create-token-dialog", AriaLabel: "Create API token"}) {
+		@modal.Content() {
+			@modal.Title("Create API token")
+			<form class={ administration_form() } method="post" action="/administration/api-tokens/create" data-administration-form>
+				<label class={ administration_form_field() }>
+					<span>Name</span>
+					@input.Input(input.InputProps{Id: "token-name", Name: "name", Placeholder: "Production hosts registration", Required: true})
+				</label>
+				<fieldset class={ administration_fieldset() }>
+					<legend>Scopes</legend>
+					for _, scope := range availableAPITokenScopes() {
+						<label class={ administration_scope_checkbox_label() }>
+							<input type="checkbox" name="scope" value={ scope } checked/>
+							<span>{ scope }</span>
+						</label>
+					}
+				</fieldset>
+				<label class={ administration_form_field() }>
+					<span>Expires in days</span>
+					@input.Input(input.InputProps{Id: "expires-in-days", Type: "number", Name: "expiresInDays", Placeholder: "0 means never"})
+				</label>
+				<p class={ administration_form_hint() }>Leave empty or use 0 for no expiration.</p>
+				@modal.Actions() {
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", "administration-create-token-dialog")}) { Cancel }
+					@button.Button(button.ButtonProps{Type: "submit"}) { Create token }
+				}
+			</form>
+		}
+	}
+}
+
+templ AdministrationTokenSuccessDialog(token string) {
+	if token != "" {
+		@modal.Modal(modal.ModalProps{ID: "administration-token-success-dialog", AriaLabel: "API token created"}) {
+			@modal.Content() {
+				@modal.Title("Token created")
+				<p class={ administration_form_hint() }>Save this value now. It cannot be retrieved again.</p>
+				<code class={ administration_token_value(), "ui-mono-text" } data-administration-created-token>{ token }</code>
+				@modal.Actions() {
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("copyAdministrationCreatedToken")}) { Copy }
+					@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("closeModalDialog", "administration-token-success-dialog")}) { I saved it }
+				}
+			}
+		}
+	}
+}
+
+templ AdministrationRevokeTokenDialog(token authentication.APIToken, dialogID string) {
+	@modal.Modal(modal.ModalProps{ID: dialogID, AriaLabel: "Revoke token " + token.Name}) {
+		@modal.Content() {
+			@modal.Title("Revoke API token")
+			<p class={ administration_destructive_text() }>Revoke <strong>{ token.Name }</strong>? Any clients using prefix <code class="ui-mono-text">{ token.Prefix }</code> will lose access.</p>
+			<form class={ administration_form() } method="post" action={ "/administration/api-tokens/" + token.ID + "/revoke" } data-administration-form>
+				@modal.Actions() {
+					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", dialogID)}) { Cancel }
+					@button.Button(button.ButtonProps{Type: "submit", Variant: "danger"}) { Revoke token }
+				}
+			</form>
+		}
+	}
+}
+
+templ AdministrationAgentDetailsDialog(row adminAgentRow) {
+	@modal.Modal(modal.ModalProps{ID: row.DetailsDialogID, AriaLabel: "Agent details"}) {
+		@modal.Content() {
+			@modal.Title("Agent details")
+			<dl class={ administration_definition_list() }>
+				@AdministrationDefinitionRow("Agent ID", row.Agent.ID.String(), "ui-mono-text")
+				@AdministrationDefinitionRow("Host", agentHostLabel(row.Host), "")
+				@AdministrationDefinitionRow("Status", row.StatusLabel, "")
+				@AdministrationDefinitionRow("Version", emptyDash(row.Agent.Version), "ui-mono-text")
+				@AdministrationDefinitionRow("Heartbeat interval", row.HeartbeatLabel, "")
+				@AdministrationDefinitionRow("Metrics interval", row.MetricsLabel, "")
+				@AdministrationDefinitionRow("Created", formatTime(row.Agent.CreatedAt), "")
+				@AdministrationDefinitionRow("Last seen", row.LastSeenLabel, "")
+			</dl>
+			@modal.Actions() {
+				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", row.DetailsDialogID)}) { Close }
+			}
+		}
+	}
+}
+
+templ AdministrationDefinitionRow(term string, value string, valueClass string) {
+	<div class={ administration_definition_item() }>
+		<dt class={ administration_definition_term() }>{ term }</dt>
+		<dd class={ administration_definition_value(), valueClass }>{ value }</dd>
+	</div>
+}
+
+templ AdministrationScripts(showTokenDialog bool) {
+	@modal.Scripts()
+	<script data-show-token-dialog?={ showTokenDialog }>
+		(function() {
+			window.copyAdministrationCreatedToken = async function() {
+				const token = document.querySelector("[data-administration-created-token]");
+				if (token instanceof HTMLElement && navigator.clipboard) {
+					await navigator.clipboard.writeText(token.textContent || "");
+				}
+			};
+
+			document.addEventListener("submit", function(event) {
+				const form = event.target;
+				if (!(form instanceof HTMLFormElement) || !form.matches("[data-administration-form]")) {
+					return;
+				}
+				form.querySelectorAll("button[type='submit']").forEach(function(button) {
+					button.disabled = true;
+				});
+			});
+
+			if (document.currentScript && document.currentScript.hasAttribute("data-show-token-dialog")) {
+				window.setTimeout(function() {
+					if (typeof window.openModalDialog === "function") {
+						window.openModalDialog("administration-token-success-dialog");
+					}
+				}, 0);
+			}
+		})();
+	</script>
+}
+
+func administrationNavItems(props AdministrationPageProps) []adminNavItem {
+	return []adminNavItem{
+		{ID: adminSectionOverview, Href: "/administration", Icon: "O", Label: "Overview", Description: "Health and gaps"},
+		{ID: adminSectionUsers, Href: "/administration/users", Icon: "U", Label: "Users", Description: "Access accounts", Badge: formatInt(len(props.Users))},
+		{ID: adminSectionAgents, Href: "/administration/agents", Icon: "A", Label: "Agents", Description: "Runtime status", Badge: formatInt(len(props.Agents))},
+		{ID: adminSectionTokens, Href: "/administration/tokens", Icon: "T", Label: "API tokens", Description: "Issued credentials", Badge: formatInt(activeAPITokenCount(props.APITokens))},
+		{ID: adminSectionSystem, Href: "/administration/system", Icon: "S", Label: "System", Description: "Runtime info"},
+	}
+}
+
+func normalizeAdminSection(section string) string {
+	switch section {
+	case adminSectionUsers, adminSectionAgents, adminSectionTokens, adminSectionSystem:
+		return section
+	default:
+		return adminSectionOverview
+	}
+}
+
+func availableAPITokenScopes() []string {
+	return []string{"hosts:register"}
+}
+
+func formatInt(value int) string {
+	return fmt.Sprintf("%d", value)
+}
+
+func formatTime(value time.Time) string {
+	if value.IsZero() {
+		return "Unavailable"
+	}
+	return value.Format("2006-01-02 15:04")
+}
+
+func formatOptionalTime(value *time.Time) string {
+	if value == nil || value.IsZero() {
+		return "Never"
+	}
+	return formatTime(*value)
+}
+
+func formatRelativeTime(value time.Time) string {
+	if value.IsZero() {
+		return "Never"
+	}
+	elapsed := time.Since(value)
+	switch {
+	case elapsed < time.Minute:
+		return "just now"
+	case elapsed < time.Hour:
+		return fmt.Sprintf("%dm ago", int(elapsed.Minutes()))
+	case elapsed < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(elapsed.Hours()))
+	default:
+		return fmt.Sprintf("%dd ago", int(elapsed.Hours()/24))
+	}
+}
+
+func truncateMiddle(value string, maxLen int) string {
+	if len(value) <= maxLen || maxLen < 5 {
+		return value
+	}
+	head := (maxLen - 1) / 2
+	tail := maxLen - head - 1
+	return value[:head] + "..." + value[len(value)-tail:]
+}
+
+func emptyDash(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "-"
+	}
+	return value
+}
+
+func activeAPITokenCount(tokens []authentication.APIToken) int {
+	count := 0
+	now := time.Now()
+	for _, token := range tokens {
+		if token.RevokedAt == nil && (token.ExpiresAt == nil || token.ExpiresAt.After(now)) {
+			count++
+		}
+	}
+	return count
+}
+
+func expiringSoonAPITokenCount(tokens []authentication.APIToken) int {
+	count := 0
+	now := time.Now()
+	soon := now.Add(14 * 24 * time.Hour)
+	for _, token := range tokens {
+		if token.RevokedAt == nil && token.ExpiresAt != nil && token.ExpiresAt.After(now) && token.ExpiresAt.Before(soon) {
+			count++
+		}
+	}
+	return count
+}
+
+func tokenSummaryText(tokens []authentication.APIToken) string {
+	return fmt.Sprintf("%d / %d", activeAPITokenCount(tokens), expiringSoonAPITokenCount(tokens))
+}
+
+func apiTokenStatus(token authentication.APIToken) string {
+	now := time.Now()
+	switch {
+	case token.RevokedAt != nil:
+		return "revoked"
+	case token.ExpiresAt != nil && token.ExpiresAt.Before(now):
+		return "expired"
+	default:
+		return "active"
+	}
+}
+
+func tokenStatusLabel(status string) string {
+	switch status {
+	case "revoked":
+		return "Revoked"
+	case "expired":
+		return "Expired"
+	default:
+		return "Active"
+	}
+}
+
+func tokenStatusVariant(status string) string {
+	switch status {
+	case "active":
+		return "success"
+	case "expired":
+		return "warning"
+	case "revoked":
+		return "danger"
+	default:
+		return "neutral"
+	}
+}
+
+func agentSummaryText(props AdministrationPageProps) string {
+	total, online, stale := 0, 0, 0
+	for _, row := range administrationAgentRows(AdministrationPageProps{Agents: props.Agents, AgentConfigs: props.AgentConfigs, HostsByID: props.HostsByID}) {
+		total++
+		switch row.Status {
+		case "online":
+			online++
+		case "stale":
+			stale++
+		}
+	}
+	return fmt.Sprintf("%d / %d / %d", total, online, stale)
+}
+
+func administrationAgentRows(props AdministrationPageProps) []adminAgentRow {
+	rows := make([]adminAgentRow, 0, len(props.Agents))
+	now := time.Now()
+	statusFilter := strings.ToLower(strings.TrimSpace(props.AgentStatusFilter))
+	search := strings.ToLower(strings.TrimSpace(props.AgentSearchQuery))
+
+	for _, currentAgent := range props.Agents {
+		agentID := currentAgent.ID.String()
+		config, hasConfig := props.AgentConfigs[agentID]
+		var configPtr *agent.AgentConfig
+		if hasConfig {
+			configPtr = &config
+		}
+
+		var hostPtr *host.Host
+		if currentHost, ok := props.HostsByID[currentAgent.HostID.String()]; ok {
+			hostPtr = &currentHost
+		}
+
+		status := agentStatus(currentAgent, configPtr, hostPtr, now)
+		row := adminAgentRow{
+			Agent:           currentAgent,
+			Config:          configPtr,
+			Host:            hostPtr,
+			Status:          status,
+			StatusLabel:     strings.Title(status),
+			StatusVariant:   agentStatusVariant(status),
+			LastSeenLabel:   formatRelativeTime(currentAgent.LastSeenAt),
+			HeartbeatLabel:  durationLabel(agentHeartbeatInterval(configPtr)),
+			MetricsLabel:    durationLabel(agentMetricsInterval(configPtr)),
+			DetailsDialogID: "administration-agent-" + agentID + "-details",
+		}
+		if statusFilter != "" && status != statusFilter {
+			continue
+		}
+		if search != "" && !strings.Contains(strings.ToLower(agentID+" "+agentHostLabel(hostPtr)), search) {
+			continue
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+func agentStatus(currentAgent agent.Agent, config *agent.AgentConfig, currentHost *host.Host, now time.Time) string {
+	if currentAgent.HostID == uuid.Nil || currentHost == nil {
+		return "unassigned"
+	}
+	if currentAgent.LastSeenAt.IsZero() {
+		return "offline"
+	}
+	elapsed := now.Sub(currentAgent.LastSeenAt)
+	heartbeat := agentHeartbeatInterval(config)
+	if elapsed <= heartbeat*3 {
+		return "online"
+	}
+	if elapsed <= 24*time.Hour {
+		return "stale"
+	}
+	return "offline"
+}
+
+func agentStatusVariant(status string) string {
+	switch status {
+	case "online":
+		return "success"
+	case "stale":
+		return "warning"
+	case "offline":
+		return "danger"
+	default:
+		return "neutral"
+	}
+}
+
+func agentHeartbeatInterval(config *agent.AgentConfig) time.Duration {
+	if config != nil && config.Heartbeat.Interval > 0 {
+		return config.Heartbeat.Interval
+	}
+	return agent.DefaultAgentHeartbeatInterval
+}
+
+func agentMetricsInterval(config *agent.AgentConfig) time.Duration {
+	if config != nil && config.Metrics.Interval > 0 {
+		return config.Metrics.Interval
+	}
+	return agent.DefaultAgentMetricsInterval
+}
+
+func durationLabel(value time.Duration) string {
+	if value == 0 {
+		return "Unavailable"
+	}
+	return value.String()
+}
+
+func agentHostLabel(currentHost *host.Host) string {
+	if currentHost == nil {
+		return "Unassigned"
+	}
+	return currentHost.Name + " / " + currentHost.IP.String()
+}
+
+func latestMetricLabel(props AdministrationPageProps) string {
+	latest := time.Time{}
+	for _, snapshot := range props.LatestMetricSnapshots {
+		if latest.IsZero() || snapshot.Timestamp.After(latest) {
+			latest = snapshot.Timestamp
+		}
+	}
+	if latest.IsZero() {
+		return "No metrics yet"
+	}
+	return formatRelativeTime(latest)
+}
+
+func attentionItems(props AdministrationPageProps) []string {
+	items := []string{}
+	for _, row := range administrationAgentRows(AdministrationPageProps{Agents: props.Agents, AgentConfigs: props.AgentConfigs, HostsByID: props.HostsByID}) {
+		switch row.Status {
+		case "stale", "offline", "unassigned":
+			items = append(items, "Agent "+truncateMiddle(row.Agent.ID.String(), 14)+" is "+row.StatusLabel+".")
+		}
+	}
+	expiring := expiringSoonAPITokenCount(props.APITokens)
+	if expiring > 0 {
+		items = append(items, fmt.Sprintf("%d API token(s) expire within 14 days.", expiring))
+	}
+	return items
 }

@@ -1,10 +1,87 @@
 package administration_page_ui
 
-css administration_page_header() {
+func CSSClasses() []templ.CSSClass {
+	return []templ.CSSClass{
+		administration_page_shell(),
+		administration_page_header(),
+		administration_page_title(),
+		administration_page_subtitle(),
+		administration_shell(),
+		administration_nav(),
+		administration_nav_item(),
+		administration_nav_item_active(),
+		administration_nav_icon(),
+		administration_nav_text(),
+		administration_nav_label(),
+		administration_nav_description(),
+		administration_nav_badge(),
+		administration_content(),
+		administration_notice(),
+		administration_notice_success(),
+		administration_notice_danger(),
+		administration_error_list(),
+		administration_section(),
+		administration_section_header(),
+		administration_section_title(),
+		administration_section_description(),
+		administration_summary_grid(),
+		administration_summary_card(),
+		administration_summary_label(),
+		administration_summary_value(),
+		administration_summary_hint(),
+		administration_panel_grid(),
+		administration_panel(),
+		administration_panel_title(),
+		administration_plain_list(),
+		administration_table_shell(),
+		administration_table(),
+		administration_table_header_cell(),
+		administration_table_cell(),
+		administration_actions_header(),
+		administration_actions_cell(),
+		administration_primary_text(),
+		administration_secondary_text(),
+		administration_muted_text(),
+		administration_mono_cell(),
+		administration_scope_text(),
+		administration_action_menu(),
+		administration_action_trigger(),
+		administration_action_panel(),
+		administration_inline_button_disabled(),
+		administration_toolbar(),
+		administration_filter_field(),
+		administration_toolbar_button(),
+		administration_reset_link(),
+		administration_result_count(),
+		administration_empty_panel(),
+		administration_empty_panel_text(),
+		administration_empty_state(),
+		administration_form(),
+		administration_form_field(),
+		administration_form_hint(),
+		administration_fieldset(),
+		administration_scope_checkbox_label(),
+		administration_token_value(),
+		administration_destructive_text(),
+		administration_definition_list(),
+		administration_definition_item(),
+		administration_definition_term(),
+		administration_definition_value(),
+	}
+}
+
+css administration_page_shell() {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	margin-bottom: 20px;
+	gap: 14px;
+}
+
+css administration_page_header() {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 12px;
+	padding-inline: 12px;
 }
 
 css administration_page_title() {
@@ -12,66 +89,415 @@ css administration_page_title() {
 }
 
 css administration_page_subtitle() {
-	margin: 0;
+	margin: 4px 0 0;
 	color: var(--muted);
+	font-size: 0.92rem;
 }
 
-css administration_token_banner() {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	padding: 12px;
-	border: 1px solid var(--primary);
-	border-radius: var(--radius-md);
-	background: color-mix(in oklab, var(--primary) 12%, transparent);
-	margin-bottom: 16px;
-}
-
-css administration_page_grid() {
+css administration_shell() {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-	gap: 16px;
+	grid-template-columns: 220px minmax(0, 1fr);
+	gap: 14px;
+	align-items: start;
+	padding-inline: 12px;
 }
 
-css administration_page_section() {
+css administration_nav() {
+	display: grid;
+	gap: 6px;
+	padding: 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(17, 28, 45, 0.42);
+}
+
+css administration_nav_item() {
+	display: grid;
+	grid-template-columns: 28px minmax(0, 1fr);
+	gap: 8px;
+	align-items: center;
+	min-height: 48px;
+	padding: 8px;
+	border: 1px solid transparent;
+	border-radius: var(--radius-sm);
+	color: var(--text-neutral-soft);
+	text-decoration: none;
+}
+
+css administration_nav_item_active() {
+	border-color: var(--border-interactive-info);
+	background: var(--surface-interactive-info);
+	color: var(--text-info-soft);
+	box-shadow: inset 3px 0 0 var(--primary);
+}
+
+css administration_nav_icon() {
+	display: inline-grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	font-family: var(--font-mono);
+	font-size: 0.82rem;
+	font-weight: 800;
+}
+
+css administration_nav_text() {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+
+css administration_nav_label() {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	font-weight: 700;
+	font-size: 0.9rem;
+}
+
+css administration_nav_description() {
+	color: var(--muted);
+	font-size: 0.78rem;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+css administration_nav_badge() {
+	min-width: 20px;
+	padding: 1px 6px;
+	border: 1px solid var(--border-interactive-info);
+	border-radius: var(--radius-pill);
+	background: rgba(34, 211, 238, 0.1);
+	color: var(--text-info-soft);
+	font-size: 0.72rem;
+	font-family: var(--font-mono);
+	text-align: center;
+}
+
+css administration_content() {
+	min-width: 0;
+}
+
+css administration_notice() {
+	margin-inline: 12px;
+	padding: 10px 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(17, 28, 45, 0.52);
+	color: var(--text-neutral-soft);
+}
+
+css administration_notice_success() {
+	border-color: var(--border-interactive-success);
+	background: var(--surface-interactive-success);
+	color: var(--text-success-muted);
+}
+
+css administration_notice_danger() {
+	border-color: var(--border-interactive-danger);
+	background: var(--surface-interactive-danger);
+	color: var(--text-danger-muted);
+}
+
+css administration_error_list() {
+	margin: 6px 0 0;
+	padding-left: 18px;
+}
+
+css administration_section() {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+	min-width: 0;
 }
 
-css administration_page_section_title() {
+css administration_section_header() {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(17, 28, 45, 0.42);
+}
+
+css administration_section_title() {
 	margin: 0;
 	font-size: 1.15rem;
 }
 
-css administration_token_form() {
-	display: flex;
-	flex-direction: column;
+css administration_section_description() {
+	margin: 3px 0 0;
+	color: var(--muted);
+	font-size: 0.88rem;
+}
+
+css administration_summary_grid() {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(130px, 1fr));
+	gap: 10px;
+}
+
+css administration_summary_card() {
+	display: grid;
+	gap: 4px;
+	min-height: 82px;
+}
+
+css administration_summary_label() {
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
+css administration_summary_value() {
+	color: var(--text);
+	font-size: 1.35rem;
+	line-height: 1.1;
+}
+
+css administration_summary_hint() {
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
+css administration_panel_grid() {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: 12px;
 }
 
-css administration_form_field() {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
+css administration_panel() {
+	display: grid;
+	gap: 10px;
 }
 
-css administration_scopes_list() {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
+css administration_panel_title() {
+	margin: 0;
+	font-size: 1rem;
 }
 
-css administration_scope_checkbox_label() {
+css administration_plain_list() {
+	margin: 0;
+	padding-left: 18px;
+	color: var(--text-neutral-soft);
+}
+
+css administration_table_shell() {
+	overflow: visible;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(17, 28, 45, 0.28);
+}
+
+css administration_table() {
+	width: 100%;
+	min-width: 860px;
+	border-collapse: collapse;
+}
+
+css administration_actions_header() {
+	padding: 10px;
+	border-bottom: 1px solid var(--border);
+	color: var(--muted);
+	font-weight: 700;
+	font-size: 0.76rem;
+	text-transform: uppercase;
+	width: 1%;
+	text-align: right;
+}
+
+css administration_actions_cell() {
+	padding: 10px;
+	border-bottom: 1px solid var(--border);
+	text-align: right;
+	vertical-align: middle;
+	font-size: 0.88rem;
+	white-space: nowrap;
+	overflow: visible;
+	position: relative;
+	z-index: 2;
+}
+
+css administration_table_header_cell() {
+	padding: 10px;
+	border-bottom: 1px solid var(--border);
+	color: var(--muted);
+	font-weight: 700;
+	font-size: 0.76rem;
+	text-align: left;
+	text-transform: uppercase;
+}
+
+css administration_table_cell() {
+	padding: 10px;
+	border-bottom: 1px solid var(--border);
+	text-align: left;
+	vertical-align: middle;
+	font-size: 0.88rem;
+}
+
+css administration_primary_text() {
+	display: block;
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 700;
+}
+
+css administration_secondary_text() {
+	display: block;
+	max-width: 240px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
+css administration_muted_text() {
+	color: var(--muted);
+}
+
+css administration_mono_cell() {
+	font-size: 0.82rem;
+}
+
+css administration_scope_text() {
+	display: inline-block;
+	max-width: 280px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+css administration_action_menu() {
+	position: relative;
+	display: inline-block;
+}
+
+css administration_action_trigger() {
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
-	font-size: 0.95rem;
+	justify-content: center;
+	list-style: none;
+	width: 34px;
+	height: 32px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--border);
+	background: transparent;
+	color: var(--text);
+	cursor: pointer;
+	user-select: none;
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1;
 }
 
-css administration_form_hint() {
+css administration_action_panel() {
+	position: absolute;
+	right: 0;
+	top: calc(100% + var(--space-6));
+	z-index: 100;
+	min-width: 168px;
+	padding: var(--space-8);
+	border: 1px solid rgba(148, 163, 184, 0.22);
+	border-radius: var(--radius-lg);
+	background: #07111f;
+	box-shadow: var(--shadow-overlay);
+	display: grid;
+	justify-items: stretch;
+	gap: var(--space-6);
+}
+
+css administration_inline_button_disabled() {
+	min-height: 34px;
+	padding: 0.45rem 0.7rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--muted);
+	font: inherit;
+	font-size: 0.88rem;
+	cursor: not-allowed;
+	opacity: 0.62;
+}
+
+css administration_toolbar() {
+	display: grid;
+	grid-template-columns: minmax(220px, 1fr) minmax(150px, 220px) auto auto auto;
+	gap: 8px;
+	align-items: end;
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(17, 28, 45, 0.42);
+}
+
+css administration_filter_field() {
+	display: grid;
+	gap: 4px;
+	min-width: 0;
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
+css administration_reset_link() {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	min-height: 42px;
+	padding: 0 0.8rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	color: var(--text);
+	text-decoration: none;
+	font-weight: 700;
+	font-size: 0.88rem;
+}
+
+css administration_toolbar_button() {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	min-height: 42px;
+	padding: 0 0.8rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-weight: 700;
+	font-size: 0.88rem;
+	cursor: pointer;
+}
+
+css administration_result_count() {
+	color: var(--muted);
+	font-size: 0.86rem;
+	white-space: nowrap;
+	padding-bottom: 8px;
+}
+
+css administration_empty_panel() {
+	display: grid;
+	gap: 4px;
+	padding: 18px;
+	border: 1px dashed var(--border-interactive-subtle);
+	border-radius: var(--radius-md);
+	background: rgba(17, 28, 45, 0.28);
+	color: var(--text-neutral-soft);
+}
+
+css administration_empty_panel_text() {
 	margin: 0;
-	font-size: 0.85rem;
 	color: var(--muted);
 }
 
@@ -80,38 +506,72 @@ css administration_empty_state() {
 	color: var(--muted);
 }
 
-css administration_tokens_list() {
-	display: flex;
-	flex-direction: column;
+css administration_form() {
+	display: grid;
+	gap: 12px;
+}
+
+css administration_form_field() {
+	display: grid;
+	gap: 6px;
+}
+
+css administration_form_hint() {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.84rem;
+}
+
+css administration_fieldset() {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+}
+
+css administration_scope_checkbox_label() {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9rem;
+}
+
+css administration_token_value() {
+	display: block;
+	max-width: min(70vw, 680px);
+	overflow-wrap: anywhere;
+	padding: 10px;
+	border: 1px solid var(--border-interactive-info);
+	border-radius: var(--radius-sm);
+	background: rgba(34, 211, 238, 0.08);
+	color: var(--text-info-soft);
+}
+
+css administration_destructive_text() {
+	margin: 0;
+	color: var(--text-neutral-soft);
+}
+
+css administration_definition_list() {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+}
+
+css administration_definition_item() {
+	display: grid;
+	grid-template-columns: minmax(120px, 0.4fr) minmax(0, 1fr);
 	gap: 10px;
 }
 
-css administration_token_row() {
-	display: flex;
-	justify-content: space-between;
-	gap: 12px;
-	padding: 10px;
-	border: 1px solid var(--border);
-	border-radius: var(--radius-sm);
-}
-
-css administration_token_row_revoked() {
-	opacity: 0.75;
-}
-
-css administration_token_info() {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-}
-
-css administration_token_name() {
-	margin: 0;
-	font-weight: 600;
-}
-
-css administration_token_meta() {
-	margin: 0;
-	font-size: 0.85rem;
+css administration_definition_term() {
 	color: var(--muted);
+}
+
+css administration_definition_value() {
+	margin: 0;
+	min-width: 0;
+	overflow-wrap: anywhere;
 }
