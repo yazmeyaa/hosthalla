@@ -21,6 +21,9 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Download Go modules
+        run: go mod download
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
