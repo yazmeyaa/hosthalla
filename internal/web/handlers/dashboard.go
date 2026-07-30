@@ -59,13 +59,15 @@ const (
 	dashboardUpdateOverview
 	dashboardUpdateHosts
 	dashboardUpdateHostRows
+	dashboardUpdateHostMetrics
 
 	dashboardUpdateAll = dashboardUpdateGeneratedAt | dashboardUpdateOverview | dashboardUpdateHosts
 )
 
 type dashboardUpdate struct {
-	sections dashboardUpdateSections
-	hostIDs  map[uuid.UUID]struct{}
+	sections      dashboardUpdateSections
+	hostRowIDs    map[uuid.UUID]struct{}
+	hostMetricIDs map[uuid.UUID]struct{}
 }
 
 type dashboardClient struct {
@@ -334,7 +336,7 @@ func (h *DashboardHandler) subscribeDashboardEvent(eventBus events.EventBus, eve
 		}
 		h.invalidateCache()
 		h.queueLiveUpdate(update)
-		h.logger.Debug("dashboard update queued", slog.String("event", event.EventName()), slog.Uint64("sections", uint64(update.sections)), slog.Int("host_ids", len(update.hostIDs)))
+		h.logger.Debug("dashboard update queued", slog.String("event", event.EventName()), slog.Uint64("sections", uint64(update.sections)), slog.Int("host_row_ids", len(update.hostRowIDs)), slog.Int("host_metric_ids", len(update.hostMetricIDs)))
 		return nil
 	}); err != nil {
 		h.logger.Error("failed to subscribe dashboard updates", slog.String("event", event.EventName()), slog.String("error", err.Error()))
@@ -349,7 +351,7 @@ func dashboardUpdateForEvent(event events.Event) dashboardUpdate {
 	case host.UpdateHostEvent:
 		return dashboardHostRowUpdate(dashboardUpdateGeneratedAt, value.Host.ID)
 	case host.HostMetricSnapshotCreatedEvent:
-		return dashboardHostRowUpdate(dashboardUpdateGeneratedAt|dashboardUpdateOverview, value.HostID)
+		return dashboardHostMetricUpdate(dashboardUpdateGeneratedAt|dashboardUpdateOverview, value.HostID)
 	case host.HostSystemInfoUpdatedEvent:
 		return dashboardHostRowUpdate(dashboardUpdateGeneratedAt|dashboardUpdateOverview, value.HostID)
 	case host.HostMonitoringAgentAssignedEvent:
@@ -371,16 +373,33 @@ func dashboardUpdateForEvent(event events.Event) dashboardUpdate {
 
 func dashboardHostRowUpdate(sections dashboardUpdateSections, hostIDs ...uuid.UUID) dashboardUpdate {
 	update := dashboardUpdate{
-		sections: sections | dashboardUpdateHostRows,
-		hostIDs:  make(map[uuid.UUID]struct{}, len(hostIDs)),
+		sections:   sections | dashboardUpdateHostRows,
+		hostRowIDs: make(map[uuid.UUID]struct{}, len(hostIDs)),
 	}
 	for _, hostID := range hostIDs {
 		if hostID == uuid.Nil {
 			continue
 		}
-		update.hostIDs[hostID] = struct{}{}
+		update.hostRowIDs[hostID] = struct{}{}
 	}
-	if len(update.hostIDs) == 0 {
+	if len(update.hostRowIDs) == 0 {
+		return dashboardUpdate{sections: sections | dashboardUpdateHosts}
+	}
+	return update
+}
+
+func dashboardHostMetricUpdate(sections dashboardUpdateSections, hostIDs ...uuid.UUID) dashboardUpdate {
+	update := dashboardUpdate{
+		sections:      sections | dashboardUpdateHostMetrics,
+		hostMetricIDs: make(map[uuid.UUID]struct{}, len(hostIDs)),
+	}
+	for _, hostID := range hostIDs {
+		if hostID == uuid.Nil {
+			continue
+		}
+		update.hostMetricIDs[hostID] = struct{}{}
+	}
+	if len(update.hostMetricIDs) == 0 {
 		return dashboardUpdate{sections: sections | dashboardUpdateHosts}
 	}
 	return update
@@ -432,14 +451,21 @@ func (h *DashboardHandler) signalClient(client *dashboardClient, update dashboar
 
 func mergeDashboardUpdates(left dashboardUpdate, right dashboardUpdate) dashboardUpdate {
 	merged := dashboardUpdate{
-		sections: left.sections | right.sections,
-		hostIDs:  make(map[uuid.UUID]struct{}, len(left.hostIDs)+len(right.hostIDs)),
+		sections:      left.sections | right.sections,
+		hostRowIDs:    make(map[uuid.UUID]struct{}, len(left.hostRowIDs)+len(right.hostRowIDs)),
+		hostMetricIDs: make(map[uuid.UUID]struct{}, len(left.hostMetricIDs)+len(right.hostMetricIDs)),
 	}
-	for hostID := range left.hostIDs {
-		merged.hostIDs[hostID] = struct{}{}
+	for hostID := range left.hostRowIDs {
+		merged.hostRowIDs[hostID] = struct{}{}
 	}
-	for hostID := range right.hostIDs {
-		merged.hostIDs[hostID] = struct{}{}
+	for hostID := range right.hostRowIDs {
+		merged.hostRowIDs[hostID] = struct{}{}
+	}
+	for hostID := range left.hostMetricIDs {
+		merged.hostMetricIDs[hostID] = struct{}{}
+	}
+	for hostID := range right.hostMetricIDs {
+		merged.hostMetricIDs[hostID] = struct{}{}
 	}
 	return merged
 }
@@ -465,15 +491,35 @@ func (h *DashboardHandler) renderLiveUpdate(ctx context.Context, update dashboar
 		if err := dashboard_page.DashboardHostsLiveUpdate(data).Render(ctx, &body); err != nil {
 			return nil, err
 		}
-	} else if update.sections&dashboardUpdateHostRows != 0 {
+	} else {
 		rowsByID := dashboardHostRowsByID(data.Hosts)
-		for _, hostID := range sortedDashboardHostIDs(update.hostIDs) {
-			row, ok := rowsByID[hostID]
-			if !ok {
-				continue
+		renderedRowIDs := map[string]struct{}{}
+		if update.sections&dashboardUpdateHostRows != 0 {
+			hostRowIDs := sortedDashboardHostIDs(update.hostRowIDs)
+			renderedRowIDs = make(map[string]struct{}, len(hostRowIDs))
+			for _, hostID := range hostRowIDs {
+				row, ok := rowsByID[hostID]
+				if !ok {
+					continue
+				}
+				renderedRowIDs[hostID] = struct{}{}
+				if err := dashboard_page.DashboardHostRowLiveUpdate(row).Render(ctx, &body); err != nil {
+					return nil, err
+				}
 			}
-			if err := dashboard_page.DashboardHostRowLiveUpdate(row).Render(ctx, &body); err != nil {
-				return nil, err
+		}
+		if update.sections&dashboardUpdateHostMetrics != 0 {
+			for _, hostID := range sortedDashboardHostIDs(update.hostMetricIDs) {
+				if _, rowAlreadyUpdated := renderedRowIDs[hostID]; rowAlreadyUpdated {
+					continue
+				}
+				row, ok := rowsByID[hostID]
+				if !ok {
+					continue
+				}
+				if err := dashboard_page.DashboardHostMetricFragmentsLiveUpdate(row).Render(ctx, &body); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}

@@ -19,6 +19,7 @@ var DashboardGeneratedAtLiveUpdate = dashboard_ui.DashboardGeneratedAtLiveUpdate
 var DashboardOverviewLiveUpdate = dashboard_ui.DashboardOverviewLiveUpdate
 var DashboardHostsLiveUpdate = dashboard_ui.DashboardHostsLiveUpdate
 var DashboardHostRowLiveUpdate = dashboard_ui.DashboardHostRowLiveUpdate
+var DashboardHostMetricFragmentsLiveUpdate = dashboard_ui.DashboardHostMetricFragmentsLiveUpdate
 
 func CSSClasses() []templ.CSSClass {
 	classes := dashboard_ui.CSSClasses()

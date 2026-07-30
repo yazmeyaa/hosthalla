@@ -89,6 +89,85 @@ func TestRenderLiveUpdateCanRenderSingleHostRow(t *testing.T) {
 	}
 }
 
+func TestRenderLiveUpdateCanRenderSingleHostMetrics(t *testing.T) {
+	hostID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	otherHostID := uuid.MustParse("22222222-2222-2222-2222-222222222222")
+	handler := &DashboardHandler{
+		cache: dashboardCache{
+			expiresAt: time.Now().Add(time.Minute),
+			data: dashboard_page.DashboardData{
+				GeneratedAtLabel: "12:00:00",
+				Summary: dashboard_page.DashboardSummary{
+					TotalHosts:          2,
+					ReportingHosts:      1,
+					WaitingHosts:        1,
+					LatestMetricAtLabel: "just now",
+				},
+				Hosts: []dashboard_page.DashboardHostRow{
+					{
+						ID:                hostID.String(),
+						Name:              "agent1host1",
+						IP:                "10.0.0.10",
+						StatusLabel:       "Reporting",
+						StatusVariant:     "success",
+						LastMetricLabel:   "just now",
+						CPUUsageLabel:     "9.1%",
+						MemoryUsageLabel:  "1.0 GB / 4.0 GB",
+						DiskUsageLabel:    "8.0 GB / 40.0 GB",
+						NetworkUsageLabel: "1.0 KB in / 2.0 KB out",
+						SystemLabel:       "linux",
+					},
+					{
+						ID:            otherHostID.String(),
+						Name:          "quiet-host",
+						IP:            "10.0.0.20",
+						StatusLabel:   "No agent",
+						StatusVariant: "neutral",
+						SystemLabel:   "Unknown system",
+					},
+				},
+			},
+		},
+	}
+
+	payload, err := handler.renderLiveUpdate(context.Background(), dashboardHostMetricUpdate(
+		dashboardUpdateGeneratedAt|dashboardUpdateOverview,
+		hostID,
+	))
+	if err != nil {
+		t.Fatalf("render live update: %v", err)
+	}
+
+	body := string(payload)
+	assertWebSocketPayloadTopLevelTargets(t, body)
+	for _, expected := range []string{
+		`id="dashboard-generated-at"`,
+		`id="dashboard-overview"`,
+		`id="dashboard-host-status-` + hostID.String() + `"`,
+		`id="dashboard-host-metrics-` + hostID.String() + `"`,
+		`id="dashboard-host-last-metric-` + hostID.String() + `"`,
+		`9.1%`,
+		`1.0 GB / 4.0 GB`,
+		`1.0 KB in / 2.0 KB out`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected metric fragment %q, got: %s", expected, body)
+		}
+	}
+	for _, unexpected := range []string{
+		`id="dashboard-hosts"`,
+		`id="dashboard-host-` + hostID.String() + `"`,
+		`id="dashboard-host-metrics-` + otherHostID.String() + `"`,
+		`10.0.0.10`,
+		`data-host-ip-toggle`,
+		`href="#ui-icon-eye-closed"`,
+	} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("unexpected full-card content %q in metric update: %s", unexpected, body)
+		}
+	}
+}
+
 func TestRenderLiveUpdateOmitsTemplStylesFromFullUpdate(t *testing.T) {
 	hostID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
 	handler := &DashboardHandler{

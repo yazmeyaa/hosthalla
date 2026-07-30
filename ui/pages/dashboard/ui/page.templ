@@ -92,6 +92,10 @@ templ DashboardHostRowLiveUpdate(host DashboardHostRow) {
 	@DashboardHostItemOOB(host)
 }
 
+templ DashboardHostMetricFragmentsLiveUpdate(host DashboardHostRow) {
+	@DashboardHostMetricFragmentsOOB(host)
+}
+
 templ DashboardOverviewContent(data DashboardData) {
 	@DashboardOverview(DashboardOverviewProps{
 		TotalHosts:          data.Summary.TotalHosts,

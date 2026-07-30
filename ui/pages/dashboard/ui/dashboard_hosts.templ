@@ -56,13 +56,13 @@ templ DashboardHosts(props DashboardHostsProps) {
 }
 
 templ DashboardHostItem(host HostRow) {
-	<li id={ hostItemID(host.ID) } class={ dashboard_hosts_item(), hostStatusClass(host.Status) }>
+	<li id={ hostItemID(host.ID) } class={ dashboard_hosts_item(), hostStatusClass(host.Status) } data-dashboard-host-item>
 		@DashboardHostItemContent(host)
 	</li>
 }
 
 templ DashboardHostItemOOB(host HostRow) {
-	<li id={ hostItemID(host.ID) } class={ dashboardHostsItemClass(), hostStatusClass(host.Status) } hx-swap-oob="outerHTML">
+	<li id={ hostItemID(host.ID) } class={ dashboardHostsItemClass(), hostStatusClass(host.Status) } data-dashboard-host-item hx-swap-oob="outerHTML">
 		@DashboardHostItemContent(host)
 	</li>
 }
@@ -73,49 +73,14 @@ templ DashboardHostItemContent(host HostRow) {
 			<div class={ dashboard_hosts_identity() }>
 				<h3 class={ dashboard_hosts_name() }>{ host.Name }</h3>
 			</div>
-			@badge.Badge(badge.BadgeProps{Variant: host.StatusVariant}) {
-				{ host.StatusLabel }
-			}
+			@DashboardHostStatus(host)
 		</div>
-		<div class={ dashboard_hosts_metrics() }>
-			<div class={ dashboard_hosts_metric() }>
-				<div class={ dashboard_hosts_metric_summary() }>
-					<span class={ dashboard_hosts_metric_label() }>CPU</span>
-					<span class={ dashboard_hosts_metric_compact_value() }>{ host.CPUUsageLabel }</span>
-				</div>
-				@UsageSparkline(UsageSparklineProps{
-					Label:   "CPU usage",
-					Values:  host.CPUUsageSeries,
-					Variant: "cpu",
-				})
-			</div>
-			<div class={ dashboard_hosts_metric() }>
-				<div class={ dashboard_hosts_metric_summary() }>
-					<span class={ dashboard_hosts_metric_label() }>Memory</span>
-					<span class={ dashboard_hosts_metric_compact_value() }>{ host.MemoryUsageLabel }</span>
-				</div>
-				@UsageSparkline(UsageSparklineProps{
-					Label:   "Memory usage",
-					Values:  host.MemoryUsageSeries,
-					Variant: "memory",
-				})
-			</div>
-			<div class={ dashboard_hosts_metric() }>
-				<div class={ dashboard_hosts_metric_summary() }>
-					<span class={ dashboard_hosts_metric_label() }>Disk</span>
-					<span class={ dashboard_hosts_metric_compact_value() }>{ host.DiskUsageLabel }</span>
-				</div>
-			</div>
-			<div class={ dashboard_hosts_metric() }>
-				<div class={ dashboard_hosts_metric_summary() }>
-					<span class={ dashboard_hosts_metric_label() }>Network</span>
-					<span class={ dashboard_hosts_metric_compact_value() }>{ host.NetworkUsageLabel }</span>
-				</div>
-			</div>
+		<div id={ hostMetricsID(host.ID) } class={ dashboard_hosts_metrics() }>
+			@DashboardHostMetricsContent(host)
 		</div>
 		<div class={ dashboard_hosts_meta() }>
 			<span>{ host.SystemLabel }</span>
-			<span>{ host.LastMetricLabel }</span>
+			@DashboardHostLastMetric(host)
 			<div class={ dashboard_hosts_ip_disclosure() } data-host-ip-disclosure>
 				<button
 					type="button"
@@ -150,6 +115,67 @@ templ DashboardHostItemContent(host HostRow) {
 			}
 		</div>
 	</article>
+}
+
+templ DashboardHostStatus(host HostRow) {
+	<span id={ hostStatusID(host.ID) } data-dashboard-host-status={ host.Status }>
+		@badge.Badge(badge.BadgeProps{Variant: host.StatusVariant}) {
+			{ host.StatusLabel }
+		}
+	</span>
+}
+
+templ DashboardHostLastMetric(host HostRow) {
+	<span id={ hostLastMetricID(host.ID) }>{ host.LastMetricLabel }</span>
+}
+
+templ DashboardHostMetricsContent(host HostRow) {
+	<div class={ dashboard_hosts_metric() }>
+		<div class={ dashboard_hosts_metric_summary() }>
+			<span class={ dashboard_hosts_metric_label() }>CPU</span>
+			<span class={ dashboard_hosts_metric_compact_value() }>{ host.CPUUsageLabel }</span>
+		</div>
+		@UsageSparkline(UsageSparklineProps{
+			Label:   "CPU usage",
+			Values:  host.CPUUsageSeries,
+			Variant: "cpu",
+		})
+	</div>
+	<div class={ dashboard_hosts_metric() }>
+		<div class={ dashboard_hosts_metric_summary() }>
+			<span class={ dashboard_hosts_metric_label() }>Memory</span>
+			<span class={ dashboard_hosts_metric_compact_value() }>{ host.MemoryUsageLabel }</span>
+		</div>
+		@UsageSparkline(UsageSparklineProps{
+			Label:   "Memory usage",
+			Values:  host.MemoryUsageSeries,
+			Variant: "memory",
+		})
+	</div>
+	<div class={ dashboard_hosts_metric() }>
+		<div class={ dashboard_hosts_metric_summary() }>
+			<span class={ dashboard_hosts_metric_label() }>Disk</span>
+			<span class={ dashboard_hosts_metric_compact_value() }>{ host.DiskUsageLabel }</span>
+		</div>
+	</div>
+	<div class={ dashboard_hosts_metric() }>
+		<div class={ dashboard_hosts_metric_summary() }>
+			<span class={ dashboard_hosts_metric_label() }>Network</span>
+			<span class={ dashboard_hosts_metric_compact_value() }>{ host.NetworkUsageLabel }</span>
+		</div>
+	</div>
+}
+
+templ DashboardHostMetricFragmentsOOB(host HostRow) {
+	<span id={ hostStatusID(host.ID) } data-dashboard-host-status={ host.Status } hx-swap-oob="outerHTML">
+		@badge.Badge(badge.BadgeProps{Variant: host.StatusVariant}) {
+			{ host.StatusLabel }
+		}
+	</span>
+	<div id={ hostMetricsID(host.ID) } class={ dashboardHostsMetricsClass() } hx-swap-oob="outerHTML">
+		@DashboardHostMetricsContent(host)
+	</div>
+	<span id={ hostLastMetricID(host.ID) } hx-swap-oob="outerHTML">{ host.LastMetricLabel }</span>
 }
 
 type UsageSparklineProps struct {
@@ -192,8 +218,24 @@ func hostItemID(hostID string) string {
 	return "dashboard-host-" + hostID
 }
 
+func hostStatusID(hostID string) string {
+	return "dashboard-host-status-" + hostID
+}
+
+func hostMetricsID(hostID string) string {
+	return "dashboard-host-metrics-" + hostID
+}
+
+func hostLastMetricID(hostID string) string {
+	return "dashboard-host-last-metric-" + hostID
+}
+
 func dashboardHostsItemClass() string {
 	return dashboard_hosts_item().ClassName()
+}
+
+func dashboardHostsMetricsClass() string {
+	return dashboard_hosts_metrics().ClassName()
 }
 
 func hostStatusClass(status string) string {

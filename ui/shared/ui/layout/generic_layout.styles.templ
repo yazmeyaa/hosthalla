@@ -257,6 +257,25 @@ templ layout_styles() {
 			box-shadow: 0 14px 30px rgba(2, 6, 23, 0.22);
 		}
 
+		[data-dashboard-host-item]:has([data-dashboard-host-status="reporting"]),
+		[data-dashboard-host-item]:has([data-dashboard-host-status="healthy"]) {
+			--dashboard-host-accent: var(--success);
+		}
+
+		[data-dashboard-host-item]:has([data-dashboard-host-status="stale"]),
+		[data-dashboard-host-item]:has([data-dashboard-host-status="warning"]) {
+			--dashboard-host-accent: var(--warn);
+		}
+
+		[data-dashboard-host-item]:has([data-dashboard-host-status="waiting"]) {
+			--dashboard-host-accent: var(--primary);
+		}
+
+		[data-dashboard-host-item]:has([data-dashboard-host-status="offline"]),
+		[data-dashboard-host-item]:has([data-dashboard-host-status="unavailable"]) {
+			--dashboard-host-accent: var(--danger);
+		}
+
 		@media (max-width: 760px) {
 			[data-dashboard-host-card] {
 				padding: 12px;
