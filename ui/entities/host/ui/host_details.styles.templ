@@ -109,19 +109,31 @@ css host_details_ip_value_masked() {
 css host_details_summary() {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	margin-bottom: 12px;
+	gap: 8px;
+	min-width: 0;
+	padding: var(--space-10);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(11, 22, 38, 0.54);
 }
 
 css host_details_summary_row() {
 	margin: 0;
+	color: var(--text);
+	font-size: 0.92rem;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
 }
 
 css host_system_info_section() {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-	margin-bottom: 12px;
+	min-width: 0;
+	padding: var(--space-10);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(11, 22, 38, 0.54);
 }
 
 css host_system_info_title() {
@@ -137,14 +149,16 @@ css host_system_info_empty() {
 
 css host_system_info_grid() {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 	gap: 8px;
+	min-width: 0;
 }
 
 css host_system_info_item() {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
+	min-width: 0;
 	padding: 8px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
@@ -163,5 +177,5 @@ css host_system_info_label() {
 css host_system_info_value() {
 	font-size: 0.9rem;
 	color: var(--text);
-	word-break: break-word;
+	overflow-wrap: anywhere;
 }

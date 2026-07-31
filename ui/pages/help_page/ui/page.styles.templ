@@ -19,7 +19,11 @@ func CSSClasses() []templ.CSSClass {
 		help_page_link(),
 		help_page_anchor_nav(),
 		help_page_cli_group(),
-		help_page_image_placeholder(),
+		help_page_screenshot(),
+		help_page_screenshot_compact(),
+		help_page_screenshot_link(),
+		help_page_screenshot_image(),
+		help_page_screenshot_caption(),
 	}
 }
 
@@ -150,15 +154,45 @@ css help_page_cli_group() {
 	padding-top: 4px;
 }
 
-css help_page_image_placeholder() {
-	display: grid;
-	place-items: center;
-	min-height: 150px;
-	border: 1px dashed var(--border-interactive-subtle-strong);
+css help_page_screenshot() {
+	margin: 0;
+	box-sizing: border-box;
+	align-self: center;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+	max-width: 840px;
+	padding: 8px;
+	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
-	background: rgba(148, 163, 184, 0.08);
+	background: rgba(17, 28, 45, 0.42);
+	box-shadow: 0 14px 34px rgba(2, 6, 23, 0.18);
+}
+
+css help_page_screenshot_compact() {
+	max-width: 520px;
+}
+
+css help_page_screenshot_link() {
+	display: block;
+	overflow: hidden;
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: var(--radius-sm);
+	background: rgba(2, 6, 23, 0.28);
+}
+
+css help_page_screenshot_image() {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+css help_page_screenshot_caption() {
+	margin: 0;
+	padding-inline: 2px;
 	color: var(--muted);
-	font-size: 0.9rem;
-	font-weight: 700;
+	font-size: 0.84rem;
+	line-height: 1.4;
 	text-align: center;
 }

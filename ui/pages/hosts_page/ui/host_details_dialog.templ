@@ -15,8 +15,8 @@ templ HostDetailsDialog(
 	detailsDialogID string,
 	addManagementMethodDialogID string,
 ) {
-	@modal.Modal(modal.ModalProps{ID: detailsDialogID, AriaLabel: "Host Details"}) {
-		@modal.Content() {
+	@modal.Modal(modal.ModalProps{ID: detailsDialogID, ClassName: host_details_dialog().ClassName(), AriaLabel: "Host Details"}) {
+		<div class={ host_details_dialog_content() }>
 			{{
 				agentRegisterStatusID := "host-agent-register-status-" + host.ID.String()
 				agentRegisterCommandID := "host-agent-register-command-" + host.ID.String()
@@ -107,6 +107,6 @@ templ HostDetailsDialog(
 					Add Method
 				}
 			}
-		}
+		</div>
 	}
 }

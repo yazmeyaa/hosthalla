@@ -76,11 +76,31 @@ css host_tags_suggestion() {
 	user-select: none;
 }
 
+css host_details_dialog() {
+	width: min(760px, calc(100vw - 24px));
+	max-height: min(780px, calc(100dvh - 24px));
+	overflow: hidden;
+}
+
+css host_details_dialog_content() {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-12);
+	max-height: min(780px, calc(100dvh - 24px));
+	padding: var(--space-14);
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
 css host_tags_section() {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-	margin-bottom: 12px;
+	padding: var(--space-10);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(11, 22, 38, 0.54);
 }
 
 css host_tags_title() {
@@ -104,7 +124,10 @@ css host_management_methods_section() {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-	margin-bottom: 8px;
+	padding: var(--space-10);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(11, 22, 38, 0.54);
 }
 
 css host_management_methods_title() {
@@ -200,7 +223,10 @@ css host_agent_registration_section() {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-	margin-bottom: 12px;
+	padding: var(--space-10);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(11, 22, 38, 0.54);
 }
 
 css host_agent_registration_title() {
@@ -217,6 +243,7 @@ css host_agent_registration_description() {
 css host_agent_registration_actions() {
 	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
 	gap: 8px;
 }
 
@@ -228,9 +255,12 @@ css host_agent_registration_status() {
 }
 
 css host_agent_registration_command() {
+	box-sizing: border-box;
 	width: 100%;
+	max-width: 100%;
 	font-family: var(--font-mono);
 	font-size: 0.85rem;
+	line-height: 1.45;
 	padding: 10px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);

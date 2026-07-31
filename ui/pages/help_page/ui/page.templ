@@ -98,8 +98,8 @@ templ HelpInstallAgentPage() {
 			<li>Run that command on the target machine, not on the Hosthalla server.</li>
 			<li>Start the agent and return to Hosthalla to confirm that the host begins reporting.</li>
 		</ol>
-		@HelpImagePlaceholder("Hosts page with selected host")
-		@HelpImagePlaceholder("Register Agent dialog")
+		@HelpScreenshot("/assets/static/help.agents.001_select_host.png", "Hosts page with selected host", "Open host actions from the Hosts page", false)
+		@HelpScreenshot("/assets/static/help.agents.002_register_agent.png", "Register Agent dialog", "Generate and copy the registration command", true)
 		@HelpNote("The generated command is the safer path because it already contains the correct host ID and token.")
 		<h3 class={ help_page_subtitle() }>CLI</h3>
 		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla agent register --host <server-url> --host-id <uuid> --token <hht_...>
@@ -126,8 +126,8 @@ templ HelpCreateAPIKeyPage() {
 			<li>Create the token.</li>
 			<li>Copy the plain token before closing the result dialog.</li>
 		</ol>
-		@HelpImagePlaceholder("Administration API tokens section")
-		@HelpImagePlaceholder("Create API token dialog")
+		@HelpScreenshot("/assets/static/help.api_tokens.001_administration_page.png", "Administration API tokens section", "Open API tokens in Administration", false)
+		@HelpScreenshot("/assets/static/help.api_tokens.002_create_token.png", "Create API token dialog", "Create a token and copy it immediately", true)
 		@HelpNote("If the plain token is lost, revoke it and create a new one. Hosthalla stores only the hashed token.")
 		<h3 class={ help_page_subtitle() }>CLI</h3>
 		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: "hosthalla tokens create --user <user-id-or-username> --name <name> [--scope <scope>] [--ttl <duration>]"})
@@ -151,8 +151,8 @@ templ HelpCreateUserPage() {
 			<li>Enter a temporary password or the final password you want to use.</li>
 			<li>Save the user and share credentials through your normal secure channel.</li>
 		</ol>
-		@HelpImagePlaceholder("Administration users section")
-		@HelpImagePlaceholder("Create user dialog")
+		@HelpScreenshot("/assets/static/help.users.001_administration_page.png", "Administration users section", "Open Users in Administration", false)
+		@HelpScreenshot("/assets/static/help.users.002_create_user.png", "Create user dialog", "Create the user account", true)
 		@HelpNote("For the first administrator on a fresh installation, use `hosthalla bootstrap` instead of creating a user from the UI.")
 		<h3 class={ help_page_subtitle() }>CLI</h3>
 		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: "hosthalla users create <username> <password>"})
@@ -282,8 +282,13 @@ templ HelpReportBugPage() {
 	</article>
 }
 
-templ HelpImagePlaceholder(label string) {
-	<div class={ help_page_image_placeholder() }>{ label }</div>
+templ HelpScreenshot(src string, alt string, caption string, compact bool) {
+	<figure class={ help_page_screenshot(), templ.KV(help_page_screenshot_compact(), compact) }>
+		<a class={ help_page_screenshot_link() } href={ src } target="_blank" rel="noopener noreferrer">
+			<img class={ help_page_screenshot_image() } src={ src } alt={ alt } loading="lazy"/>
+		</a>
+		<figcaption class={ help_page_screenshot_caption() }>{ caption }</figcaption>
+	</figure>
 }
 
 templ HelpNote(value string) {
