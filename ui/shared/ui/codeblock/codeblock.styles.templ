@@ -1,0 +1,45 @@
+package codeblock
+
+func CSSClasses() []templ.CSSClass {
+	return []templ.CSSClass{
+		codeblock_shell(),
+		codeblock_copy_button(),
+		codeblock_pre(),
+	}
+}
+
+css codeblock_shell() {
+	position: relative;
+}
+
+css codeblock_copy_button() {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	min-height: 28px;
+	padding: 4px 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: rgba(11, 22, 38, 0.9);
+	color: var(--text-neutral-soft);
+	font-family: inherit;
+	font-size: 0.78rem;
+	font-weight: 700;
+	line-height: 1;
+	cursor: pointer;
+}
+
+css codeblock_pre() {
+	margin: 0;
+	overflow-x: auto;
+	padding: 12px;
+	padding-right: 76px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: rgba(2, 6, 23, 0.36);
+	color: var(--text-info-soft);
+	font-family: var(--font-mono);
+	font-size: 0.86rem;
+	line-height: 1.5;
+	white-space: pre-wrap;
+}

@@ -35,6 +35,7 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 						<li>@AuthenticatedNavLink(props.Path, "/dashboard", "Dashboard")</li>
 						<li>@AuthenticatedNavLink(props.Path, "/hosts", "Hosts")</li>
 						<li>@AuthenticatedNavLink(props.Path, "/administration", "Administration")</li>
+						<li>@AuthenticatedNavLink(props.Path, "/help", "Help")</li>
 					</ul>
 				</nav>
 				<div class={ authenticated_profile() }>

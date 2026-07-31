@@ -16,6 +16,7 @@ import (
 	ui_assets "github.com/yazmeyaa/hosthalla/ui/app/assets"
 	administration_page "github.com/yazmeyaa/hosthalla/ui/pages/administration_page"
 	dashboard_page "github.com/yazmeyaa/hosthalla/ui/pages/dashboard"
+	help_page "github.com/yazmeyaa/hosthalla/ui/pages/help_page"
 	hosts_page "github.com/yazmeyaa/hosthalla/ui/pages/hosts_page"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
 )
@@ -45,12 +46,15 @@ func NewRouter(params NewRouterParams) http.Handler {
 		ProfileService: params.AuthService,
 		EventBus:       params.EventBus,
 	})
+	helpHandler := handlers.NewHelpHandler(params.AuthService, params.Logger)
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /assets/", staticAssetsHandler(http.StripPrefix("/assets/", http.FileServer(http.FS(ui_assets.Files)))))
 
 	mux.Handle("GET /", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(indexHandler.Index)))
 	mux.Handle("GET /dashboard", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(dashboardHandler.Dashboard)))
+	mux.Handle("GET /help", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(helpHandler.Help)))
+	mux.Handle("GET /help/{topic}", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(helpHandler.Help)))
 
 	mux.HandleFunc("GET /auth", authHandler.Auth)
 	mux.HandleFunc("POST /auth/login", authHandler.Login)
@@ -98,6 +102,7 @@ func cssClasses() []templ.CSSClass {
 	classes = append(classes, dashboard_page.CSSClasses()...)
 	classes = append(classes, hosts_page.CSSClasses()...)
 	classes = append(classes, administration_page.CSSClasses()...)
+	classes = append(classes, help_page.CSSClasses()...)
 	return classes
 }
 

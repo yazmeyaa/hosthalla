@@ -1,0 +1,164 @@
+package help_page_ui
+
+func CSSClasses() []templ.CSSClass {
+	return []templ.CSSClass{
+		help_page_shell(),
+		help_page_header(),
+		help_page_title(),
+		help_page_layout(),
+		help_page_nav(),
+		help_page_nav_item(),
+		help_page_nav_item_active(),
+		help_page_content(),
+		help_page_article(),
+		help_page_section_title(),
+		help_page_subtitle(),
+		help_page_lead(),
+		help_page_text(),
+		help_page_list(),
+		help_page_link(),
+		help_page_anchor_nav(),
+		help_page_cli_group(),
+		help_page_image_placeholder(),
+	}
+}
+
+css help_page_shell() {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+css help_page_header() {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 12px;
+	padding-inline: 12px;
+}
+
+css help_page_title() {
+	margin: 0;
+}
+
+css help_page_layout() {
+	display: grid;
+	grid-template-columns: 220px minmax(0, 1fr);
+	gap: 14px;
+	align-items: start;
+	padding-inline: 12px;
+}
+
+css help_page_nav() {
+	display: grid;
+	gap: 6px;
+	align-content: start;
+	padding: 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(17, 28, 45, 0.42);
+}
+
+css help_page_nav_item() {
+	display: flex;
+	align-items: center;
+	min-height: 38px;
+	padding: 8px 10px;
+	border: 1px solid transparent;
+	border-radius: var(--radius-sm);
+	color: var(--text-neutral-soft);
+	text-decoration: none;
+	font-size: 0.9rem;
+	font-weight: 700;
+}
+
+css help_page_nav_item_active() {
+	border-color: var(--border-interactive-info);
+	background: var(--surface-interactive-info);
+	color: var(--text-info-soft);
+	box-shadow: inset 3px 0 0 var(--primary);
+}
+
+css help_page_content() {
+	min-width: 0;
+	min-height: 520px;
+	padding: 18px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(11, 22, 38, 0.36);
+}
+
+css help_page_article() {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+css help_page_section_title() {
+	margin: 0;
+	font-size: 1.2rem;
+}
+
+css help_page_subtitle() {
+	margin: 8px 0 0;
+	font-size: 0.96rem;
+}
+
+css help_page_lead() {
+	margin: 0;
+	color: var(--text);
+	font-size: 1rem;
+	line-height: 1.6;
+}
+
+css help_page_text() {
+	margin: 0;
+	color: var(--text-neutral-soft);
+	line-height: 1.55;
+}
+
+css help_page_list() {
+	margin: 0;
+	padding-left: 22px;
+	color: var(--text-neutral-soft);
+	line-height: 1.55;
+}
+
+css help_page_link() {
+	color: var(--text-link);
+	font-weight: 700;
+	text-decoration-line: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+
+css help_page_anchor_nav() {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 14px;
+	padding: 10px 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: rgba(17, 28, 45, 0.42);
+}
+
+css help_page_cli_group() {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	scroll-margin-top: 18px;
+	padding-top: 4px;
+}
+
+css help_page_image_placeholder() {
+	display: grid;
+	place-items: center;
+	min-height: 150px;
+	border: 1px dashed var(--border-interactive-subtle-strong);
+	border-radius: var(--radius-md);
+	background: rgba(148, 163, 184, 0.08);
+	color: var(--muted);
+	font-size: 0.9rem;
+	font-weight: 700;
+	text-align: center;
+}

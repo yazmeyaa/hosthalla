@@ -1,0 +1,320 @@
+package help_page_ui
+
+import "github.com/yazmeyaa/hosthalla/ui/shared/ui/callout"
+import "github.com/yazmeyaa/hosthalla/ui/shared/ui/codeblock"
+import "github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
+
+type HelpPageProps struct {
+	AuthLayoutProps layout.AuthenticatedLayoutProps
+	ActiveTopic     string
+}
+
+type helpNavItem struct {
+	Topic string
+	Href  string
+	Label string
+}
+
+templ HelpPage(props HelpPageProps) {
+	@layout.AuthenticatedLayout(props.AuthLayoutProps) {
+		@HelpPageContent(props)
+	}
+}
+
+templ HelpPageContent(props HelpPageProps) {
+	@HelpResponsiveStyles()
+	<div class={ help_page_shell() }>
+		<header class={ help_page_header() }>
+			<h1 class={ help_page_title() }>Help</h1>
+		</header>
+		<div class={ help_page_layout() }>
+			<nav
+				class={ help_page_nav() }
+				aria-label="Help navigation"
+				hx-boost="true"
+				hx-target="#app-content"
+				hx-select="#app-content"
+				hx-swap="outerHTML show:none"
+				hx-push-url="true"
+				>
+					for _, item := range helpNavItems() {
+						if props.ActiveTopic == item.Topic {
+							<a class={ help_page_nav_item(), help_page_nav_item_active(), "ui-interactive-control" } href={ item.Href } aria-current="page">{ item.Label }</a>
+						} else {
+							<a class={ help_page_nav_item(), "ui-interactive-control" } href={ item.Href }>{ item.Label }</a>
+						}
+					}
+				</nav>
+				<main class={ help_page_content() } id="help-content" tabindex="-1">
+					switch props.ActiveTopic {
+						case "install-agent":
+							@HelpInstallAgentPage()
+						case "create-api-key":
+						@HelpCreateAPIKeyPage()
+					case "create-user":
+						@HelpCreateUserPage()
+					case "cli-usage":
+						@HelpCLIUsagePage()
+					case "update-hosthalla":
+						@HelpUpdateHosthallaPage()
+					case "report-bug":
+						@HelpReportBugPage()
+					default:
+						@HelpInstallServerPage()
+				}
+			</main>
+		</div>
+	</div>
+	@codeblock.CodeBlockScripts()
+}
+
+templ HelpInstallServerPage() {
+	<article class={ help_page_article() }>
+		<h2 class={ help_page_section_title() }>Install hosthalla to server</h2>
+		<p class={ help_page_lead() }>Install Hosthalla on the machine that will run the web interface and store your infrastructure inventory.</p>
+		<p class={ help_page_text() }>This is usually the first step on a new server. The installer downloads the release binary, puts it into the system path, and makes the `hosthalla` command available for setup, migrations, users, tokens, and the web server.</p>
+		@HelpNote("After installation, generate the config, check the database settings, run bootstrap, and then start the server.")
+		<h3 class={ help_page_subtitle() }>CLI</h3>
+		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: "curl -fsSL https://raw.githubusercontent.com/yazmeyaa/hosthalla/main/scripts/install_hosthalla.sh | bash"})
+		<p class={ help_page_text() }>A successful install means the `hosthalla` command is available on the server. You can verify it with `hosthalla version`.</p>
+	</article>
+}
+
+templ HelpInstallAgentPage() {
+	<article class={ help_page_article() }>
+		<h2 class={ help_page_section_title() }>Install and register agent</h2>
+		<p class={ help_page_lead() }>Register an agent when you want a host to report live state back to Hosthalla.</p>
+		<p class={ help_page_text() }>A host record can exist without an agent, but then Hosthalla only knows the data you entered manually. After registration, the target machine starts sending heartbeat, system information, and resource metrics such as CPU, memory, disk, and network usage.</p>
+			<h3 class={ help_page_subtitle() }>UI</h3>
+				<ol class={ help_page_list() }>
+					<li>
+						<span>Open </span>
+						<a class={ help_page_link() } href="/hosts">Hosts</a>
+						{ " and find the machine you want to monitor." }
+					</li>
+			<li>If the machine is not listed yet, create a host first.</li>
+			<li>Open the host actions and click Register Agent.</li>
+			<li>Copy the generated command. It includes the server URL, host ID, and a token.</li>
+			<li>Run that command on the target machine, not on the Hosthalla server.</li>
+			<li>Start the agent and return to Hosthalla to confirm that the host begins reporting.</li>
+		</ol>
+		@HelpImagePlaceholder("Hosts page with selected host")
+		@HelpImagePlaceholder("Register Agent dialog")
+		@HelpNote("The generated command is the safer path because it already contains the correct host ID and token.")
+		<h3 class={ help_page_subtitle() }>CLI</h3>
+		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla agent register --host <server-url> --host-id <uuid> --token <hht_...>
+hosthalla agent run`})
+		<p class={ help_page_text() }>Once the agent is running, Hosthalla should show recent heartbeat and metrics for that host.</p>
+	</article>
+}
+
+templ HelpCreateAPIKeyPage() {
+	<article class={ help_page_article() }>
+		<h2 class={ help_page_section_title() }>Create API key</h2>
+		<p class={ help_page_lead() }>Create an API key when something needs to talk to Hosthalla without signing in through the browser.</p>
+		<p class={ help_page_text() }>API keys are meant for automation: scripts, integrations, and agent registration flows. Each key belongs to a user, can have scopes, and can optionally expire. The plain token is shown only once, so it needs to be copied immediately.</p>
+			<h3 class={ help_page_subtitle() }>UI</h3>
+				<ol class={ help_page_list() }>
+					<li>
+						<span>Open </span>
+						<a class={ help_page_link() } href="/administration/tokens">API tokens</a>
+						{ " in Administration." }
+					</li>
+			<li>Click Create token.</li>
+			<li>Enter a clear token name, for example `backup-script` or `agent-registration`.</li>
+			<li>Select scopes and expiration if your setup uses them.</li>
+			<li>Create the token.</li>
+			<li>Copy the plain token before closing the result dialog.</li>
+		</ol>
+		@HelpImagePlaceholder("Administration API tokens section")
+		@HelpImagePlaceholder("Create API token dialog")
+		@HelpNote("If the plain token is lost, revoke it and create a new one. Hosthalla stores only the hashed token.")
+		<h3 class={ help_page_subtitle() }>CLI</h3>
+		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: "hosthalla tokens create --user <user-id-or-username> --name <name> [--scope <scope>] [--ttl <duration>]"})
+	</article>
+}
+
+templ HelpCreateUserPage() {
+	<article class={ help_page_article() }>
+		<h2 class={ help_page_section_title() }>Create new user</h2>
+		<p class={ help_page_lead() }>Create a user when another person needs access, or when automation should be owned by a separate account.</p>
+		<p class={ help_page_text() }>Users can sign in to the web UI and can own API tokens. Keeping people and automation on separate users makes it easier to see who created a token, rotate access, or remove access later.</p>
+			<h3 class={ help_page_subtitle() }>UI</h3>
+				<ol class={ help_page_list() }>
+					<li>
+						<span>Open </span>
+						<a class={ help_page_link() } href="/administration/users">Users</a>
+						{ " in Administration." }
+					</li>
+			<li>Click Create user.</li>
+			<li>Enter the username.</li>
+			<li>Enter a temporary password or the final password you want to use.</li>
+			<li>Save the user and share credentials through your normal secure channel.</li>
+		</ol>
+		@HelpImagePlaceholder("Administration users section")
+		@HelpImagePlaceholder("Create user dialog")
+		@HelpNote("For the first administrator on a fresh installation, use `hosthalla bootstrap` instead of creating a user from the UI.")
+		<h3 class={ help_page_subtitle() }>CLI</h3>
+		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: "hosthalla users create <username> <password>"})
+	</article>
+}
+
+templ HelpCLIUsagePage() {
+	<article class={ help_page_article() }>
+		<h2 class={ help_page_section_title() }>CLI usage</h2>
+		<p class={ help_page_lead() }>The CLI is the operational entry point for setup, maintenance, and automation.</p>
+		<p class={ help_page_text() }>Use it when you are working directly on the server, scripting a repeatable action, checking database state, managing users, or running an agent on a monitored machine. Commands are grouped by the same tree exposed by `hosthalla help`.</p>
+			@HelpCallout("info", "Most server-side commands read the default config. Pass `--config <file>` when you need to use another config file. Use `--json` when output is consumed by scripts.")
+			<nav class={ help_page_anchor_nav() } aria-label="CLI sections">
+				<a class={ help_page_link() } href="#cli-global">Global</a>
+				<a class={ help_page_link() } href="#cli-config">Config</a>
+				<a class={ help_page_link() } href="#cli-bootstrap">Bootstrap</a>
+				<a class={ help_page_link() } href="#cli-db">Database</a>
+				<a class={ help_page_link() } href="#cli-users">Users</a>
+				<a class={ help_page_link() } href="#cli-tokens">Tokens</a>
+				<a class={ help_page_link() } href="#cli-hosts">Hosts</a>
+				<a class={ help_page_link() } href="#cli-agents">Agents</a>
+				<a class={ help_page_link() } href="#cli-agent">Local agent</a>
+			</nav>
+		<section class={ help_page_cli_group() } id="cli-global">
+			<h3 class={ help_page_subtitle() }>Global</h3>
+			<p class={ help_page_text() }>These commands are useful for discovery, checking the installed version, and starting the web server.</p>
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla [--config <file>] [--json] <command> [arguments]
+
+hosthalla help
+hosthalla version
+hosthalla serve`})
+		</section>
+		<section class={ help_page_cli_group() } id="cli-config">
+			<h3 class={ help_page_subtitle() }>Config</h3>
+			<p class={ help_page_text() }>Use `config` commands before the first run or when you need to inspect the current server configuration.</p>
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla config generate [--path <file>] [--overwrite]
+hosthalla config show [--path <file>]
+hosthalla config validate [--path <file>]`})
+		</section>
+		<section class={ help_page_cli_group() } id="cli-bootstrap">
+			<h3 class={ help_page_subtitle() }>Bootstrap</h3>
+			<p class={ help_page_text() }>Use `bootstrap` for first-time setup. It creates the config if it is missing, applies migrations, and can create the first user.</p>
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: "hosthalla bootstrap [--username <username> --password <password>]"})
+		</section>
+		<section class={ help_page_cli_group() } id="cli-db">
+			<h3 class={ help_page_subtitle() }>Database</h3>
+			<p class={ help_page_text() }>Use `db` commands to apply migrations, check migration state, or roll back one migration.</p>
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla db migrate
+hosthalla db status [--json]
+hosthalla db rollback`})
+		</section>
+		<section class={ help_page_cli_group() } id="cli-users">
+			<h3 class={ help_page_subtitle() }>Users</h3>
+			<p class={ help_page_text() }>Use `users` commands to manage web UI accounts and passwords from the server shell.</p>
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla users create <username> <password>
+hosthalla users list [--json]
+hosthalla users show <user-id-or-username> [--json]
+hosthalla users password set <user-id-or-username> <password>
+hosthalla users delete <user-id-or-username>`})
+		</section>
+		<section class={ help_page_cli_group() } id="cli-tokens">
+			<h3 class={ help_page_subtitle() }>Tokens</h3>
+			<p class={ help_page_text() }>Use `tokens` commands to create and rotate API access for scripts, integrations, and registration flows.</p>
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla tokens create --user <user-id-or-username> --name <name> [--scope <scope>] [--ttl <duration>] [--json]
+hosthalla tokens list [--user <user-id-or-username>] [--json]
+hosthalla tokens show <token-id> [--json]
+hosthalla tokens revoke <token-id>`})
+			@HelpCallout("warning", "`tokens create` prints the plain token only once. Store it immediately or create a new token later.")
+		</section>
+		<section class={ help_page_cli_group() } id="cli-hosts">
+			<h3 class={ help_page_subtitle() }>Hosts</h3>
+			<p class={ help_page_text() }>Use `hosts` commands to inspect or remove host records from the inventory.</p>
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla hosts list [--json]
+hosthalla hosts show <host-id> [--json]
+hosthalla hosts delete <host-id>`})
+		</section>
+		<section class={ help_page_cli_group() } id="cli-agents">
+			<h3 class={ help_page_subtitle() }>Agents</h3>
+			<p class={ help_page_text() }>Use `agents` commands on the Hosthalla server to inspect or remove registered monitoring agents.</p>
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla agents list [--json]
+hosthalla agents show <agent-id> [--json]
+hosthalla agents delete <agent-id>`})
+		</section>
+		<section class={ help_page_cli_group() } id="cli-agent">
+			<h3 class={ help_page_subtitle() }>Local agent</h3>
+			<p class={ help_page_text() }>Use `agent` commands on the monitored machine. Register writes the local agent config, and run starts the worker.</p>
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla agent register --host <server-url> --host-id <uuid> --token <hht_...> [--scheme <http|https>] [--config <file>]
+hosthalla agent run [--config <file>]`})
+		</section>
+	</article>
+	}
+
+	templ HelpUpdateHosthallaPage() {
+		<article class={ help_page_article() }>
+		<h2 class={ help_page_section_title() }>Update hosthalla</h2>
+		<p class={ help_page_lead() }>Update Hosthalla by replacing the installed binary with the latest release.</p>
+		<p class={ help_page_text() }>The update flow is intentionally the same as installation. Run the installer on the Hosthalla server, then restart the process or service that runs `hosthalla serve`.</p>
+		@HelpNote("Before updating, keep a copy of your config and make sure the database is backed up according to your normal server routine.")
+		<h3 class={ help_page_subtitle() }>CLI</h3>
+		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: "curl -fsSL https://raw.githubusercontent.com/yazmeyaa/hosthalla/main/scripts/install_hosthalla.sh | bash"})
+		<p class={ help_page_text() }>After the binary is replaced, check `hosthalla version` and start the server again.</p>
+	</article>
+}
+
+templ HelpReportBugPage() {
+	<article class={ help_page_article() }>
+		<h2 class={ help_page_section_title() }>Report bug</h2>
+		<p class={ help_page_lead() }>Create a bug report when Hosthalla behaves differently from what you expected, crashes, shows incorrect data, or a workflow cannot be completed.</p>
+		<p class={ help_page_text() }>A good issue should make the problem easy to reproduce. The more concrete the report is, the faster it is to understand what broke and where to look.</p>
+		<h3 class={ help_page_subtitle() }>Create issue</h3>
+			<p class={ help_page_text() }>
+				<span>Open </span>
+				<a class={ help_page_link() } href="https://github.com/yazmeyaa/hosthalla/issues/new" target="_blank" rel="noopener noreferrer">GitHub Issues</a>
+				{ " and describe the problem there." }
+			</p>
+		<h3 class={ help_page_subtitle() }>What to include</h3>
+		<ul class={ help_page_list() }>
+			<li>What you were trying to do.</li>
+			<li>What happened instead.</li>
+			<li>What you expected to happen.</li>
+			<li>Step-by-step reproduction notes.</li>
+			<li>Screenshots or screen recordings if the issue is visible in the UI.</li>
+			<li>Hosthalla version, operating system, browser, and database version if relevant.</li>
+			<li>Relevant logs or error messages, with secrets, tokens, passwords, and private keys removed.</li>
+		</ul>
+		@HelpCallout("warning", "Please remove sensitive data before attaching logs or screenshots. API tokens, SSH secrets, public server URLs, and private IPs may be sensitive in your environment.")
+	</article>
+}
+
+templ HelpImagePlaceholder(label string) {
+	<div class={ help_page_image_placeholder() }>{ label }</div>
+}
+
+templ HelpNote(value string) {
+	@HelpCallout("info", value)
+}
+
+templ HelpCallout(variant string, value string) {
+	@callout.Callout(callout.CalloutProps{Variant: variant}) {
+		{ value }
+	}
+}
+
+templ HelpResponsiveStyles() {
+	<style>
+		@media (max-width: 760px) {
+			.{ help_page_layout().ClassName() } {
+				grid-template-columns: 1fr;
+				padding-inline: 0;
+			}
+		}
+	</style>
+}
+
+	func helpNavItems() []helpNavItem {
+		return []helpNavItem{
+			{Topic: "install-server", Href: "/help/install-server", Label: "Install hosthalla to server"},
+		{Topic: "install-agent", Href: "/help/install-agent", Label: "Install and register agent"},
+		{Topic: "create-api-key", Href: "/help/create-api-key", Label: "Create API key"},
+		{Topic: "create-user", Href: "/help/create-user", Label: "Create new user"},
+		{Topic: "cli-usage", Href: "/help/cli-usage", Label: "CLI usage"},
+		{Topic: "update-hosthalla", Href: "/help/update-hosthalla", Label: "Update hosthalla"},
+			{Topic: "report-bug", Href: "/help/report-bug", Label: "Report bug"},
+		}
+	}
