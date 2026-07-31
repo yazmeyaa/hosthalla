@@ -1,0 +1,47 @@
+package callout
+
+func CSSClasses() []templ.CSSClass {
+	return []templ.CSSClass{
+		callout_base(),
+		callout_icon(),
+		callout_content(),
+		callout_info(),
+		callout_warning(),
+	}
+}
+
+css callout_base() {
+	display: grid;
+	grid-template-columns: 22px minmax(0, 1fr);
+	gap: 10px;
+	align-items: start;
+	margin: 0;
+	padding: 10px 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	line-height: 1.5;
+}
+
+css callout_icon() {
+	display: inline-grid;
+	place-items: center;
+	width: 20px;
+	height: 20px;
+	margin-top: 1px;
+}
+
+css callout_content() {
+	min-width: 0;
+}
+
+css callout_info() {
+	border-color: var(--border-interactive-info);
+	background: rgba(34, 211, 238, 0.08);
+	color: var(--text-info-soft);
+}
+
+css callout_warning() {
+	border-color: var(--border-interactive-warning);
+	background: rgba(245, 158, 11, 0.12);
+	color: var(--text-warning-muted);
+}

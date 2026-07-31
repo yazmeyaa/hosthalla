@@ -1,0 +1,44 @@
+package codeblock
+
+type CodeBlockProps struct {
+	Code string
+}
+
+templ CodeBlock(props CodeBlockProps) {
+	<div class={ codeblock_shell() } data-codeblock>
+		<button class={ codeblock_copy_button(), "ui-interactive-control" } type="button" data-codeblock-copy>Copy</button>
+		<pre class={ codeblock_pre() }><code>{ props.Code }</code></pre>
+	</div>
+}
+
+templ CodeBlockScripts() {
+	<script>
+		(function() {
+			if (window.__codeblockCopyBound) {
+				return;
+			}
+			window.__codeblockCopyBound = true;
+
+			document.addEventListener("click", function(event) {
+				const button = event.target.closest("[data-codeblock-copy]");
+				if (!button) {
+					return;
+				}
+
+				const shell = button.closest("[data-codeblock]");
+				const code = shell && shell.querySelector("code");
+				if (!code || !navigator.clipboard) {
+					return;
+				}
+
+				navigator.clipboard.writeText(code.textContent || "").then(function() {
+					const previousText = button.textContent;
+					button.textContent = "Copied";
+					window.setTimeout(function() {
+						button.textContent = previousText || "Copy";
+					}, 1200);
+				});
+			});
+		})();
+	</script>
+}
