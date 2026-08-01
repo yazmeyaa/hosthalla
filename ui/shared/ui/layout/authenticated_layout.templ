@@ -12,7 +12,7 @@ type AuthenticatedLayoutProps struct {
 
 templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 	@GenericLayout(GenericLayoutProps{Title: props.Title}) {
-		<div class={ authenticated_shell() }>
+		<div class={ authenticated_shell() } data-authenticated-shell>
 			<header class={ authenticated_header() }>
 				<span class={ authenticated_header_motif() } aria-hidden="true"></span>
 				<div class={ authenticated_brand() }>
@@ -42,7 +42,7 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 					@ThemeSwitcher()
 					<div class={ authenticated_profile() }>
 						<p class={ authenticated_profile_text() }>Logged in as <span>{ props.Profile.Username }</span></p>
-						<form method="post" action="/auth/logout">
+						<form class={ authenticated_profile_form() } method="post" action="/auth/logout">
 							@button.Button(button.ButtonProps{Type: "submit", Variant: "secondary"}) {
 								Log out
 							}

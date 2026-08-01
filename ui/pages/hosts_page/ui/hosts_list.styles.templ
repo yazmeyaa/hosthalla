@@ -74,7 +74,7 @@ func CSSClasses() []templ.CSSClass {
 }
 
 css hosts_inventory() {
-	--hosts-row-height: 60px;
+	--hosts-row-height: 66px;
 	--hosts-cell-padding-x: 10px;
 	display: flex;
 	flex-direction: column;
@@ -328,8 +328,8 @@ css hosts_sort_button() {
 
 css hosts_sort_indicator() {
 	color: var(--primary);
-	font-size: 0.72rem;
-	opacity: 0.72;
+	font-size: 0.76rem;
+	opacity: 0.82;
 }
 
 css hosts_inventory_row() {
@@ -407,10 +407,11 @@ css hosts_status_badge() {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--space-4);
-	padding: 0;
+	min-height: 24px;
+	padding: 2px 8px;
 	border-radius: var(--radius-sm);
-	border: 0;
-	background: transparent;
+	border: 1px solid var(--border-interactive-subtle);
+	background: var(--surface-interactive-subtle);
 	color: var(--muted);
 	font-size: 0.76rem;
 	font-weight: 600;
@@ -430,7 +431,9 @@ css hosts_status_badge_waiting() {
 }
 
 css hosts_status_badge_offline() {
-	color: var(--muted);
+	border-color: var(--border-interactive-danger);
+	background: var(--surface-interactive-danger);
+	color: var(--text-danger-muted);
 }
 
 css hosts_status_badge_warning() {
@@ -575,9 +578,10 @@ css hosts_inventory_no_results() {
 templ HostsInventoryStyles() {
 	<style>
 		[data-hosts-inventory] table th {
-			padding: 9px var(--hosts-cell-padding-x);
+			padding: 10px var(--hosts-cell-padding-x);
 			border-bottom: 1px solid var(--border);
-			color: var(--muted);
+			background: var(--surface-panel);
+			color: var(--text-neutral-soft);
 			font-size: 0.76rem;
 			font-weight: 700;
 			text-align: left;
@@ -586,7 +590,7 @@ templ HostsInventoryStyles() {
 
 		[data-hosts-inventory] table td {
 			height: var(--hosts-row-height);
-			padding: 7px var(--hosts-cell-padding-x);
+			padding: 9px var(--hosts-cell-padding-x);
 			border-bottom: 1px solid var(--border-row);
 			vertical-align: middle;
 			min-width: 0;

@@ -31,6 +31,7 @@ css help_page_shell() {
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
+	width: 100%;
 }
 
 css help_page_header() {
@@ -95,7 +96,7 @@ css help_page_content() {
 css help_page_article() {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: 14px;
 }
 
 css help_page_section_title() {
@@ -104,7 +105,7 @@ css help_page_section_title() {
 }
 
 css help_page_subtitle() {
-	margin: 8px 0 0;
+	margin: 10px 0 0;
 	font-size: 0.96rem;
 }
 
@@ -125,7 +126,7 @@ css help_page_list() {
 	margin: 0;
 	padding-left: 22px;
 	color: var(--text-neutral-soft);
-	line-height: 1.55;
+	line-height: 1.6;
 }
 
 css help_page_link() {
@@ -162,12 +163,12 @@ css help_page_screenshot() {
 	flex-direction: column;
 	gap: 8px;
 	width: 100%;
-	max-width: 840px;
+	max-width: 780px;
 	padding: 8px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
 	background: var(--surface-panel);
-	box-shadow: var(--shadow-raised);
+	box-shadow: none;
 }
 
 css help_page_screenshot_compact() {

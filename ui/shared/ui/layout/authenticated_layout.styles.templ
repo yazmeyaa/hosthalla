@@ -4,6 +4,12 @@ css authenticated_shell() {
 	display: flex;
 	flex-direction: column;
 	gap: 20px;
+	width: 100%;
+	max-width: 1420px;
+	margin: 0 auto;
+	padding: 14px clamp(12px, 2vw, 24px);
+	box-sizing: border-box;
+	flex: 1;
 }
 
 css authenticated_header() {
@@ -15,7 +21,7 @@ css authenticated_header() {
 	border: 1px solid var(--border);
 	border-radius: var(--radius-xl);
 	background: var(--surface-header-gradient);
-	box-shadow: var(--shadow-raised);
+	box-shadow: none;
 	position: relative;
 	overflow: hidden;
 	flex-wrap: wrap;
@@ -26,8 +32,8 @@ css authenticated_header_motif() {
 	inset: 0;
 	pointer-events: none;
 	background:
-		linear-gradient(135deg, transparent 0 46%, rgba(34, 211, 238, 0.08) 46% 48%, transparent 48% 100%),
-		linear-gradient(45deg, transparent 0 56%, rgba(34, 211, 238, 0.045) 56% 58%, transparent 58% 100%);
+		linear-gradient(135deg, transparent 0 46%, rgba(34, 211, 238, 0.045) 46% 48%, transparent 48% 100%),
+		linear-gradient(45deg, transparent 0 56%, rgba(34, 211, 238, 0.028) 56% 58%, transparent 58% 100%);
 	mask-image: linear-gradient(90deg, transparent, #000 22%, transparent 72%);
 }
 
@@ -136,7 +142,8 @@ css authenticated_theme_button_active() {
 css authenticated_profile() {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.4rem 0.65rem;
+	gap: var(--space-6);
+	padding: 3px 3px 3px 0.75rem;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-pill);
 	background: var(--surface-overlay-muted);
@@ -146,4 +153,8 @@ css authenticated_profile_text() {
 	margin: 0;
 	color: var(--muted);
 	font-size: 0.85rem;
+}
+
+css authenticated_profile_form() {
+	margin: 0;
 }

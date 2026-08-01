@@ -291,7 +291,7 @@ css administration_table_shell() {
 	overflow: visible;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
-	background: var(--surface-panel-muted);
+	background: var(--surface-panel-strong);
 }
 
 css administration_table() {
@@ -301,9 +301,10 @@ css administration_table() {
 }
 
 css administration_actions_header() {
-	padding: 10px;
+	padding: 11px 10px;
 	border-bottom: 1px solid var(--border);
-	color: var(--muted);
+	background: var(--surface-panel);
+	color: var(--text-neutral-soft);
 	font-weight: 700;
 	font-size: 0.76rem;
 	text-transform: uppercase;
@@ -312,8 +313,8 @@ css administration_actions_header() {
 }
 
 css administration_actions_cell() {
-	padding: 10px;
-	border-bottom: 1px solid var(--border);
+	padding: 11px 10px;
+	border-bottom: 1px solid var(--border-row);
 	text-align: right;
 	vertical-align: middle;
 	font-size: 0.88rem;
@@ -324,9 +325,10 @@ css administration_actions_cell() {
 }
 
 css administration_table_header_cell() {
-	padding: 10px;
+	padding: 11px 10px;
 	border-bottom: 1px solid var(--border);
-	color: var(--muted);
+	background: var(--surface-panel);
+	color: var(--text-neutral-soft);
 	font-weight: 700;
 	font-size: 0.76rem;
 	text-align: left;
@@ -334,8 +336,8 @@ css administration_table_header_cell() {
 }
 
 css administration_table_cell() {
-	padding: 10px;
-	border-bottom: 1px solid var(--border);
+	padding: 11px 10px;
+	border-bottom: 1px solid var(--border-row);
 	text-align: left;
 	vertical-align: middle;
 	font-size: 0.88rem;
@@ -390,8 +392,8 @@ css administration_action_trigger() {
 	height: 32px;
 	border-radius: var(--radius-sm);
 	border: 1px solid var(--border);
-	background: transparent;
-	color: var(--text);
+	background: var(--surface-panel);
+	color: var(--text-neutral-soft);
 	cursor: pointer;
 	user-select: none;
 	font-size: 1rem;
@@ -416,8 +418,8 @@ css administration_action_panel() {
 }
 
 css administration_inline_button_disabled() {
-	min-height: 34px;
-	padding: 0.45rem 0.7rem;
+	min-height: 32px;
+	padding: 0.4rem 0.65rem;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
 	background: transparent;

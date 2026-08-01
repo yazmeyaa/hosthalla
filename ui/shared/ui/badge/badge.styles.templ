@@ -14,9 +14,11 @@ func CSSClasses() []templ.CSSClass {
 css badge_base() {
 	display: inline-flex;
 	align-items: center;
-	padding: 4px 10px;
+	min-height: 24px;
+	padding: 2px 8px;
 	border-radius: var(--radius-pill);
-	font-size: 0.82rem;
+	font-size: 0.78rem;
+	font-weight: 600;
 }
 
 css badge_variant_neutral() {

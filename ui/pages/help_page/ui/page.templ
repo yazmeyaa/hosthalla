@@ -304,9 +304,18 @@ templ HelpCallout(variant string, value string) {
 templ HelpResponsiveStyles() {
 	<style>
 		@media (max-width: 760px) {
-			.{ help_page_layout().ClassName() } {
+			[class*="help_page_layout"] {
 				grid-template-columns: 1fr;
 				padding-inline: 0;
+			}
+
+			nav[class*="help_page_nav"] {
+				display: flex;
+				overflow-x: auto;
+			}
+
+			a[class*="help_page_nav_item"] {
+				min-width: 170px;
 			}
 		}
 	</style>
