@@ -78,8 +78,8 @@ css dashboard_hosts_card() {
 	border: 1px solid var(--border);
 	border-top: 3px solid var(--dashboard-host-accent);
 	border-radius: var(--radius-card);
-	background: linear-gradient(180deg, rgba(17, 28, 45, 0.96), rgba(12, 24, 39, 0.96));
-	box-shadow: 0 10px 24px rgba(2, 6, 23, 0.16);
+	background: var(--surface-card-gradient);
+	box-shadow: var(--shadow-card);
 	transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
 }
 
@@ -176,7 +176,7 @@ css dashboard_hosts_metric() {
 	box-sizing: border-box;
 	padding: 8px 9px;
 	border-radius: 8px 3px 8px 3px;
-	background: rgba(7, 17, 31, 0.44);
+	background: var(--surface-metric);
 }
 
 css dashboard_hosts_metric_summary() {
@@ -246,13 +246,13 @@ css dashboard_hosts_sparkline_memory() {
 }
 
 css dashboard_hosts_sparkline_rule() {
-	stroke: rgba(255, 255, 255, 0.13);
+	stroke: var(--sparkline-rule);
 	stroke-width: 1;
 	vector-effect: non-scaling-stroke;
 }
 
 css dashboard_hosts_sparkline_mid_rule() {
-	stroke: rgba(255, 255, 255, 0.06);
+	stroke: var(--sparkline-mid-rule);
 	stroke-width: 1;
 	vector-effect: non-scaling-stroke;
 }

@@ -12,7 +12,7 @@ type AuthenticatedLayoutProps struct {
 
 templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 	@GenericLayout(GenericLayoutProps{Title: props.Title}) {
-		<div class={ authenticated_shell() }>
+		<div class={ authenticated_shell() } data-authenticated-shell>
 			<header class={ authenticated_header() }>
 				<span class={ authenticated_header_motif() } aria-hidden="true"></span>
 				<div class={ authenticated_brand() }>
@@ -38,16 +38,20 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 						<li>@AuthenticatedNavLink(props.Path, "/help", "Help")</li>
 					</ul>
 				</nav>
-				<div class={ authenticated_profile() }>
-					<p class={ authenticated_profile_text() }>Logged in as <span>{ props.Profile.Username }</span></p>
-					<form method="post" action="/auth/logout">
-						@button.Button(button.ButtonProps{Type: "submit", Variant: "secondary"}) {
-							Log out
-						}
-					</form>
+				<div class={ authenticated_header_actions() }>
+					@ThemeSwitcher()
+					<div class={ authenticated_profile() }>
+						<p class={ authenticated_profile_text() }>Logged in as <span>{ props.Profile.Username }</span></p>
+						<form class={ authenticated_profile_form() } method="post" action="/auth/logout">
+							@button.Button(button.ButtonProps{Type: "submit", Variant: "secondary"}) {
+								Log out
+							}
+						</form>
+					</div>
 				</div>
 			</header>
 			@AuthenticatedNavScripts()
+			@AuthenticatedThemeScripts()
 			@AppContent() {
 				{ children... }
 			}
@@ -61,6 +65,14 @@ templ AuthenticatedNavLink(currentPath string, href string, label string) {
 	} else {
 		<a class={ authenticated_nav_link(), "ui-interactive-control" } href={ href } data-nav-href={ href }>{ label }</a>
 	}
+}
+
+templ ThemeSwitcher() {
+	<div class={ authenticated_theme_switcher() } data-theme-toggle data-theme-active-class={ authenticated_theme_button_active().ClassName() } role="group" aria-label="Theme">
+		<button class={ authenticated_theme_button(), authenticated_theme_button_active() } type="button" data-theme-choice="system" aria-pressed="true">System</button>
+		<button class={ authenticated_theme_button() } type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+		<button class={ authenticated_theme_button() } type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+	</div>
 }
 
 templ AuthenticatedNavScripts() {
@@ -113,6 +125,35 @@ templ AuthenticatedNavScripts() {
 				window.addEventListener("popstate", function() {
 					window.setTimeout(updateAuthenticatedNav, 0);
 				});
+			}
+		})();
+	</script>
+}
+
+templ AuthenticatedThemeScripts() {
+	<script>
+		(function() {
+			if (!window.__hosthallaThemeSwitcherBound) {
+				window.__hosthallaThemeSwitcherBound = true;
+				document.addEventListener("click", function(event) {
+					const target = event.target;
+					if (!(target instanceof Element)) {
+						return;
+					}
+
+					const button = target.closest("[data-theme-choice]");
+					if (!(button instanceof HTMLButtonElement)) {
+						return;
+					}
+
+					if (window.hosthallaTheme) {
+						window.hosthallaTheme.set(button.getAttribute("data-theme-choice") || "system");
+					}
+				});
+			}
+
+			if (window.hosthallaTheme) {
+				window.hosthallaTheme.refresh();
 			}
 		})();
 	</script>

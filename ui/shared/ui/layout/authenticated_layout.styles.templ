@@ -4,6 +4,12 @@ css authenticated_shell() {
 	display: flex;
 	flex-direction: column;
 	gap: 20px;
+	width: 100%;
+	max-width: 1420px;
+	margin: 0 auto;
+	padding: 14px clamp(12px, 2vw, 24px);
+	box-sizing: border-box;
+	flex: 1;
 }
 
 css authenticated_header() {
@@ -15,9 +21,10 @@ css authenticated_header() {
 	border: 1px solid var(--border);
 	border-radius: var(--radius-xl);
 	background: var(--surface-header-gradient);
-	box-shadow: 0 14px 36px rgba(2, 6, 23, 0.18);
+	box-shadow: none;
 	position: relative;
 	overflow: hidden;
+	flex-wrap: wrap;
 }
 
 css authenticated_header_motif() {
@@ -25,8 +32,8 @@ css authenticated_header_motif() {
 	inset: 0;
 	pointer-events: none;
 	background:
-		linear-gradient(135deg, transparent 0 46%, rgba(34, 211, 238, 0.08) 46% 48%, transparent 48% 100%),
-		linear-gradient(45deg, transparent 0 56%, rgba(34, 211, 238, 0.045) 56% 58%, transparent 58% 100%);
+		linear-gradient(135deg, transparent 0 46%, rgba(34, 211, 238, 0.045) 46% 48%, transparent 48% 100%),
+		linear-gradient(45deg, transparent 0 56%, rgba(34, 211, 238, 0.028) 56% 58%, transparent 58% 100%);
 	mask-image: linear-gradient(90deg, transparent, #000 22%, transparent 72%);
 }
 
@@ -44,7 +51,7 @@ css authenticated_brand_mark() {
 	height: 34px;
 	border: 1px solid var(--border-interactive-info);
 	border-radius: 8px 3px 8px 3px;
-	background: rgba(34, 211, 238, 0.1);
+	background: var(--surface-interactive-info);
 	color: var(--text-info-soft);
 	font-family: var(--font-mono);
 	font-size: 0.78rem;
@@ -91,15 +98,52 @@ css authenticated_nav_link() {
 
 css authenticated_nav_link_active() {
 	border-color: rgba(34, 211, 238, 0.5);
-	background: rgba(34, 211, 238, 0.12);
+	background: var(--surface-interactive-info);
 	color: var(--text-info-soft);
 	box-shadow: inset 0 -2px 0 rgba(34, 211, 238, 0.58);
+}
+
+css authenticated_header_actions() {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-8);
+	margin-left: auto;
+}
+
+css authenticated_theme_switcher() {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	padding: 2px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-pill);
+	background: var(--surface-overlay-muted);
+}
+
+css authenticated_theme_button() {
+	min-height: 30px;
+	padding: 0 9px;
+	border: 0;
+	border-radius: var(--radius-pill);
+	background: transparent;
+	color: var(--muted);
+	font: inherit;
+	font-size: 0.78rem;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+css authenticated_theme_button_active() {
+	background: var(--surface-interactive-info);
+	color: var(--text-info-soft);
+	box-shadow: inset 0 0 0 1px var(--border-interactive-info);
 }
 
 css authenticated_profile() {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.4rem 0.65rem;
+	gap: var(--space-6);
+	padding: 3px 3px 3px 0.75rem;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-pill);
 	background: var(--surface-overlay-muted);
@@ -109,4 +153,8 @@ css authenticated_profile_text() {
 	margin: 0;
 	color: var(--muted);
 	font-size: 0.85rem;
+}
+
+css authenticated_profile_form() {
+	margin: 0;
 }

@@ -38,18 +38,18 @@ templ Styles() {
 	}
 
 	.ui-dropdown__trigger:hover {
-		box-shadow: 0 6px 16px rgba(2, 6, 23, 0.22);
+		box-shadow: var(--shadow-hover);
 		transform: translateY(-1px);
 	}
 
 	.ui-dropdown__trigger:active {
-		box-shadow: 0 2px 8px rgba(2, 6, 23, 0.2);
+		box-shadow: var(--shadow-hover);
 		transform: translateY(1px);
 	}
 
 	.ui-dropdown__trigger:focus-visible {
 		outline: none;
-		box-shadow: 0 0 0 3px var(--focus-ring), 0 6px 16px rgba(2, 6, 23, 0.22);
+		box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-hover);
 	}
 
 	.ui-dropdown[open] > .ui-dropdown__trigger {

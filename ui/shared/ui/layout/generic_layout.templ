@@ -15,7 +15,9 @@ templ GenericLayout(props GenericLayoutProps) {
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<meta name="color-scheme" content="dark light"/>
 			<title>Hosthalla - { props.Title }</title>
+			@ThemeBootScript()
 			<script src="/assets/htmx.min.js"></script>
 			<script src="/assets/htmx-ext-ws.min.js"></script>
 			@layout_styles()
@@ -34,6 +36,78 @@ templ GenericLayout(props GenericLayoutProps) {
 			</footer>
 		</body>
 	</html>
+}
+
+templ ThemeBootScript() {
+	<script>
+		(function() {
+			const key = "hosthalla-theme";
+			const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+			const root = document.documentElement;
+
+			function storedMode() {
+				try {
+					const mode = localStorage.getItem(key);
+					return mode === "dark" || mode === "light" || mode === "system" ? mode : "system";
+				} catch (_) {
+					return "system";
+				}
+			}
+
+			function resolvedTheme(mode) {
+				return mode === "dark" || mode === "light" ? mode : (media && media.matches ? "light" : "dark");
+			}
+
+			function applyTheme(mode) {
+				const nextMode = mode === "dark" || mode === "light" || mode === "system" ? mode : "system";
+				const theme = resolvedTheme(nextMode);
+
+				root.dataset.theme = theme;
+				root.dataset.themeMode = nextMode;
+				root.style.colorScheme = theme;
+				document.querySelectorAll("[data-theme-toggle]").forEach(function(toggle) {
+					const activeClass = toggle.getAttribute("data-theme-active-class");
+					toggle.querySelectorAll("[data-theme-choice]").forEach(function(button) {
+						const active = button.getAttribute("data-theme-choice") === nextMode;
+						button.setAttribute("aria-pressed", String(active));
+						if (activeClass) {
+							button.classList.toggle(activeClass, active);
+						}
+					});
+				});
+			}
+
+			window.hosthallaTheme = {
+				get: storedMode,
+				set: function(mode) {
+					const nextMode = mode === "dark" || mode === "light" || mode === "system" ? mode : "system";
+					try {
+						localStorage.setItem(key, nextMode);
+					} catch (_) {}
+					applyTheme(nextMode);
+				},
+				refresh: function() {
+					applyTheme(storedMode());
+				},
+			};
+
+			applyTheme(storedMode());
+
+			if (media && media.addEventListener) {
+				media.addEventListener("change", function() {
+					if (storedMode() === "system") {
+						applyTheme("system");
+					}
+				});
+			}
+
+			window.addEventListener("storage", function(event) {
+				if (event.key === key) {
+					applyTheme(storedMode());
+				}
+			});
+		})();
+	</script>
 }
 
 templ AppContent() {

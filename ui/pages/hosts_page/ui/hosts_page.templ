@@ -38,7 +38,6 @@ templ HostsPage(props HostsPageProps) {
 
 templ HostsPageContent(props HostsPageProps) {
 	@dropdown.Styles()
-	@HostsPagePolishStyles()
 	<div class={ hosts_page_header() }>
 		<h1 class={ hosts_page_title() }>
 			Hosts <span class={ hosts_page_title_count() }>{ "· " + hostCountLabel(props.TotalHosts) }</span>
@@ -81,16 +80,6 @@ templ HostsPageContent(props HostsPageProps) {
 	@HostDialogScripts()
 	@host_entity.HostDetailsScripts()
 	@dropdown.Scripts()
-}
-
-templ HostsPagePolishStyles() {
-	<style>
-		[class*="hosts_page_actions"] .ui-button[data-ui-button-variant="primary"] {
-			background: rgba(34, 211, 238, 0.16);
-			border-color: var(--border-interactive-info-strong);
-			color: var(--text-info-soft);
-		}
-	</style>
 }
 
 func hostCountLabel(count int) string {

@@ -19,8 +19,13 @@ func CSSClasses() []templ.CSSClass {
 		authenticated_nav_list(),
 		authenticated_nav_link(),
 		authenticated_nav_link_active(),
+		authenticated_header_actions(),
+		authenticated_theme_switcher(),
+		authenticated_theme_button(),
+		authenticated_theme_button_active(),
 		authenticated_profile(),
 		authenticated_profile_text(),
+		authenticated_profile_form(),
 	}
 }
 
@@ -51,6 +56,8 @@ templ layout_styles() {
 		}
 
         :root {
+            color-scheme: dark;
+
             --font-sans: "Adwaita Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
             --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
 
@@ -60,6 +67,7 @@ templ layout_styles() {
             --text: #E5E7EB;
             --muted: #96a4b7;
             --primary: #22d3ee;
+            --primary-on: #07111f;
             --success: #22C55E;
             --warn: #F59E0B;
             --danger: #EF4444;
@@ -78,6 +86,16 @@ templ layout_styles() {
             --surface-overlay: rgba(11, 22, 38, 0.98);
             --surface-overlay-muted: rgba(17, 28, 45, 0.58);
             --surface-header-gradient: linear-gradient(180deg, rgba(34, 211, 238, 0.09), rgba(11, 22, 38, 0.84));
+            --surface-card-gradient: linear-gradient(180deg, rgba(17, 28, 45, 0.96), rgba(12, 24, 39, 0.96));
+            --surface-panel: rgba(17, 28, 45, 0.42);
+            --surface-panel-soft: rgba(11, 22, 38, 0.36);
+            --surface-panel-strong: rgba(11, 22, 38, 0.54);
+            --surface-panel-muted: rgba(17, 28, 45, 0.28);
+            --surface-metric: rgba(7, 17, 31, 0.44);
+            --surface-menu: #07111f;
+            --surface-menu-item: #0b1626;
+            --surface-code: rgba(2, 6, 23, 0.36);
+            --surface-code-button: rgba(11, 22, 38, 0.9);
             --surface-sensitive-mask: rgba(255, 255, 255, 0.1);
             --surface-interactive-subtle: rgba(148, 163, 184, 0.12);
             --surface-interactive-subtle-strong: rgba(148, 163, 184, 0.16);
@@ -87,6 +105,9 @@ templ layout_styles() {
 
             --border-interactive-subtle: rgba(148, 163, 184, 0.35);
             --border-interactive-subtle-strong: rgba(148, 163, 184, 0.45);
+            --border-muted: rgba(148, 163, 184, 0.22);
+            --border-row: rgba(255, 255, 255, 0.055);
+            --border-screenshot: rgba(255, 255, 255, 0.06);
             --border-interactive-info: rgba(34, 211, 238, 0.38);
             --border-interactive-info-strong: rgba(34, 211, 238, 0.62);
             --border-interactive-success: rgba(34, 197, 94, 0.45);
@@ -110,7 +131,12 @@ templ layout_styles() {
             --blur-backdrop: 3px;
             --blur-sensitive: 4px;
             --shadow-overlay: 0 8px 20px rgba(2, 6, 23, 0.45);
+            --shadow-raised: 0 14px 34px rgba(2, 6, 23, 0.18);
+            --shadow-card: 0 10px 24px rgba(2, 6, 23, 0.16);
+            --shadow-hover: 0 6px 16px rgba(2, 6, 23, 0.22);
             --shadow-sensitive-text: 0 0 7px rgba(226, 232, 240, 0.7);
+            --sparkline-rule: rgba(255, 255, 255, 0.13);
+            --sparkline-mid-rule: rgba(255, 255, 255, 0.06);
 
             --radius-xs: 3px;
             --radius-sm: 0.5rem;
@@ -131,6 +157,86 @@ templ layout_styles() {
             --space-12: 12px;
             --space-14: 14px;
         }
+
+		:root[data-theme="light"] {
+				color-scheme: light;
+
+				--bg: #f4f7fa;
+				--surface: #ffffff;
+				--card: #ffffff;
+				--text: #172033;
+				--muted: #5f6f82;
+				--primary: #087f9a;
+				--primary-on: #ffffff;
+				--success: #16a34a;
+				--warn: #d97706;
+				--danger: #dc2626;
+				--border: #d8e0e8;
+				--text-link: #0e7490;
+				--text-neutral-soft: #334155;
+				--text-info-soft: #155e75;
+				--text-success-soft: #166534;
+				--text-danger-soft: #991b1b;
+				--text-success-muted: #166534;
+				--text-warning-muted: #92400e;
+				--text-danger-muted: #991b1b;
+				--text-danger-on: #ffffff;
+
+				--surface-footer: #eef3f7;
+				--surface-overlay: rgba(255, 255, 255, 0.98);
+				--surface-overlay-muted: #f8fafc;
+				--surface-header-gradient: linear-gradient(180deg, #ffffff, #f8fafc);
+				--surface-card-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.92));
+				--surface-panel: #f8fafc;
+				--surface-panel-soft: #ffffff;
+				--surface-panel-strong: #ffffff;
+				--surface-panel-muted: #f8fafc;
+				--surface-metric: rgba(241, 245, 249, 0.78);
+				--surface-menu: #ffffff;
+				--surface-menu-item: #f8fafc;
+				--surface-code: rgba(15, 23, 42, 0.06);
+				--surface-code-button: rgba(255, 255, 255, 0.95);
+				--surface-sensitive-mask: rgba(15, 23, 42, 0.1);
+				--surface-interactive-subtle: rgba(15, 23, 42, 0.05);
+				--surface-interactive-subtle-strong: rgba(15, 23, 42, 0.08);
+				--surface-interactive-info: rgba(8, 145, 178, 0.12);
+				--surface-interactive-info-strong: rgba(8, 145, 178, 0.18);
+				--surface-interactive-danger-strong: rgba(220, 38, 38, 0.14);
+
+				--border-interactive-subtle: rgba(100, 116, 139, 0.38);
+				--border-interactive-subtle-strong: rgba(71, 85, 105, 0.46);
+				--border-muted: #e3e9ef;
+				--border-row: #e3e9ef;
+				--border-screenshot: rgba(15, 23, 42, 0.1);
+				--border-interactive-info: rgba(8, 145, 178, 0.34);
+				--border-interactive-info-strong: rgba(8, 145, 178, 0.52);
+				--border-interactive-success: rgba(22, 163, 74, 0.38);
+				--border-interactive-warning: rgba(217, 119, 6, 0.4);
+				--border-interactive-danger: rgba(220, 38, 38, 0.4);
+
+				--surface-interactive-success: rgba(22, 163, 74, 0.09);
+				--surface-interactive-warning: rgba(217, 119, 6, 0.12);
+				--surface-interactive-danger: rgba(220, 38, 38, 0.12);
+				--surface-danger-strong: #b91c1c;
+				--border-danger-strong: #b91c1c;
+
+				--input-placeholder: rgba(100, 116, 139, 0.9);
+				--input-border-hover: rgba(8, 145, 178, 0.42);
+				--input-bg-hover: #f8fafc;
+				--input-border-focus: rgba(8, 145, 178, 0.86);
+				--input-focus-ring: rgba(8, 145, 178, 0.18);
+				--input-bg-focus: #ffffff;
+				--focus-ring: rgba(8, 145, 178, 0.2);
+
+				--overlay-backdrop: rgba(15, 23, 42, 0.28);
+				--shadow-overlay: 0 12px 28px rgba(15, 23, 42, 0.16);
+				--shadow-raised: 0 10px 24px rgba(15, 23, 42, 0.08);
+				--shadow-card: 0 10px 24px rgba(15, 23, 42, 0.1);
+				--shadow-hover: 0 6px 16px rgba(15, 23, 42, 0.12);
+				--shadow-sensitive-text: 0 0 7px rgba(15, 23, 42, 0.45);
+				--sparkline-rule: rgba(15, 23, 42, 0.16);
+				--sparkline-mid-rule: rgba(15, 23, 42, 0.08);
+		}
 
 		.ui-input::placeholder {
 			color: var(--input-placeholder);
@@ -190,8 +296,8 @@ templ layout_styles() {
 		}
 
 		.ui-button:not(:disabled):not([aria-disabled="true"]):hover {
-			border-color: rgba(147, 197, 253, 0.72);
-			box-shadow: 0 6px 16px rgba(2, 6, 23, 0.24);
+			border-color: var(--border-interactive-info);
+			box-shadow: var(--shadow-hover);
 			filter: brightness(1.07);
 		}
 
@@ -207,14 +313,14 @@ templ layout_styles() {
 		}
 
 		.ui-button:not(:disabled):not([aria-disabled="true"]):active {
-			box-shadow: 0 2px 8px rgba(2, 6, 23, 0.22);
+			box-shadow: var(--shadow-hover);
 			filter: brightness(0.95);
 		}
 
 		.ui-button:focus-visible {
 			outline: none;
 			border-color: var(--input-border-focus);
-			box-shadow: 0 0 0 3px var(--focus-ring), 0 6px 16px rgba(2, 6, 23, 0.24);
+			box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-hover);
 		}
 
 		.ui-button:disabled,
@@ -234,17 +340,45 @@ templ layout_styles() {
 			border-color: var(--border-interactive-info);
 			background: var(--surface-interactive-subtle);
 			color: var(--text-info-soft);
-			box-shadow: 0 6px 16px rgba(2, 6, 23, 0.22);
+			box-shadow: var(--shadow-hover);
 		}
 
 		.ui-interactive-control:active {
-			box-shadow: 0 2px 8px rgba(2, 6, 23, 0.2);
+			box-shadow: var(--shadow-hover);
 		}
 
 		.ui-interactive-control:focus-visible {
 			outline: none;
 			border-color: var(--input-border-focus);
-			box-shadow: 0 0 0 3px var(--focus-ring), 0 6px 16px rgba(2, 6, 23, 0.22);
+			box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-hover);
+		}
+
+		[data-authenticated-shell] > #app-content {
+			max-width: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		[data-authenticated-shell] [class*="authenticated_profile"] .ui-button {
+			min-height: 30px;
+			padding: 0 10px;
+			font-size: 0.82rem;
+			white-space: nowrap;
+		}
+
+		[data-authenticated-shell] [class*="authenticated_profile_text"] span {
+			color: var(--text);
+			font-weight: 700;
+		}
+
+		@media (max-width: 760px) {
+			[data-authenticated-shell] {
+				padding-inline: 10px;
+			}
+
+			[data-authenticated-shell] [class*="authenticated_nav_list"] {
+				flex-wrap: wrap;
+			}
 		}
 
 		.ui-modal::backdrop {
@@ -254,7 +388,7 @@ templ layout_styles() {
 
 		[data-dashboard-host-card]:hover {
 			border-color: color-mix(in srgb, var(--dashboard-host-accent) 42%, var(--border));
-			box-shadow: 0 14px 30px rgba(2, 6, 23, 0.22);
+			box-shadow: var(--shadow-raised);
 		}
 
 		[data-dashboard-host-item]:has([data-dashboard-host-status="reporting"]),
@@ -298,13 +432,14 @@ css generic_layout_styles() {
 	-moz-osx-font-smoothing: grayscale;
 	margin: 0;
 	min-height: 100vh;
+	min-height: 100dvh;
 	display: flex;
 	flex-direction: column;
 }
 
 css generic_layout_main() {
 	width: 100%;
-	max-width: 1520px;
+	max-width: 1420px;
 	margin: 0 auto;
 	padding: 14px clamp(12px, 2vw, 24px);
 	box-sizing: border-box;
@@ -318,7 +453,7 @@ css generic_layout_footer() {
 }
 
 css generic_layout_footer_inner() {
-	max-width: 1520px;
+	max-width: 1420px;
 	margin: 0 auto;
 	padding: 18px clamp(12px, 2vw, 24px);
 	display: flex;
