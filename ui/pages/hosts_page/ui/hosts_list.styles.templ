@@ -90,7 +90,7 @@ css hosts_inventory_toolbar() {
 	padding: var(--space-10);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
-	background: rgba(17, 28, 45, 0.42);
+	background: var(--surface-panel);
 }
 
 css hosts_inventory_search() {
@@ -238,7 +238,7 @@ css hosts_bulk_toolbar() {
 	padding: var(--space-8) var(--space-10);
 	border: 1px solid var(--border-interactive-info);
 	border-radius: var(--radius-md);
-	background: rgba(34, 211, 238, 0.08);
+	background: var(--surface-interactive-info);
 }
 
 css hosts_bulk_count() {
@@ -277,7 +277,7 @@ css hosts_inventory_table_shell() {
 	overflow: visible;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
-	background: rgba(11, 22, 38, 0.54);
+	background: var(--surface-panel-strong);
 }
 
 css hosts_inventory_table() {
@@ -466,7 +466,7 @@ css hosts_metric_bar() {
 	max-width: 68px;
 	height: 3px;
 	border-radius: var(--radius-pill);
-	background: rgba(148, 163, 184, 0.16);
+	background: var(--surface-interactive-subtle-strong);
 	overflow: hidden;
 }
 
@@ -518,7 +518,7 @@ css hosts_inventory_card() {
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
 	padding: var(--space-10);
-	background: rgba(17, 28, 45, 0.46);
+	background: var(--surface-panel);
 }
 
 css hosts_inventory_card_header() {
@@ -560,7 +560,7 @@ css hosts_inventory_empty() {
 	padding: 28px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
-	background: rgba(17, 28, 45, 0.42);
+	background: var(--surface-panel);
 }
 
 css hosts_inventory_no_results() {
@@ -569,7 +569,7 @@ css hosts_inventory_no_results() {
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
 	color: var(--muted);
-	background: rgba(17, 28, 45, 0.36);
+	background: var(--surface-panel-soft);
 }
 
 templ HostsInventoryStyles() {
@@ -587,7 +587,7 @@ templ HostsInventoryStyles() {
 		[data-hosts-inventory] table td {
 			height: var(--hosts-row-height);
 			padding: 7px var(--hosts-cell-padding-x);
-			border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+			border-bottom: 1px solid var(--border-row);
 			vertical-align: middle;
 			min-width: 0;
 			overflow: hidden;
@@ -614,7 +614,7 @@ templ HostsInventoryStyles() {
 		[data-hosts-inventory] th:nth-child(11) { width: 58px; }
 
 		[data-host-row]:hover {
-			background: rgba(148, 163, 184, 0.05);
+			background: var(--surface-interactive-subtle);
 			cursor: pointer;
 		}
 
@@ -640,18 +640,18 @@ templ HostsInventoryStyles() {
 		}
 
 		[data-hosts-inventory] .host-actions-menu [class*="host_actions_menu_panel"] {
-			background: #07111f;
+			background: var(--surface-menu);
 			backdrop-filter: none;
 		}
 
 		[data-hosts-inventory] .host-actions-menu [class*="host_actions_menu_panel"] .ui-button[data-ui-button-variant="secondary"] {
-			background: #0b1626;
-			border-color: rgba(148, 163, 184, 0.24);
+			background: var(--surface-menu-item);
+			border-color: var(--border-muted);
 		}
 
 		[data-hosts-inventory] .host-actions-menu [class*="host_actions_menu_panel"] .ui-button[data-ui-button-variant="danger"] {
-			background: #7f1d1d;
-			border-color: #991b1b;
+			background: var(--surface-danger-strong);
+			border-color: var(--border-danger-strong);
 		}
 
 		[data-hosts-inventory] [class*="hosts_status_badge"]::before {

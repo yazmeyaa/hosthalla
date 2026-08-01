@@ -15,9 +15,10 @@ css authenticated_header() {
 	border: 1px solid var(--border);
 	border-radius: var(--radius-xl);
 	background: var(--surface-header-gradient);
-	box-shadow: 0 14px 36px rgba(2, 6, 23, 0.18);
+	box-shadow: var(--shadow-raised);
 	position: relative;
 	overflow: hidden;
+	flex-wrap: wrap;
 }
 
 css authenticated_header_motif() {
@@ -44,7 +45,7 @@ css authenticated_brand_mark() {
 	height: 34px;
 	border: 1px solid var(--border-interactive-info);
 	border-radius: 8px 3px 8px 3px;
-	background: rgba(34, 211, 238, 0.1);
+	background: var(--surface-interactive-info);
 	color: var(--text-info-soft);
 	font-family: var(--font-mono);
 	font-size: 0.78rem;
@@ -91,9 +92,45 @@ css authenticated_nav_link() {
 
 css authenticated_nav_link_active() {
 	border-color: rgba(34, 211, 238, 0.5);
-	background: rgba(34, 211, 238, 0.12);
+	background: var(--surface-interactive-info);
 	color: var(--text-info-soft);
 	box-shadow: inset 0 -2px 0 rgba(34, 211, 238, 0.58);
+}
+
+css authenticated_header_actions() {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-8);
+	margin-left: auto;
+}
+
+css authenticated_theme_switcher() {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	padding: 2px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-pill);
+	background: var(--surface-overlay-muted);
+}
+
+css authenticated_theme_button() {
+	min-height: 30px;
+	padding: 0 9px;
+	border: 0;
+	border-radius: var(--radius-pill);
+	background: transparent;
+	color: var(--muted);
+	font: inherit;
+	font-size: 0.78rem;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+css authenticated_theme_button_active() {
+	background: var(--surface-interactive-info);
+	color: var(--text-info-soft);
+	box-shadow: inset 0 0 0 1px var(--border-interactive-info);
 }
 
 css authenticated_profile() {
