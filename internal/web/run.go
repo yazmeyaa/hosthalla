@@ -52,6 +52,11 @@ func Run(ctx context.Context, params RunParams) error {
 		bootstrapLogger.Error("invalid config value", slog.String("field", "log_level"), slog.String("error", err.Error()))
 		return err
 	}
+	webOrigin, err := cfg.PublicWebOrigin()
+	if err != nil {
+		bootstrapLogger.Error("invalid config value", slog.String("field", "web_origin"), slog.String("error", err.Error()))
+		return err
+	}
 
 	logger := app_logger.NewLogger(app_logger.LoggerParams{
 		Output: os.Stdout,
@@ -119,6 +124,7 @@ func Run(ctx context.Context, params RunParams) error {
 		SessionRepository: sessionRepository,
 		Logger:            logger,
 		EventBus:          eventBus,
+		WebOrigin:         webOrigin,
 	})
 	apiRouter := api.NewRouter(
 		api.RouterParams{

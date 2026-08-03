@@ -28,12 +28,13 @@ type NewRouterParams struct {
 	AuthService       *auth_service.Service
 	Logger            *slog.Logger
 	EventBus          events.EventBus
+	WebOrigin         string
 }
 
 func NewRouter(params NewRouterParams) http.Handler {
 	indexHandler := handlers.NewIndexHandler(params.HostService, params.Logger, params.AuthService)
 	authHandler := handlers.NewAuthHandler(params.Logger, params.AuthService)
-	hostHandler := handlers.NewHostsHandler(params.HostService, params.AuthService, params.Logger)
+	hostHandler := handlers.NewHostsHandler(params.HostService, params.AuthService, params.Logger, params.WebOrigin)
 	administrationHandler := handlers.NewAdministrationHandler(handlers.NewAdministrationHandlerParams{
 		AuthService:  params.AuthService,
 		AgentService: params.AgentService,

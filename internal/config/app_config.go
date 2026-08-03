@@ -14,12 +14,14 @@ import (
 )
 
 const DefaultLogLevel = "warning"
+const DefaultWebOrigin = "http://localhost:8080"
 
 type AppConfig struct {
-	WEB      WEBConfig      `yaml:"web"`
-	Database DatabaseConfig `yaml:"database"`
-	Security SecurityConfig `yaml:"security"`
-	LogLevel string         `yaml:"log_level"`
+	WEB       WEBConfig      `yaml:"web"`
+	WebOrigin string         `yaml:"web_origin"`
+	Database  DatabaseConfig `yaml:"database"`
+	Security  SecurityConfig `yaml:"security"`
+	LogLevel  string         `yaml:"log_level"`
 }
 type WEBConfig struct {
 	Port int    `yaml:"port"`
@@ -44,6 +46,7 @@ func NewDefaultAppConfig() AppConfig {
 			Host: "0.0.0.0",
 			Port: 8080,
 		},
+		WebOrigin: DefaultWebOrigin,
 		Database: DatabaseConfig{
 			Host:     "localhost",
 			Port:     5432,
@@ -82,10 +85,29 @@ func (a *AppConfig) ApplyDefaults() {
 	if strings.TrimSpace(a.LogLevel) == "" {
 		a.LogLevel = DefaultLogLevel
 	}
+	a.WebOrigin = normalizeWebOrigin(a.WebOrigin)
+	if a.WebOrigin == "" {
+		a.WebOrigin = DefaultWebOrigin
+	}
 }
 
 func (a AppConfig) SlogLevel() (slog.Level, error) {
 	return ParseLogLevel(a.LogLevel)
+}
+
+func (a AppConfig) PublicWebOrigin() (string, error) {
+	parsed, err := url.Parse(a.WebOrigin)
+	if err != nil {
+		return "", fmt.Errorf("parse web_origin: %w", err)
+	}
+	if parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("web_origin must include scheme and host")
+	}
+	if parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("web_origin must be an origin without path, query, or fragment")
+	}
+
+	return a.WebOrigin, nil
 }
 
 func (a *AppConfig) ToYAML() ([]byte, error) {
@@ -116,6 +138,10 @@ func ParseLogLevel(raw string) (slog.Level, error) {
 	default:
 		return 0, fmt.Errorf("unsupported log_level %q: expected debug, info, warning, or error", raw)
 	}
+}
+
+func normalizeWebOrigin(origin string) string {
+	return strings.TrimRight(strings.TrimSpace(origin), "/")
 }
 
 func (a AppConfig) SecretEncryptionKey() ([]byte, error) {

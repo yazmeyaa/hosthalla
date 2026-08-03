@@ -29,7 +29,7 @@ func TestConfigGenerateAndShow(t *testing.T) {
 	if code != cliapp.ExitCodeOK {
 		t.Fatalf("show exit code = %d, stderr = %q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "database:") || !strings.Contains(stdout.String(), "secret_encryption_key:") {
+	if !strings.Contains(stdout.String(), "web_origin:") || !strings.Contains(stdout.String(), "database:") || !strings.Contains(stdout.String(), "secret_encryption_key:") {
 		t.Fatalf("show stdout = %q", stdout.String())
 	}
 }
