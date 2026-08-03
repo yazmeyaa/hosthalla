@@ -33,6 +33,38 @@ func TestParseHostsPageQueryKeepsMultiFilterState(t *testing.T) {
 	}
 }
 
+func TestHostsOpenDialogIDFromRoutes(t *testing.T) {
+	hostID := uuid.New().String()
+	methodID := uuid.New().String()
+	tests := []struct {
+		path   string
+		host   string
+		method string
+		want   string
+	}{
+		{path: "/hosts", want: ""},
+		{path: "/hosts/create", want: "create-host-dialog"},
+		{path: "/hosts/" + hostID, host: hostID, want: "host-details-dialog-" + hostID},
+		{path: "/hosts/" + hostID + "/update", host: hostID, want: "update-host-dialog-" + hostID},
+		{path: "/hosts/" + hostID + "/methods/create", host: hostID, want: "add-host-management-method-dialog-" + hostID},
+		{path: "/hosts/" + hostID + "/methods/" + methodID, host: hostID, method: methodID, want: "host-management-method-details-" + methodID},
+		{path: "/hosts/" + hostID + "/methods/" + methodID + "/update", host: hostID, method: methodID, want: "update-host-management-method-" + methodID},
+	}
+
+	for _, tt := range tests {
+		request := httptest.NewRequest("GET", tt.path, nil)
+		if tt.host != "" {
+			request.SetPathValue("id", tt.host)
+		}
+		if tt.method != "" {
+			request.SetPathValue("methodID", tt.method)
+		}
+		if got := hostsOpenDialogID(request); got != tt.want {
+			t.Fatalf("expected %q for %s, got %q", tt.want, tt.path, got)
+		}
+	}
+}
+
 func TestFilterAndSortHostsForHostsPageUsesServerSideDerivedData(t *testing.T) {
 	now := time.Now()
 	firstID := uuid.New()

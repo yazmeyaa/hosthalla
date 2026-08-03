@@ -162,6 +162,27 @@ css host_management_method_details_title() {
 	color: var(--text);
 }
 
+css host_management_method_details_header() {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-10);
+}
+
+css host_management_method_delete_button() {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: 1px solid var(--border-danger-strong);
+	border-radius: var(--radius-sm);
+	background: var(--surface-danger-strong);
+	color: var(--text-danger-on);
+	cursor: pointer;
+}
+
 css host_management_method_details_list() {
 	display: flex;
 	flex-direction: column;
@@ -352,6 +373,12 @@ css host_management_method_select() {
 }
 
 css host_management_method_key_fields() {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+css host_management_method_auth_section() {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;

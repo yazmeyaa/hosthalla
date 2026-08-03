@@ -6,14 +6,14 @@ import (
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
 )
 
-templ CreateHostDialog(availableTags []host.Tag) {
-	@modal.Modal(modal.ModalProps{ID: "create-host-dialog", AriaLabel: "Add Host"}) {
+templ CreateHostDialog(availableTags []host.Tag, open bool) {
+	@modal.Modal(modal.ModalProps{ID: "create-host-dialog", AriaLabel: "Add Host", Open: open, CloseHref: "/hosts"}) {
 		@modal.Content() {
 			@modal.Title("Add Host")
 			<form class={ host_form() } method="post" action="/hosts/create">
 				@HostFormFields("create-host", "", "", "", nil, availableTags)
 				@modal.Actions() {
-					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", "create-host-dialog")}) {
+					@button.Link(button.LinkProps{Href: "/hosts", Variant: "secondary"}) {
 						Cancel
 					}
 					@button.Button(button.ButtonProps{Type: "submit"}) {

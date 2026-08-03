@@ -38,6 +38,13 @@ type getHostManagementMethodSecretResponse struct {
 	PrivateKey string `json:"privateKey,omitempty"`
 }
 
+type testSSHManagementMethodResponse struct {
+	Status     string `json:"status"`
+	Message    string `json:"message"`
+	CheckedAt  string `json:"checkedAt"`
+	DurationMS int64  `json:"durationMs"`
+}
+
 type importHostsResponse struct {
 	Imported      int `json:"imported"`
 	Skipped       int `json:"skipped"`
@@ -65,6 +72,7 @@ type hostImportExportDTO struct {
 }
 
 type hostManagementMethodExportDTO struct {
+	Name        string                        `json:"name,omitempty"`
 	Type        host.HostManagementMethodType `json:"type"`
 	Username    string                        `json:"username"`
 	Port        uint16                        `json:"port,omitempty"`
@@ -183,6 +191,7 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 		HostManagementMethodsByHostID: hostManagementMethodsByHostID,
 		HostSystemInfoByHostID:        hostSystemInfoByHostID,
 		HostLatestMetricsByHostID:     hostLatestMetricsByHostID,
+		OpenDialogID:                  hostsOpenDialogID(r),
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
 			GenericLayoutProps: layout.GenericLayoutProps{Title: "Hosts"},
 			Profile:            profile,
@@ -195,6 +204,28 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hosts_page.HostsPage(pageProps).Render(r.Context(), w)
+}
+
+func hostsOpenDialogID(r *http.Request) string {
+	path := strings.TrimSuffix(r.URL.Path, "/")
+	hostID := r.PathValue("id")
+	methodID := r.PathValue("methodID")
+	switch {
+	case path == "/hosts/create":
+		return "create-host-dialog"
+	case hostID != "" && strings.HasSuffix(path, "/methods/create"):
+		return "add-host-management-method-dialog-" + hostID
+	case methodID != "" && strings.HasSuffix(path, "/update"):
+		return "update-host-management-method-" + methodID
+	case methodID != "":
+		return "host-management-method-details-" + methodID
+	case hostID != "" && strings.HasSuffix(path, "/update"):
+		return "update-host-dialog-" + hostID
+	case hostID != "":
+		return "host-details-dialog-" + hostID
+	default:
+		return ""
+	}
 }
 
 type hostsPageQuery struct {
@@ -292,7 +323,7 @@ func filterHostsForHostsPage(
 		if len(query.ManagementFilters) > 0 && !anyStringInSlice(managementFilters, query.ManagementFilters) {
 			continue
 		}
-		if search != "" && !strings.Contains(hostSearchTextForHostsPage(listedHost, hostSystemInfoByHostID[hostID], managementFilters), search) {
+		if search != "" && !strings.Contains(hostSearchTextForHostsPage(listedHost, methods, hostSystemInfoByHostID[hostID], managementFilters), search) {
 			continue
 		}
 		filtered = append(filtered, listedHost)
@@ -392,12 +423,17 @@ func hostManagementFiltersForHostsPage(listedHost host.Host, methods []host.Host
 	return result
 }
 
-func hostSearchTextForHostsPage(listedHost host.Host, systemInfo host.HostSystemInfo, managementFilters []string) string {
+func hostSearchTextForHostsPage(listedHost host.Host, methods []host.HostManagementMethod, systemInfo host.HostSystemInfo, managementFilters []string) string {
+	methodNames := make([]string, 0, len(methods))
+	for _, method := range methods {
+		methodNames = append(methodNames, method.Name)
+	}
 	return strings.ToLower(strings.Join([]string{
 		listedHost.Name,
 		listedHost.Description,
 		listedHost.IP.String(),
 		strings.Join(listedHost.Tags, " "),
+		strings.Join(methodNames, " "),
 		systemInfo.Hostname,
 		systemInfo.OS.Name,
 		systemInfo.OS.Version,
@@ -593,6 +629,18 @@ func (h *HostsHandler) PingAllHosts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *HostsHandler) ManagementMethodFields(w http.ResponseWriter, r *http.Request) {
+	hostID := r.PathValue("id")
+	methodType := strings.TrimSpace(r.URL.Query().Get("methodType"))
+	if methodType != string(host.HostManagementMethodTypeSSHKey) {
+		methodType = string(host.HostManagementMethodTypeSSHPassword)
+	}
+	if err := hosts_page.AddHostManagementMethodFields(hostID, methodType).Render(r.Context(), w); err != nil {
+		h.logger.Error("failed to render management method fields", slog.String("host_id", hostID), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func (h *HostsHandler) CreateHostManagementMethod(w http.ResponseWriter, r *http.Request) {
 	hostID, err := parseHostID(r.PathValue("id"))
 	if err != nil {
@@ -617,6 +665,7 @@ func (h *HostsHandler) CreateHostManagementMethod(w http.ResponseWriter, r *http
 			return
 		}
 		_, err = h.hostService.CreateSSHPasswordManagementMethod(r.Context(), hostID, host.CreateSSHPasswordManagementMethodDTO{
+			Name:        r.FormValue("name"),
 			Username:    r.FormValue("username"),
 			Password:    r.FormValue("password"),
 			Port:        port,
@@ -636,6 +685,7 @@ func (h *HostsHandler) CreateHostManagementMethod(w http.ResponseWriter, r *http
 			return
 		}
 		_, err = h.hostService.CreateSSHKeyManagementMethod(r.Context(), hostID, host.CreateSSHKeyManagementMethodDTO{
+			Name:        r.FormValue("name"),
 			Username:    r.FormValue("username"),
 			PublicKey:   r.FormValue("publicKey"),
 			PrivateKey:  r.FormValue("privateKey"),
@@ -655,6 +705,67 @@ func (h *HostsHandler) CreateHostManagementMethod(w http.ResponseWriter, r *http
 	}
 
 	http.Redirect(w, r, "/hosts", http.StatusSeeOther)
+}
+
+func (h *HostsHandler) UpdateHostManagementMethod(w http.ResponseWriter, r *http.Request) {
+	hostID, methodID, ok := h.parseHostAndMethodIDs(w, r, "update management method")
+	if !ok {
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		h.logger.Warn("failed to parse update management method form", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	port, err := host.ParsePort(r.FormValue("port"))
+	if err != nil {
+		h.logger.Warn("invalid port in update management method request", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if _, err := h.hostService.UpdateHostManagementMethod(r.Context(), hostID, methodID, host.UpdateHostManagementMethodInput{
+		Name:        r.FormValue("name"),
+		Username:    r.FormValue("username"),
+		Password:    r.FormValue("password"),
+		PublicKey:   r.FormValue("publicKey"),
+		PrivateKey:  r.FormValue("privateKey"),
+		Port:        port,
+		Description: r.FormValue("description"),
+	}); err != nil {
+		h.logger.Warn("failed to update management method in handler", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Redirect(w, r, "/hosts", http.StatusSeeOther)
+}
+
+func (h *HostsHandler) DeleteHostManagementMethod(w http.ResponseWriter, r *http.Request) {
+	hostID, methodID, ok := h.parseHostAndMethodIDs(w, r, "delete management method")
+	if !ok {
+		return
+	}
+	if err := h.hostService.DeleteHostManagementMethod(r.Context(), hostID, methodID); err != nil {
+		h.logger.Warn("failed to delete management method in handler", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	http.Redirect(w, r, "/hosts", http.StatusSeeOther)
+}
+
+func (h *HostsHandler) parseHostAndMethodIDs(w http.ResponseWriter, r *http.Request, action string) (uuid.UUID, uuid.UUID, bool) {
+	hostID, err := parseHostID(r.PathValue("id"))
+	if err != nil {
+		h.logger.Warn("invalid host id in "+action+" request", slog.String("host_id", r.PathValue("id")), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return uuid.UUID{}, uuid.UUID{}, false
+	}
+	methodID, err := parseHostID(r.PathValue("methodID"))
+	if err != nil {
+		h.logger.Warn("invalid management method id in "+action+" request", slog.String("host_id", hostID.String()), slog.String("method_id", r.PathValue("methodID")), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return uuid.UUID{}, uuid.UUID{}, false
+	}
+	return hostID, methodID, true
 }
 
 func (h *HostsHandler) GetHostManagementMethodSecret(w http.ResponseWriter, r *http.Request) {
@@ -686,6 +797,41 @@ func (h *HostsHandler) GetHostManagementMethodSecret(w http.ResponseWriter, r *h
 		PrivateKey: secret.PrivateKey,
 	}); err != nil {
 		h.logger.Error("failed to encode management method secret response", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *HostsHandler) TestSSHManagementMethod(w http.ResponseWriter, r *http.Request) {
+	hostID, err := parseHostID(r.PathValue("id"))
+	if err != nil {
+		h.logger.Warn("invalid host id in ssh check request", slog.String("host_id", r.PathValue("id")), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	methodID, err := parseHostID(r.PathValue("methodID"))
+	if err != nil {
+		h.logger.Warn("invalid management method id in ssh check request", slog.String("host_id", hostID.String()), slog.String("method_id", r.PathValue("methodID")), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.hostService.TestSSHManagementMethod(r.Context(), hostID, methodID)
+	if err != nil {
+		h.logger.Warn("failed to test ssh management method in handler", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(testSSHManagementMethodResponse{
+		Status:     string(result.Status),
+		Message:    result.Message,
+		CheckedAt:  result.CheckedAt.Format(time.RFC3339),
+		DurationMS: result.Duration.Milliseconds(),
+	}); err != nil {
+		h.logger.Error("failed to encode ssh check response", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return
 	}
@@ -836,6 +982,7 @@ func (h *HostsHandler) ExportHosts(w http.ResponseWriter, r *http.Request) {
 			}
 
 			exportedManagementMethods = append(exportedManagementMethods, hostManagementMethodExportDTO{
+				Name:        method.Name,
 				Type:        method.Type,
 				Username:    method.Username,
 				Port:        method.Port,
@@ -978,10 +1125,28 @@ func decodeHostsImportPayload(reader io.Reader) ([]hostImportExportDTO, error) {
 
 func formatExportManagementMethod(method host.HostManagementMethod) string {
 	parts := []string{string(method.Type), method.Username}
+	if method.Name != "" {
+		parts = append(parts, method.Name)
+	}
 	if method.Description != "" {
 		parts = append(parts, method.Description)
 	}
 	return strings.Join(parts, " / ")
+}
+
+func importedManagementMethodName(method hostManagementMethodExportDTO) string {
+	name := strings.TrimSpace(method.Name)
+	if name != "" {
+		return name
+	}
+	switch method.Type {
+	case host.HostManagementMethodTypeSSHPassword:
+		return "SSH password"
+	case host.HostManagementMethodTypeSSHKey:
+		return "SSH private key"
+	default:
+		return string(method.Type)
+	}
 }
 
 func validateImportedManagementMethods(methods []hostManagementMethodExportDTO) error {
@@ -1012,6 +1177,7 @@ func (h *HostsHandler) importHostManagementMethod(ctx context.Context, hostID uu
 	switch method.Type {
 	case host.HostManagementMethodTypeSSHPassword:
 		_, err := h.hostService.CreateSSHPasswordManagementMethod(ctx, hostID, host.CreateSSHPasswordManagementMethodDTO{
+			Name:        importedManagementMethodName(method),
 			Username:    method.Username,
 			Password:    method.Secret.Password,
 			Port:        method.Port,
@@ -1023,6 +1189,7 @@ func (h *HostsHandler) importHostManagementMethod(ctx context.Context, hostID uu
 		}
 	case host.HostManagementMethodTypeSSHKey:
 		_, err := h.hostService.CreateSSHKeyManagementMethod(ctx, hostID, host.CreateSSHKeyManagementMethodDTO{
+			Name:        importedManagementMethodName(method),
 			Username:    method.Username,
 			PublicKey:   method.Secret.PublicKey,
 			PrivateKey:  method.Secret.PrivateKey,

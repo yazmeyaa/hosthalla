@@ -10,14 +10,27 @@ func managementMethodLabel(methodType host.HostManagementMethodType) string {
 	case host.HostManagementMethodTypeSSHPassword:
 		return "ssh (password)"
 	case host.HostManagementMethodTypeSSHKey:
-		return "ssh (key)"
+		return "ssh (private key)"
 	default:
 		return string(methodType)
 	}
 }
 
+func managementMethodNameLabel(method host.HostManagementMethod) string {
+	if method.Name != "" {
+		return method.Name
+	}
+	return managementMethodLabel(method.Type)
+}
+
 templ MethodTypeTag(methodType host.HostManagementMethodType) {
 	@badge.Badge(badge.BadgeProps{Variant: "info"}) {
 		{ managementMethodLabel(methodType) }
+	}
+}
+
+templ MethodNameTag(method host.HostManagementMethod) {
+	@badge.Badge(badge.BadgeProps{Variant: "info"}) {
+		{ managementMethodNameLabel(method) }
 	}
 }

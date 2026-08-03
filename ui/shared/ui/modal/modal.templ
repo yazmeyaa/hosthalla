@@ -4,10 +4,18 @@ type ModalProps struct {
 	ID        string
 	ClassName string
 	AriaLabel string
+	Open      bool
+	CloseHref string
 }
 
 templ Modal(props ModalProps) {
-	<dialog id={ props.ID } class={ modal_dialog(), "ui-modal", props.ClassName } aria-label={ props.AriaLabel }>
+	<dialog
+		id={ props.ID }
+		class={ modal_dialog(), "ui-modal", props.ClassName }
+		aria-label={ props.AriaLabel }
+		data-modal-open?={ props.Open }
+		data-modal-close-href={ props.CloseHref }
+	>
 		{ children... }
 	</dialog>
 }
@@ -30,6 +38,14 @@ templ Actions() {
 
 templ Scripts() {
 	<script>
+		function navigateModalClose(dialog) {
+			const href = dialog.dataset.modalCloseHref || "";
+			if (href === "") {
+				return;
+			}
+			window.location.href = href;
+		}
+
 		function bindModalInteractions(dialog) {
 			if (!(dialog instanceof HTMLDialogElement)) {
 				return;
@@ -43,12 +59,30 @@ templ Scripts() {
 			dialog.addEventListener("click", function(event) {
 				// Native modal UX: click on backdrop closes dialog.
 				if (event.target === dialog) {
-					dialog.close();
+					navigateModalClose(dialog);
 				}
 			});
+
+			dialog.addEventListener("cancel", function(event) {
+				if ((dialog.dataset.modalCloseHref || "") === "") {
+					return;
+				}
+				event.preventDefault();
+				navigateModalClose(dialog);
+			});
+
 		}
 
 		document.querySelectorAll("dialog.ui-modal").forEach(bindModalInteractions);
+
+		document.addEventListener("htmx:beforeSwap", function(event) {
+			if (!event.detail || event.detail.target !== document.getElementById("app-content")) {
+				return;
+			}
+			document.querySelectorAll("dialog.ui-modal[open]").forEach(function(dialog) {
+				dialog.close();
+			});
+		});
 
 		function openModalDialog(dialogId) {
 			const dialog = document.getElementById(dialogId);
@@ -64,5 +98,9 @@ templ Scripts() {
 				dialog.close();
 			}
 		}
+
+		document.querySelectorAll("dialog.ui-modal[data-modal-open]").forEach(function(dialog) {
+			openModalDialog(dialog.id);
+		});
 	</script>
 }

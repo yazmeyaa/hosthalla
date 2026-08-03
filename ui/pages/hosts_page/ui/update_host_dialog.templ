@@ -6,17 +6,17 @@ import (
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
 )
 
-templ UpdateHostDialog(host host.Host, availableTags []host.Tag) {
+templ UpdateHostDialog(host host.Host, availableTags []host.Tag, open bool) {
 	{{
 		dialogID := "update-host-dialog-" + host.ID.String()
 	}}
-	@modal.Modal(modal.ModalProps{ID: dialogID, AriaLabel: "Update Host"}) {
+	@modal.Modal(modal.ModalProps{ID: dialogID, AriaLabel: "Update Host", Open: open, CloseHref: "/hosts"}) {
 		@modal.Content() {
 			@modal.Title("Update Host")
 			<form class={ host_form() } method="post" action={ "/hosts/" + host.ID.String() + "/update" }>
 				@HostFormFields("update-host-"+host.ID.String(), host.Name, host.Description, host.IP.String(), host.Tags, availableTags)
 				@modal.Actions() {
-					@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", dialogID)}) {
+					@button.Link(button.LinkProps{Href: "/hosts", Variant: "secondary"}) {
 						Cancel
 					}
 					@button.Button(button.ButtonProps{Type: "submit"}) {

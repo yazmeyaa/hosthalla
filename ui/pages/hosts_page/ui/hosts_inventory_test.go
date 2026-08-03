@@ -84,6 +84,107 @@ func TestHostsInventoryRendersFilteringSortingAndActions(t *testing.T) {
 	}
 }
 
+func TestAddHostManagementMethodDialogStartsWithPasswordFieldsOnly(t *testing.T) {
+	hostID := uuid.New()
+
+	var body bytes.Buffer
+	err := AddHostManagementMethodDialog(host.Host{ID: hostID}, "add-method-dialog", false).Render(t.Context(), &body)
+	if err != nil {
+		t.Fatalf("render add management method dialog: %v", err)
+	}
+	html := body.String()
+
+	for _, expected := range []string{
+		`name="methodType"`,
+		`hx-get="/hosts/` + hostID.String() + `/management-method-fields"`,
+		`hx-target="#management-method-auth-fields-` + hostID.String() + `"`,
+		`name="password"`,
+		`required`,
+	} {
+		if !strings.Contains(html, expected) {
+			t.Fatalf("expected add management method dialog to contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{`name="publicKey"`, `name="privateKey"`, `disabled`} {
+		if strings.Contains(html, unexpected) {
+			t.Fatalf("expected initial add management method dialog not to contain %q", unexpected)
+		}
+	}
+}
+
+func TestAddHostManagementMethodFieldsSwitchesByMethodType(t *testing.T) {
+	var passwordFields bytes.Buffer
+	err := AddHostManagementMethodFields("host-1", "ssh_password").Render(t.Context(), &passwordFields)
+	if err != nil {
+		t.Fatalf("render password fields: %v", err)
+	}
+	passwordHTML := passwordFields.String()
+	if !strings.Contains(passwordHTML, `name="password"`) || strings.Contains(passwordHTML, `name="publicKey"`) || strings.Contains(passwordHTML, `name="privateKey"`) {
+		t.Fatalf("expected password fields only, got %s", passwordHTML)
+	}
+
+	var keyFields bytes.Buffer
+	err = AddHostManagementMethodFields("host-1", "ssh_key").Render(t.Context(), &keyFields)
+	if err != nil {
+		t.Fatalf("render key fields: %v", err)
+	}
+	keyHTML := keyFields.String()
+	if !strings.Contains(keyHTML, `name="publicKey"`) || !strings.Contains(keyHTML, `name="privateKey"`) || strings.Contains(keyHTML, `name="password"`) {
+		t.Fatalf("expected key fields only, got %s", keyHTML)
+	}
+
+	var passwordFieldsAgain bytes.Buffer
+	err = AddHostManagementMethodFields("host-1", "ssh_password").Render(t.Context(), &passwordFieldsAgain)
+	if err != nil {
+		t.Fatalf("render password fields again: %v", err)
+	}
+	passwordAgainHTML := passwordFieldsAgain.String()
+	if !strings.Contains(passwordAgainHTML, `name="password"`) || strings.Contains(passwordAgainHTML, `name="publicKey"`) || strings.Contains(passwordAgainHTML, `name="privateKey"`) {
+		t.Fatalf("expected password fields after switching back, got %s", passwordAgainHTML)
+	}
+}
+
+func TestHostManagementMethodDetailsDialogRendersDeleteAction(t *testing.T) {
+	methodID := uuid.New()
+	hostID := uuid.New()
+	var body bytes.Buffer
+	method := host.HostManagementMethod{
+		ID:       methodID,
+		HostID:   hostID,
+		Name:     "Primary SSH",
+		Type:     host.HostManagementMethodTypeSSHPassword,
+		Username: "root",
+		Port:     22,
+	}
+	err := HostManagementMethodDetailsDialog("192.0.2.10", method, "method-details-dialog", "update-method-dialog", true).Render(t.Context(), &body)
+	if err != nil {
+		t.Fatalf("render management method details dialog: %v", err)
+	}
+	html := body.String()
+	for _, expected := range []string{
+		`data-delete-management-method-form`,
+		`data-delete-management-method-button`,
+		`action="/hosts/` + hostID.String() + `/management-methods/` + methodID.String() + `/delete"`,
+		`hx-post="/hosts/` + hostID.String() + `/management-methods/` + methodID.String() + `/delete"`,
+		`hx-confirm="Delete this authorization method?"`,
+		`aria-label="Delete Primary SSH"`,
+		`href="#ui-icon-trash"`,
+	} {
+		if !strings.Contains(html, expected) {
+			t.Fatalf("expected management method details dialog to contain %q", expected)
+		}
+	}
+
+	body.Reset()
+	err = UpdateHostManagementMethodDialog(method, "update-method-dialog", true).Render(t.Context(), &body)
+	if err != nil {
+		t.Fatalf("render update management method dialog: %v", err)
+	}
+	if strings.Contains(body.String(), `data-delete-management-method-form`) {
+		t.Fatal("expected update management method dialog not to contain delete form")
+	}
+}
+
 func TestBuildHostInventoryRowsProvidesSortAndFilterData(t *testing.T) {
 	hostID := uuid.New()
 	now := time.Now()

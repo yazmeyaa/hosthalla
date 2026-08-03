@@ -15,7 +15,16 @@ type CreateHostDTO struct {
 }
 
 type CreateHostManagementMethodDTO struct {
+	Name        string
 	Type        HostManagementMethodType
+	Username    string
+	Port        uint16
+	Secret      []byte
+	Description string
+}
+
+type UpdateHostManagementMethodDTO struct {
+	Name        string
 	Username    string
 	Port        uint16
 	Secret      []byte
@@ -40,6 +49,8 @@ type HostManagementMethodRepository interface {
 	ListHostManagementMethodsByHostIDs(ctx context.Context, hostIDs []uuid.UUID) (map[uuid.UUID][]HostManagementMethod, error)
 	GetHostManagementMethodByID(ctx context.Context, methodID uuid.UUID) (HostManagementMethod, error)
 	CreateHostManagementMethod(ctx context.Context, hostID uuid.UUID, data CreateHostManagementMethodDTO) (HostManagementMethod, error)
+	UpdateHostManagementMethod(ctx context.Context, methodID uuid.UUID, data UpdateHostManagementMethodDTO) (HostManagementMethod, error)
+	DeleteHostManagementMethod(ctx context.Context, methodID uuid.UUID) error
 }
 
 type HostSystemInfoRepository interface {

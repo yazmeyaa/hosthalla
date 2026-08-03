@@ -1,0 +1,68 @@
+package hosts_page_ui
+
+import (
+	"strconv"
+
+	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/input"
+	"github.com/yazmeyaa/hosthalla/ui/shared/ui/modal"
+)
+
+templ UpdateHostManagementMethodDialog(method host.HostManagementMethod, dialogID string, open bool) {
+	{{
+		nameValue := method.Name
+		if nameValue == "" {
+			nameValue = hostManagementMethodDetailsTypeLabel(method.Type)
+		}
+	}}
+	@modal.Modal(modal.ModalProps{ID: dialogID, AriaLabel: "Update authorization method", Open: open, CloseHref: "/hosts/" + method.HostID.String() + "/methods/" + method.ID.String()}) {
+		@modal.Content() {
+			@modal.Title("Update Method")
+			<form class={ host_form(), host_management_method_form() } method="post" action={ "/hosts/" + method.HostID.String() + "/management-methods/" + method.ID.String() + "/update" }>
+				<div class={ host_form_field() }>
+					<label class={ host_form_label() } for={ "edit-management-method-name-" + method.ID.String() }>Name</label>
+					@input.Input(input.InputProps{Id: "edit-management-method-name-" + method.ID.String(), Name: "name", Value: nameValue, Required: true})
+				</div>
+				<div class={ host_form_field() }>
+					<label class={ host_form_label() } for={ "edit-management-method-username-" + method.ID.String() }>Username</label>
+					@input.Input(input.InputProps{Id: "edit-management-method-username-" + method.ID.String(), Name: "username", Value: method.Username, ClassName: "ui-mono-text", Required: true})
+				</div>
+				<div class={ host_form_field() }>
+					<label class={ host_form_label() } for={ "edit-management-method-port-" + method.ID.String() }>Port</label>
+					@input.Input(input.InputProps{Id: "edit-management-method-port-" + method.ID.String(), Name: "port", Type: "number", Value: strconv.Itoa(int(method.Port)), ClassName: "ui-mono-text"})
+				</div>
+				<div class={ host_form_field() }>
+					<label class={ host_form_label() } for={ "edit-management-method-description-" + method.ID.String() }>Description (optional)</label>
+					@input.Input(input.InputProps{Id: "edit-management-method-description-" + method.ID.String(), Name: "description", Value: method.Description})
+				</div>
+				if method.Type == host.HostManagementMethodTypeSSHPassword {
+					<div class={ host_form_field() }>
+						<label class={ host_form_label() } for={ "edit-management-method-password-" + method.ID.String() }>New password</label>
+						@input.Input(input.InputProps{Id: "edit-management-method-password-" + method.ID.String(), Name: "password", Type: "password", Placeholder: "Leave blank to keep current password"})
+					</div>
+				}
+				if method.Type == host.HostManagementMethodTypeSSHKey {
+					<div class={ host_management_method_key_fields() }>
+						<div class={ host_form_field() }>
+							<label class={ host_form_label() } for={ "edit-management-method-public-key-" + method.ID.String() }>New public key</label>
+							<textarea class={ host_management_method_textarea(), "ui-input", "ui-mono-text" } id={ "edit-management-method-public-key-" + method.ID.String() } name="publicKey" rows="4" placeholder="Leave blank to keep current public key"></textarea>
+						</div>
+						<div class={ host_form_field() }>
+							<label class={ host_form_label() } for={ "edit-management-method-private-key-" + method.ID.String() }>New private key</label>
+							<textarea class={ host_management_method_textarea(), "ui-input", "ui-mono-text" } id={ "edit-management-method-private-key-" + method.ID.String() } name="privateKey" rows="7" placeholder="Leave blank to keep current private key"></textarea>
+						</div>
+					</div>
+				}
+				@modal.Actions() {
+					@button.Link(button.LinkProps{Href: "/hosts/" + method.HostID.String() + "/methods/" + method.ID.String(), Variant: "secondary"}) {
+						Cancel
+					}
+					@button.Button(button.ButtonProps{Type: "submit"}) {
+						Save
+					}
+				}
+			</form>
+		}
+	}
+}

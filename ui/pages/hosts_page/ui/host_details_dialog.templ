@@ -14,8 +14,9 @@ templ HostDetailsDialog(
 	systemInfo *host.HostSystemInfo,
 	detailsDialogID string,
 	addManagementMethodDialogID string,
+	openDialogID string,
 ) {
-	@modal.Modal(modal.ModalProps{ID: detailsDialogID, ClassName: host_details_dialog().ClassName(), AriaLabel: "Host Details"}) {
+	@modal.Modal(modal.ModalProps{ID: detailsDialogID, ClassName: host_details_dialog().ClassName(), AriaLabel: "Host Details", Open: hostDetailsDialogOpen(detailsDialogID, addManagementMethodDialogID, methods, openDialogID), CloseHref: "/hosts"}) {
 		<div class={ host_details_dialog_content() }>
 			{{
 				agentRegisterStatusID := "host-agent-register-status-" + host.ID.String()
@@ -47,16 +48,26 @@ templ HostDetailsDialog(
 						for _, method := range methods {
 							{{
 								methodDetailsDialogID := "host-management-method-details-" + method.ID.String()
+								methodUpdateDialogID := "update-host-management-method-" + method.ID.String()
 							}}
-							<button
-								type="button"
+							<a
 								class={ host_management_method_details_trigger(), "ui-interactive-control" }
-								aria-label={ "Show connection details for " + method.Username }
-								onclick={ templ.JSFuncCall("openModalDialog", methodDetailsDialogID) }
+								href={ "/hosts/" + host.ID.String() + "/methods/" + method.ID.String() }
+								aria-label={ "Show connection details for " + method.Name }
+								hx-boost="true"
+								hx-target="#app-content"
+								hx-select="#app-content"
+								hx-swap="outerHTML show:none"
+								hx-push-url="true"
 							>
-								@host_entity.MethodTypeTag(method.Type)
-							</button>
-							@HostManagementMethodDetailsDialog(host.IP.String(), method, methodDetailsDialogID)
+								@host_entity.MethodNameTag(method)
+							</a>
+							if openDialogID == methodDetailsDialogID {
+								@HostManagementMethodDetailsDialog(host.IP.String(), method, methodDetailsDialogID, methodUpdateDialogID, true)
+							}
+							if openDialogID == methodUpdateDialogID {
+								@UpdateHostManagementMethodDialog(method, methodUpdateDialogID, true)
+							}
 						}
 					</div>
 				}
@@ -100,13 +111,27 @@ templ HostDetailsDialog(
 				></textarea>
 			</div>
 			@modal.Actions() {
-				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", detailsDialogID)}) {
+				@button.Link(button.LinkProps{Href: "/hosts", Variant: "secondary"}) {
 					Close
 				}
-				@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", addManagementMethodDialogID)}) {
-					Add Method
-				}
+				<span hx-boost="true" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML show:none" hx-push-url="true">
+					@button.Link(button.LinkProps{Href: "/hosts/" + host.ID.String() + "/methods/create"}) {
+						Add Method
+					}
+				</span>
 			}
 		</div>
 	}
+}
+
+func hostDetailsDialogOpen(detailsDialogID string, addManagementMethodDialogID string, methods []host.HostManagementMethod, openDialogID string) bool {
+	if openDialogID == detailsDialogID || openDialogID == addManagementMethodDialogID {
+		return true
+	}
+	for _, method := range methods {
+		if openDialogID == "host-management-method-details-"+method.ID.String() || openDialogID == "update-host-management-method-"+method.ID.String() {
+			return true
+		}
+	}
+	return false
 }

@@ -24,3 +24,6 @@ for bin in hosthalla; do
     sudo install -m 0755 "$TMP/$bin" "/usr/local/bin/$bin"
   fi
 done
+
+VERSION=$(hosthalla version)
+echo "Installed Hosthalla v$(VERSION)"

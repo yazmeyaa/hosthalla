@@ -161,8 +161,9 @@ templ HostsInventoryScripts() {
 				}
 				const detailRow = target.closest("[data-open-details]");
 				if (detailRow && !target.closest("a, button, input, select, textarea, summary, details, form, label, [data-hosts-row-select], [data-hosts-select-all]")) {
-					if (typeof window.openModalDialog === "function") {
-						window.openModalDialog(detailRow.dataset.openDetails);
+					const detailsLink = detailRow.querySelector("[data-host-details-link]");
+					if (detailsLink instanceof HTMLAnchorElement) {
+						detailsLink.click();
 					}
 					return;
 				}
