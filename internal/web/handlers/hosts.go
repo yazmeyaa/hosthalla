@@ -25,6 +25,7 @@ type HostsHandler struct {
 	hostService    *host.Service
 	profileService *auth_service.Service
 	logger         *slog.Logger
+	webOrigin      string
 }
 
 type createAgentRegisterCommandResponse struct {
@@ -83,8 +84,8 @@ type importHostCandidate struct {
 	Methods []hostManagementMethodExportDTO
 }
 
-func NewHostsHandler(hostService *host.Service, profileService *auth_service.Service, logger *slog.Logger) *HostsHandler {
-	return &HostsHandler{hostService: hostService, profileService: profileService, logger: logger}
+func NewHostsHandler(hostService *host.Service, profileService *auth_service.Service, logger *slog.Logger, webOrigin string) *HostsHandler {
+	return &HostsHandler{hostService: hostService, profileService: profileService, logger: logger, webOrigin: webOrigin}
 }
 
 func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
@@ -724,10 +725,9 @@ func (h *HostsHandler) CreateAgentRegisterCommand(w http.ResponseWriter, r *http
 		return
 	}
 
-	serverURL := resolvePublicServerURL(r)
 	command := fmt.Sprintf(
 		"hosthalla agent register --host=%s --host-id=%s --token=%s",
-		serverURL,
+		h.webOrigin,
 		hostID.String(),
 		createdToken.PlainToken,
 	)
@@ -795,28 +795,6 @@ func parseHostID(rawHostID string) (uuid.UUID, error) {
 		return uuid.UUID{}, err
 	}
 	return hostUUID, nil
-}
-
-func resolvePublicServerURL(r *http.Request) string {
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
-	}
-
-	if forwardedProto := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")); forwardedProto != "" {
-		scheme = strings.Split(forwardedProto, ",")[0]
-	}
-
-	host := strings.TrimSpace(r.Host)
-	if forwardedHost := strings.TrimSpace(r.Header.Get("X-Forwarded-Host")); forwardedHost != "" {
-		host = strings.Split(forwardedHost, ",")[0]
-	}
-
-	if host == "" {
-		host = "localhost"
-	}
-
-	return scheme + "://" + host
 }
 
 func (h *HostsHandler) ExportHosts(w http.ResponseWriter, r *http.Request) {
