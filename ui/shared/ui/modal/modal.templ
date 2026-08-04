@@ -38,69 +38,181 @@ templ Actions() {
 
 templ Scripts() {
 	<script>
-		function navigateModalClose(dialog) {
-			const href = dialog.dataset.modalCloseHref || "";
-			if (href === "") {
-				return;
-			}
-			window.location.href = href;
-		}
-
-		function bindModalInteractions(dialog) {
-			if (!(dialog instanceof HTMLDialogElement)) {
+		(function() {
+			const managerName = "hosthallaModalStack";
+			const existingManager = window[managerName];
+			if (existingManager && typeof existingManager.boot === "function") {
+				existingManager.boot(document);
 				return;
 			}
 
-			if (dialog.dataset.backdropCloseBound === "true") {
-				return;
-			}
-			dialog.dataset.backdropCloseBound = "true";
+			const stack = [];
 
-			dialog.addEventListener("click", function(event) {
-				// Native modal UX: click on backdrop closes dialog.
-				if (event.target === dialog) {
-					navigateModalClose(dialog);
+			function isDialog(value) {
+				return value instanceof HTMLDialogElement;
+			}
+
+			function pruneStack() {
+				for (let index = stack.length - 1; index >= 0; index -= 1) {
+					if (!document.documentElement.contains(stack[index])) {
+						stack.splice(index, 1);
+					}
 				}
-			});
+			}
 
-			dialog.addEventListener("cancel", function(event) {
-				if ((dialog.dataset.modalCloseHref || "") === "") {
+			function stackTop() {
+				pruneStack();
+				return stack.length === 0 ? null : stack[stack.length - 1];
+			}
+
+			function removeFromStack(dialog) {
+				for (let index = stack.length - 1; index >= 0; index -= 1) {
+					if (stack[index] === dialog) {
+						stack.splice(index, 1);
+					}
+				}
+			}
+
+			function closeSilently(dialog) {
+				if (!isDialog(dialog) || !dialog.open) {
 					return;
 				}
-				event.preventDefault();
-				navigateModalClose(dialog);
-			});
-
-		}
-
-		document.querySelectorAll("dialog.ui-modal").forEach(bindModalInteractions);
-
-		document.addEventListener("htmx:beforeSwap", function(event) {
-			if (!event.detail || event.detail.target !== document.getElementById("app-content")) {
-				return;
-			}
-			document.querySelectorAll("dialog.ui-modal[open]").forEach(function(dialog) {
-				dialog.close();
-			});
-		});
-
-		function openModalDialog(dialogId) {
-			const dialog = document.getElementById(dialogId);
-			bindModalInteractions(dialog);
-			if (dialog && typeof dialog.showModal === "function") {
-				dialog.showModal();
-			}
-		}
-
-		function closeModalDialog(dialogId) {
-			const dialog = document.getElementById(dialogId);
-			if (dialog && typeof dialog.close === "function") {
+				dialog.dataset.modalStackSilentClose = "true";
 				dialog.close();
 			}
-		}
 
-		document.querySelectorAll("dialog.ui-modal[data-modal-open]").forEach(function(dialog) {
-			openModalDialog(dialog.id);
-		});
+			function showAsModal(dialog) {
+				if (!isDialog(dialog)) {
+					return false;
+				}
+
+				if (dialog.open) {
+					return true;
+				}
+
+				try {
+					dialog.showModal();
+					return true;
+				} catch (error) {
+					document.querySelectorAll("dialog.ui-modal[open]").forEach(function(openDialog) {
+						if (openDialog !== dialog && stack.indexOf(openDialog) === -1) {
+							closeSilently(openDialog);
+						}
+					});
+				}
+
+				try {
+					dialog.showModal();
+					return true;
+				} catch (error) {
+					return false;
+				}
+			}
+
+			function requestDialogClose(dialog) {
+				if (!isDialog(dialog)) {
+					return;
+				}
+
+				const href = dialog.dataset.modalCloseHref || "";
+				if (href !== "") {
+					window.location.href = href;
+					return;
+				}
+
+				dialog.close();
+			}
+
+			function bindModalInteractions(dialog) {
+				if (!isDialog(dialog) || dialog.dataset.modalStackBound === "true") {
+					return;
+				}
+				dialog.dataset.modalStackBound = "true";
+
+				dialog.addEventListener("click", function(event) {
+					if (event.target === dialog) {
+						requestDialogClose(dialog);
+					}
+				});
+
+				dialog.addEventListener("cancel", function(event) {
+					event.preventDefault();
+					requestDialogClose(dialog);
+				});
+
+				dialog.addEventListener("close", function() {
+					if (dialog.dataset.modalStackSilentClose === "true") {
+						delete dialog.dataset.modalStackSilentClose;
+						return;
+					}
+
+					removeFromStack(dialog);
+				});
+			}
+
+			function openDialog(dialog) {
+				if (!isDialog(dialog)) {
+					return;
+				}
+
+				bindModalInteractions(dialog);
+				if (stackTop() === dialog && dialog.open) {
+					return;
+				}
+
+				removeFromStack(dialog);
+				if (showAsModal(dialog)) {
+					stack.push(dialog);
+				}
+			}
+
+			function openByID(dialogID) {
+				openDialog(document.getElementById(dialogID));
+			}
+
+			function closeByID(dialogID) {
+				const dialog = document.getElementById(dialogID);
+				if (isDialog(dialog) && dialog.open) {
+					dialog.close();
+				}
+			}
+
+			function closeAll() {
+				document.querySelectorAll("dialog.ui-modal[open]").forEach(closeSilently);
+				stack.length = 0;
+			}
+
+			function boot(root) {
+				const scope = root && typeof root.querySelectorAll === "function" ? root : document;
+				scope.querySelectorAll("dialog.ui-modal").forEach(bindModalInteractions);
+				scope.querySelectorAll("dialog.ui-modal[data-modal-open]").forEach(function(dialog) {
+					if (dialog.dataset.modalStackAutoOpened === "true") {
+						return;
+					}
+					dialog.dataset.modalStackAutoOpened = "true";
+					openDialog(dialog);
+				});
+			}
+
+			document.addEventListener("htmx:beforeSwap", function(event) {
+				if (!event.detail || event.detail.target !== document.getElementById("app-content")) {
+					return;
+				}
+				closeAll();
+			});
+
+			window[managerName] = {
+				boot: boot,
+				closeAll: closeAll,
+				closeByID: closeByID,
+				open: openDialog,
+				openByID: openByID,
+			};
+			window.openModalDialog = openByID;
+			window.closeModalDialog = closeByID;
+			window.navigateModalClose = requestDialogClose;
+
+			boot(document);
+		})();
 	</script>
 }
