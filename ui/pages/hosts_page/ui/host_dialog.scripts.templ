@@ -341,7 +341,6 @@ templ HostDialogScripts() {
 				return;
 			}
 
-			const usernameInput = form.querySelector("input[name='username']");
 			const passwordInput = form.querySelector("input[name='password']");
 			const publicKeyInput = form.querySelector("textarea[name='publicKey']");
 			const privateKeyInput = form.querySelector("textarea[name='privateKey']");
@@ -350,36 +349,187 @@ templ HostDialogScripts() {
 			const privateKeyField = form.querySelector("[data-method-field='privateKey']");
 			const isSSHKey = typeSelect.value === "ssh_key";
 
-			if (passwordField instanceof HTMLElement) {
-				passwordField.style.display = isSSHKey ? "none" : "";
-			}
-			if (publicKeyField instanceof HTMLElement) {
-				publicKeyField.style.display = isSSHKey ? "" : "none";
-			}
-			if (privateKeyField instanceof HTMLElement) {
-				privateKeyField.style.display = isSSHKey ? "" : "none";
-			}
+			setHostManagementMethodSecretField(passwordField, passwordInput, !isSSHKey);
+			setHostManagementMethodSecretField(publicKeyField, publicKeyInput, isSSHKey);
+			setHostManagementMethodSecretField(privateKeyField, privateKeyInput, isSSHKey);
+		}
 
-			if (usernameInput instanceof HTMLInputElement) {
-				usernameInput.required = true;
-				usernameInput.disabled = false;
+		function setHostManagementMethodSecretField(field, input, enabled) {
+			if (field instanceof HTMLElement) {
+				field.hidden = !enabled;
 			}
-			if (passwordInput instanceof HTMLInputElement) {
-				passwordInput.required = !isSSHKey;
-				passwordInput.disabled = isSSHKey;
+			if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement)) {
+				return;
 			}
-			if (publicKeyInput instanceof HTMLTextAreaElement) {
-				publicKeyInput.required = isSSHKey;
-				publicKeyInput.disabled = !isSSHKey;
+			if (!enabled) {
+				input.value = "";
 			}
-			if (privateKeyInput instanceof HTMLTextAreaElement) {
-				privateKeyInput.required = isSSHKey;
-				privateKeyInput.disabled = !isSSHKey;
+			input.disabled = !enabled;
+			input.required = enabled;
+		}
+
+		function hostDialogClass(selector, fallback) {
+			const source = document.querySelector(selector);
+			return source instanceof HTMLElement ? source.className : fallback;
+		}
+
+		function hostDialogRootClass(root, attributeName, fallback) {
+			const className = root.dataset[attributeName] || "";
+			return className || fallback;
+		}
+
+		function isVisibleHostDialogOpener(element) {
+			return element instanceof HTMLElement && element.isConnected && element.getClientRects().length > 0;
+		}
+		function createHostManagementMethodField(labelText, control, fieldName) {
+			const field = document.createElement("div");
+			field.className = hostDialogClass("#create-host-dialog form > div", "");
+			if (fieldName) {
+				field.dataset.methodField = fieldName;
+			}
+			const label = document.createElement("label");
+			label.className = hostDialogClass("#create-host-dialog label", "");
+			label.htmlFor = control.id;
+			label.textContent = labelText;
+			field.append(label, control);
+			return field;
+		}
+
+		function createHostManagementMethodInput(name, type, required) {
+			const input = document.createElement("input");
+			input.className = hostDialogClass("#create-host-dialog input.ui-input", "ui-input");
+			input.id = "host-management-method-" + name;
+			input.name = name;
+			input.type = type;
+			input.required = required;
+			return input;
+		}
+
+		function createHostManagementMethodTextarea(root, name, rows) {
+			const textarea = document.createElement("textarea");
+			textarea.className = hostDialogRootClass(root, "hostManagementMethodTextareaClass", "") + " ui-input ui-mono-text";
+			textarea.id = "host-management-method-" + name;
+			textarea.name = name;
+			textarea.rows = rows;
+			return textarea;
+		}
+
+		function createHostManagementMethodButton(text, type, variant) {
+			const button = document.createElement("button");
+			button.className = hostDialogClass(".ui-button[data-ui-button-variant=\"" + variant + "\"]", "ui-button");
+			button.type = type;
+			button.dataset.uiButtonVariant = variant;
+			button.textContent = text;
+			return button;
+		}
+
+		function closeHostManagementMethodDialog(dialog) {
+			if (dialog instanceof HTMLDialogElement && dialog.open) {
+				dialog.close();
 			}
 		}
 
-		window.syncHostManagementMethodForm = syncHostManagementMethodForm;
+		function openHostManagementMethodDialog(trigger) {
+			if (!(trigger instanceof HTMLElement)) {
+				return;
+			}
+			const hostID = trigger.dataset.hostId || "";
+			const root = document.getElementById("host-modal-root");
+			if (hostID === "" || !(root instanceof HTMLElement)) {
+				return;
+			}
 
+			const detailsDialog = trigger.closest("dialog");
+			const returnFocusTarget = detailsDialog instanceof HTMLDialogElement && isVisibleHostDialogOpener(detailsDialog._modalOpener)
+				? detailsDialog._modalOpener
+				: null;
+			if (detailsDialog instanceof HTMLDialogElement && detailsDialog.open) {
+				detailsDialog.close();
+			}
+
+			const dialog = document.createElement("dialog");
+			dialog.className = hostDialogClass("#create-host-dialog", "ui-modal");
+			dialog.setAttribute("aria-label", "Add management method");
+			const content = document.createElement("div");
+			content.className = hostDialogClass("#create-host-dialog > div", "");
+			const title = document.createElement("h2");
+			title.className = hostDialogClass("#create-host-dialog h2", "");
+			title.textContent = "Add Management Method";
+			const form = document.createElement("form");
+			form.className = hostDialogRootClass(root, "hostManagementMethodFormClass", "");
+			form.method = "post";
+			form.action = "/hosts/" + encodeURIComponent(hostID) + "/management-methods/create";
+
+			const typeSelect = document.createElement("select");
+			typeSelect.className = hostDialogRootClass(root, "hostManagementMethodSelectClass", "") + " ui-input host-management-method-type-select";
+			typeSelect.id = "host-management-method-type";
+			typeSelect.name = "methodType";
+			const passwordOption = document.createElement("option");
+			passwordOption.value = "ssh_password";
+			passwordOption.textContent = "SSH (Username + Password)";
+			const keyOption = document.createElement("option");
+			keyOption.value = "ssh_key";
+			keyOption.textContent = "SSH (RSA Key)";
+			typeSelect.append(passwordOption, keyOption);
+
+			const descriptionInput = createHostManagementMethodInput("description", "text", false);
+			const usernameInput = createHostManagementMethodInput("username", "text", true);
+			usernameInput.classList.add("ui-mono-text");
+			const portInput = createHostManagementMethodInput("port", "number", false);
+			portInput.classList.add("ui-mono-text");
+			portInput.value = "22";
+			const passwordInput = createHostManagementMethodInput("password", "password", true);
+			const publicKeyInput = createHostManagementMethodTextarea(root, "publicKey", 4);
+			const privateKeyInput = createHostManagementMethodTextarea(root, "privateKey", 7);
+			const keyFields = document.createElement("div");
+			keyFields.className = hostDialogRootClass(root, "hostManagementMethodKeyFieldsClass", "");
+			keyFields.append(
+				createHostManagementMethodField("Public Key", publicKeyInput, "publicKey"),
+				createHostManagementMethodField("Private Key", privateKeyInput, "privateKey"),
+			);
+
+			form.append(
+				createHostManagementMethodField("Type", typeSelect, ""),
+				createHostManagementMethodField("Description (optional)", descriptionInput, ""),
+				createHostManagementMethodField("Username", usernameInput, ""),
+				createHostManagementMethodField("Port", portInput, ""),
+				createHostManagementMethodField("Password", passwordInput, "password"),
+				keyFields,
+			);
+
+			const actions = document.createElement("div");
+			actions.className = hostDialogClass("#create-host-dialog form > div:last-child", "");
+			const cancelButton = createHostManagementMethodButton("Cancel", "button", "secondary");
+			cancelButton.addEventListener("click", function() {
+				closeHostManagementMethodDialog(dialog);
+			});
+			actions.append(cancelButton, createHostManagementMethodButton("Add", "submit", "primary"));
+			form.append(actions);
+			content.append(title, form);
+			dialog.append(content);
+			root.append(dialog);
+
+			dialog.addEventListener("click", function(event) {
+				if (event.target === dialog) {
+					closeHostManagementMethodDialog(dialog);
+				}
+			});
+			dialog.addEventListener("close", function() {
+				if (dialog.parentNode !== null) {
+					dialog.remove();
+				}
+				if (returnFocusTarget !== null) {
+					returnFocusTarget.focus();
+				}
+			}, { once: true });
+			typeSelect.addEventListener("change", function() {
+				syncHostManagementMethodForm(form);
+			});
+			syncHostManagementMethodForm(form);
+			dialog.showModal();
+		}
+
+		window.syncHostManagementMethodForm = syncHostManagementMethodForm;
 		function readImportHostsPayload(rawPayload) {
 			const payload = JSON.parse(rawPayload);
 			if (Array.isArray(payload)) {
@@ -587,6 +737,11 @@ templ HostDialogScripts() {
 					return;
 				}
 
+				const addManagementMethodButton = target.closest("[data-add-host-management-method]");
+				if (addManagementMethodButton instanceof HTMLElement) {
+					openHostManagementMethodDialog(addManagementMethodButton);
+					return;
+				}
 				const suggestion = target.closest("[data-host-tag-suggestion]");
 				if (suggestion instanceof HTMLElement) {
 					const field = suggestion.closest("[data-host-tags-field]");

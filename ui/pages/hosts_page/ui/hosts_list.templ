@@ -31,7 +31,6 @@ type hostInventoryRow struct {
 	ManagementLabel         string
 	UpdateDialogID          string
 	DetailsDialogID         string
-	AddManagementDialogID   string
 	SearchText              string
 	TagsText                string
 	HighCPU                 bool
@@ -241,8 +240,7 @@ templ HostsInventoryTableRow(row hostInventoryRow, props HostsPageProps) {
 		</td>
 	</tr>
 	@UpdateHostDialog(row.Host, props.AvailableTags)
-	@HostDetailsDialog(row.Host, row.ManagementMethods, row.SystemInfo, row.DetailsDialogID, row.AddManagementDialogID)
-	@AddHostManagementMethodDialog(row.Host, row.AddManagementDialogID)
+	@HostDetailsDialog(row.Host, row.ManagementMethods, row.SystemInfo, row.DetailsDialogID)
 }
 
 templ HostsInventoryCards(rows []hostInventoryRow, props HostsPageProps) {
@@ -400,7 +398,6 @@ func buildHostInventoryRows(
 			ManagementLabel:       addressSystem,
 			UpdateDialogID:        "update-host-dialog-" + hostID,
 			DetailsDialogID:       "host-details-dialog-" + hostID,
-			AddManagementDialogID: "add-host-management-method-dialog-" + hostID,
 			SearchText:            strings.ToLower(strings.Join(searchParts, " ")),
 			TagsText:              strings.ToLower(strings.Join(listedHost.Tags, ",")),
 			UpdatedAtRelative:     relativeTime(listedHost.UpdatedAt, now),

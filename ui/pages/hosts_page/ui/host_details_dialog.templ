@@ -13,7 +13,6 @@ templ HostDetailsDialog(
 	methods []host.HostManagementMethod,
 	systemInfo *host.HostSystemInfo,
 	detailsDialogID string,
-	addManagementMethodDialogID string,
 ) {
 	@modal.Modal(modal.ModalProps{ID: detailsDialogID, ClassName: host_details_dialog().ClassName(), AriaLabel: "Host Details"}) {
 		<div class={ host_details_dialog_content() }>
@@ -103,8 +102,8 @@ templ HostDetailsDialog(
 				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("closeModalDialog", detailsDialogID)}) {
 					Close
 				}
-				@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", addManagementMethodDialogID)}) {
-					Add Method
+				@button.Button(button.ButtonProps{Type: "button"}) {
+					<span data-add-host-management-method data-host-id={ host.ID.String() }>Add Method</span>
 				}
 			}
 		</div>

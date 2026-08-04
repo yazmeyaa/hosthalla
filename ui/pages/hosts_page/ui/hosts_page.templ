@@ -75,6 +75,13 @@ templ HostsPageContent(props HostsPageProps) {
 	@HostsInventory(props)
 	@CreateHostDialog(props.AvailableTags)
 	@HostImportExportDialog(props.Hosts)
+	<div
+		id="host-modal-root"
+		data-host-management-method-form-class={ host_management_method_form().ClassName() }
+		data-host-management-method-select-class={ host_management_method_select().ClassName() }
+		data-host-management-method-textarea-class={ host_management_method_textarea().ClassName() }
+		data-host-management-method-key-fields-class={ host_management_method_key_fields().ClassName() }
+	></div>
 	@HostsInventoryScripts()
 	@HostActionsScripts()
 	@HostDialogScripts()

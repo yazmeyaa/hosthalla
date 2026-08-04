@@ -54,6 +54,8 @@ templ Scripts() {
 			const dialog = document.getElementById(dialogId);
 			bindModalInteractions(dialog);
 			if (dialog && typeof dialog.showModal === "function") {
+				const opener = document.activeElement;
+				dialog._modalOpener = opener instanceof HTMLElement ? opener : null;
 				dialog.showModal();
 			}
 		}
