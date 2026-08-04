@@ -40,7 +40,7 @@ Hosthalla answers a practical day-to-day question: what machines do I have, how 
 Requirements: Go 1.26+, Docker, and Docker Compose.
 
 ```sh
-make dev-up
+make infra-up
 go run ./cmd/hosthalla config generate
 go run ./cmd/hosthalla bootstrap --username admin --password admin
 go run ./cmd/hosthalla serve
@@ -55,11 +55,10 @@ http://localhost:8080
 For regular local development, use:
 
 ```sh
-make dev-up
-make dev-web
+make dev
 ```
 
-`make dev-web` regenerates Templ views and starts the server with `go run ./cmd/hosthalla serve`. Before the first run, create the config and run `bootstrap` once.
+`make dev` starts PostgreSQL, regenerates Templ views, and starts the server with `go run ./cmd/hosthalla serve`. Before the first run, create the config and run `bootstrap` once.
 
 ## Install Binary
 
@@ -211,16 +210,19 @@ hosthalla agent run [--config <file>]
 | Target | Description |
 | --- | --- |
 | `make help` | Show available Make targets |
-| `make dev-up` | Start PostgreSQL for development |
-| `make dev-down` | Stop development infrastructure |
-| `make dev-logs` | Stream development infrastructure logs |
-| `make dev-ps` | Show development service status |
-| `make dev-reset` | Stop development infrastructure and remove volumes |
-| `make migrate-up` | Apply migrations in the Docker network |
-| `make migrate-down` | Roll back one migration in the Docker network |
-| `make templ-generate` | Regenerate Templ Go files |
+| `make dev` | Start PostgreSQL, regenerate Templ files, and run the web server |
+| `make run` | Run the web server from source |
 | `make build` | Build the binary |
-| `make dev-web` | Regenerate Templ files and run the web server |
+| `make generate` | Regenerate Templ Go files |
+| `make test` | Run Go tests |
+| `make check` | Regenerate Templ files and run Go tests |
+| `make infra-up` | Start PostgreSQL for development |
+| `make infra-down` | Stop development infrastructure |
+| `make infra-status` | Show development service status |
+| `make infra-logs` | Stream development infrastructure logs |
+| `make infra-reset` | Stop development infrastructure and remove volumes |
+| `make db-migrate` | Apply migrations in the Docker network |
+| `make db-rollback` | Roll back one migration in the Docker network |
 
 ## Project Structure
 
