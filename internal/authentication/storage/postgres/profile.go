@@ -2,12 +2,15 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/authentication"
 	"github.com/yazmeyaa/hosthalla/internal/authentication/storage"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
 const (
@@ -29,7 +32,7 @@ func scanProfile(row pgx.Row) (authentication.Profile, error) {
 		&profile.CreatedAt,
 		&profile.UpdatedAt,
 	); err != nil {
-		return authentication.Profile{}, err
+		return authentication.Profile{}, repository.NormalizeError(err)
 	}
 	return profile, nil
 }
@@ -80,9 +83,9 @@ func (p *ProfileRepositoryPostgresImpl) GetProfileByUsername(ctx context.Context
 // UpdateProfile implements storage.ProfileRepository.
 func (p *ProfileRepositoryPostgresImpl) UpdateProfile(ctx context.Context, profile *authentication.Profile) error {
 	row := p.pool.QueryRow(ctx, updateProfileQuery, profile.ID, profile.Username)
-	if err := row.Scan(&profile.UpdatedAt); err != nil {
-		if err == pgx.ErrNoRows {
-			return fmt.Errorf("profile not found: %s", profile.ID)
+	if err := repository.NormalizeError(row.Scan(&profile.UpdatedAt)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("profile not found: %s: %w", profile.ID, sql.ErrNoRows)
 		}
 		return err
 	}
@@ -96,7 +99,7 @@ func (p *ProfileRepositoryPostgresImpl) DeleteProfile(ctx context.Context, id st
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("profile not found: %s", id)
+		return fmt.Errorf("profile not found: %s: %w", id, sql.ErrNoRows)
 	}
 	return nil
 }

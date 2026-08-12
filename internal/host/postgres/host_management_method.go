@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
 const hostManagementMethodSelectColumns = "id, host_id, name, type, username, port, secret, description, created_at, updated_at"
@@ -25,7 +26,7 @@ func scanHostManagementMethod(row pgx.Row) (host.HostManagementMethod, error) {
 		&result.CreatedAt,
 		&result.UpdatedAt,
 	); err != nil {
-		return host.HostManagementMethod{}, err
+		return host.HostManagementMethod{}, repository.NormalizeError(err)
 	}
 	return result, nil
 }
