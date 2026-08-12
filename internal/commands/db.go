@@ -3,11 +3,15 @@ package commands
 import (
 	"context"
 	"database/sql"
+	"flag"
 	"fmt"
+	"io"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	cliapp "github.com/yazmeyaa/hosthalla/internal/cli"
-	app_migrations "github.com/yazmeyaa/hosthalla/internal/migrations"
+	"github.com/yazmeyaa/hosthalla/internal/config"
+	appdatabase "github.com/yazmeyaa/hosthalla/internal/database"
+	appmigrations "github.com/yazmeyaa/hosthalla/internal/migrations"
 )
 
 type migrator interface {
@@ -16,10 +20,17 @@ type migrator interface {
 	Version() (uint, bool, error)
 }
 
-var openSQL = sql.Open
-var newMigrator = func(db *sql.DB) (migrator, error) {
-	return app_migrations.NewMigrator(db)
+var openSQL = func(driverName, dsn string) (*sql.DB, error) {
+	if driverName == "sqlite" {
+		return appdatabase.OpenSQLite(dsn)
+	}
+	return sql.Open(driverName, dsn)
 }
+var newMigrator = func(db *sql.DB, strategy appmigrations.Strategy) (migrator, error) {
+	return appmigrations.NewMigrator(db, strategy)
+}
+
+const dbFlagsUsage = "[--driver <sqlite|postgres>] [--dsn <connection-string>]"
 
 func newDBCommand() *cliapp.Command {
 	return &cliapp.Command{
@@ -27,17 +38,17 @@ func newDBCommand() *cliapp.Command {
 		Usage: "hosthalla [--config <file>] db <command>",
 		Short: "Manage database migrations.",
 		Children: []*cliapp.Command{
-			newDBMigrateCommand("hosthalla [--config <file>] db migrate"),
+			newDBMigrateCommand("hosthalla [--config <file>] db migrate " + dbFlagsUsage),
 			{
 				Name:        "status",
-				Usage:       "hosthalla [--config <file>] db status",
+				Usage:       "hosthalla [--config <file>] db status " + dbFlagsUsage,
 				Short:       "Print migration status.",
 				NeedsConfig: true,
 				Run:         runDBStatus,
 			},
 			{
 				Name:        "rollback",
-				Usage:       "hosthalla [--config <file>] db rollback",
+				Usage:       "hosthalla [--config <file>] db rollback " + dbFlagsUsage,
 				Short:       "Roll back one migration.",
 				NeedsConfig: true,
 				Run:         runDBRollback,
@@ -57,20 +68,11 @@ func newDBMigrateCommand(usage string) *cliapp.Command {
 }
 
 func runDBMigrate(ctx context.Context, env *cliapp.Env, args []string) error {
-	if len(args) != 0 {
-		return cliapp.UsageError{Message: "db migrate does not accept arguments", Usage: "hosthalla [--config <file>] db migrate"}
-	}
-
-	db, err := openSQL("pgx", env.Config.Database.ConnectionString())
+	migrator, db, err := openMigrator(env, args, "hosthalla [--config <file>] db migrate "+dbFlagsUsage)
 	if err != nil {
-		return fmt.Errorf("open database connection: %w", err)
+		return err
 	}
 	defer db.Close()
-
-	migrator, err := newMigrator(db)
-	if err != nil {
-		return fmt.Errorf("initialize migrator: %w", err)
-	}
 
 	if err := migrator.Up(); err != nil {
 		return fmt.Errorf("apply migrations: %w", err)
@@ -81,11 +83,7 @@ func runDBMigrate(ctx context.Context, env *cliapp.Env, args []string) error {
 }
 
 func runDBStatus(ctx context.Context, env *cliapp.Env, args []string) error {
-	if len(args) != 0 {
-		return cliapp.UsageError{Message: "db status does not accept arguments", Usage: "hosthalla [--config <file>] db status"}
-	}
-
-	migrator, db, err := openMigrator(env)
+	migrator, db, err := openMigrator(env, args, "hosthalla [--config <file>] db status "+dbFlagsUsage)
 	if err != nil {
 		return err
 	}
@@ -103,11 +101,7 @@ func runDBStatus(ctx context.Context, env *cliapp.Env, args []string) error {
 }
 
 func runDBRollback(ctx context.Context, env *cliapp.Env, args []string) error {
-	if len(args) != 0 {
-		return cliapp.UsageError{Message: "db rollback does not accept arguments", Usage: "hosthalla [--config <file>] db rollback"}
-	}
-
-	migrator, db, err := openMigrator(env)
+	migrator, db, err := openMigrator(env, args, "hosthalla [--config <file>] db rollback "+dbFlagsUsage)
 	if err != nil {
 		return err
 	}
@@ -120,13 +114,43 @@ func runDBRollback(ctx context.Context, env *cliapp.Env, args []string) error {
 	return nil
 }
 
-func openMigrator(env *cliapp.Env) (migrator, *sql.DB, error) {
-	db, err := openSQL("pgx", env.Config.Database.ConnectionString())
+func openMigrator(env *cliapp.Env, args []string, usage string) (migrator, *sql.DB, error) {
+	flags := flag.NewFlagSet("database migrations", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	driverOverride := flags.String("driver", "", "database driver override")
+	dsnOverride := flags.String("dsn", "", "database connection string override")
+	if err := flags.Parse(args); err != nil {
+		return nil, nil, cliapp.UsageError{Message: err.Error(), Usage: usage}
+	}
+	if flags.NArg() != 0 {
+		return nil, nil, cliapp.UsageError{Message: "database command does not accept positional arguments", Usage: usage}
+	}
+
+	settings, err := env.Config.Database.ConnectionSettings(*driverOverride, *dsnOverride)
+	if err != nil {
+		return nil, nil, fmt.Errorf("resolve database connection: %w", err)
+	}
+
+	var (
+		sqlDriver string
+		strategy  appmigrations.Strategy
+	)
+	switch settings.Driver {
+	case config.DatabaseDriverPostgres:
+		sqlDriver = "pgx"
+		strategy = appmigrations.Postgres
+	case config.DatabaseDriverSQLite:
+		sqlDriver = "sqlite"
+		strategy = appmigrations.SQLite
+	default:
+		return nil, nil, fmt.Errorf("unsupported database driver %q", settings.Driver)
+	}
+
+	db, err := openSQL(sqlDriver, settings.DSN)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open database connection: %w", err)
 	}
-
-	migrator, err := newMigrator(db)
+	migrator, err := newMigrator(db, strategy)
 	if err != nil {
 		db.Close()
 		return nil, nil, fmt.Errorf("initialize migrator: %w", err)

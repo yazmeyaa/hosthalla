@@ -5,8 +5,8 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/config"
+	appdatabase "github.com/yazmeyaa/hosthalla/internal/database"
 )
 
 type RunFunc func(ctx context.Context, env *Env, args []string) error
@@ -27,7 +27,7 @@ type Env struct {
 	ConfigPath string
 	JSON       bool
 	Config     *config.AppConfig
-	DB         *pgxpool.Pool
+	DB         *appdatabase.Store
 	Logger     *slog.Logger
 }
 

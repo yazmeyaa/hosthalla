@@ -28,7 +28,7 @@ Hosthalla answers a practical day-to-day question: what machines do I have, how 
 | Layer | Technology |
 | --- | --- |
 | Backend | Go 1.26, `net/http` |
-| Database | PostgreSQL 18 |
+| Database | SQLite (default), PostgreSQL 18 |
 | UI | Templ, HTMX, WebSocket |
 | Auth | Cookie sessions, bcrypt |
 | API auth | Bearer tokens with the `hht_` prefix, SHA-256 hash stored in DB |
@@ -37,13 +37,12 @@ Hosthalla answers a practical day-to-day question: what machines do I have, how 
 
 ## Development Quick Start
 
-Requirements: Go 1.26+, Docker, and Docker Compose.
+Requirements: Go 1.26+. Docker and Docker Compose are optional and only needed for PostgreSQL development.
 
 ```sh
-make infra-up
 go run ./cmd/hosthalla config generate
 go run ./cmd/hosthalla bootstrap --username admin --password admin
-go run ./cmd/hosthalla serve
+make dev
 ```
 
 The web UI will be available at:
@@ -58,7 +57,7 @@ For regular local development, use:
 make dev
 ```
 
-`make dev` starts PostgreSQL, regenerates Templ views, and starts the server with `go run ./cmd/hosthalla serve`. Before the first run, create the config and run `bootstrap` once.
+`make dev` regenerates Templ views and starts the server with `go run ./cmd/hosthalla serve`. Before the first run, create the config and run `bootstrap` once.
 
 ## Install Binary
 
@@ -68,11 +67,19 @@ Use the install script from the repository:
 curl -fsSL https://raw.githubusercontent.com/yazmeyaa/hosthalla/main/scripts/install_hosthalla.sh | bash
 ```
 
-The script requires `curl`, `jq`, `tar`, and `sudo`. You can also download a release asset manually and place the `hosthalla` binary somewhere in your `PATH`.
+The script requires `curl`, `jq`, `tar`, `sudo`, and standard Linux account-management tools. It installs the binary, creates the system user and group `hosthalla`, prepares `/etc/hosthalla` and `/var/lib/hosthalla`, and generates the initial config when it is missing. Existing configs are preserved.
+
+The service account owns the data directory but can only read the root-owned config. Run server-side setup commands as that account:
+
+```sh
+sudo -u hosthalla hosthalla bootstrap --username admin --password <strong-password>
+```
+
+You can also download a release asset manually and place the `hosthalla` binary somewhere in your `PATH`.
 
 ## Configuration
 
-The default application config path is `~/.hosthalla/config.yaml`.
+The default application config path is `/etc/hosthalla/hosthalla.yaml`.
 
 Generate a config:
 
@@ -87,17 +94,28 @@ web:
   host: 0.0.0.0
   port: 8080
 database:
-  host: localhost
-  port: 5432
-  user: hosthalla
-  password: hosthalla
-  database: hosthalla
+  driver: sqlite
+  path: /var/lib/hosthalla/hosthalla.db
 security:
   secret_encryption_key: <base64-encoded-32-byte-key>
 log_level: warning
 ```
 
 `secret_encryption_key` is used to encrypt host management secrets. It is generated automatically when the config is created.
+
+SQLite is used by default. To use PostgreSQL instead:
+
+```yaml
+database:
+  driver: postgres
+  host: localhost
+  port: 5432
+  user: hosthalla
+  password: hosthalla
+  database: hosthalla
+```
+
+Existing PostgreSQL configs without `database.driver` remain supported.
 
 Validate the config:
 
@@ -107,7 +125,7 @@ hosthalla config validate
 
 ## First Run
 
-Once PostgreSQL is available and the config is filled in, run bootstrap:
+Once the config is ready, run bootstrap:
 
 ```sh
 hosthalla bootstrap --username admin --password <strong-password>
@@ -176,9 +194,9 @@ hosthalla config validate [--path <file>]
 
 hosthalla bootstrap [--username <username> --password <password>]
 
-hosthalla db migrate
-hosthalla db status [--json]
-hosthalla db rollback
+hosthalla db migrate [--driver sqlite|postgres] [--dsn <connection-string>]
+hosthalla db status [--driver sqlite|postgres] [--dsn <connection-string>] [--json]
+hosthalla db rollback [--driver sqlite|postgres] [--dsn <connection-string>]
 
 hosthalla users create <username> <password>
 hosthalla users list [--json]
@@ -210,7 +228,7 @@ hosthalla agent run [--config <file>]
 | Target | Description |
 | --- | --- |
 | `make help` | Show available Make targets |
-| `make dev` | Start PostgreSQL, regenerate Templ files, and run the web server |
+| `make dev` | Regenerate Templ files and run the web server |
 | `make run` | Run the web server from source |
 | `make build` | Build the binary |
 | `make generate` | Regenerate Templ Go files |
@@ -221,8 +239,16 @@ hosthalla agent run [--config <file>]
 | `make infra-status` | Show development service status |
 | `make infra-logs` | Stream development infrastructure logs |
 | `make infra-reset` | Stop development infrastructure and remove volumes |
-| `make db-migrate` | Apply migrations in the Docker network |
-| `make db-rollback` | Roll back one migration in the Docker network |
+| `make db-migrate` | Apply migrations for the configured database; accepts `driver` and `dsn` overrides |
+| `make db-rollback` | Roll back one configured migration; accepts `driver` and `dsn` overrides |
+
+Examples:
+
+```sh
+make db-migrate
+make db-migrate driver=sqlite dsn='file:/tmp/hosthalla.sqlite'
+make db-migrate driver=postgres dsn='postgres://hosthalla:hosthalla@localhost:5432/hosthalla?sslmode=disable'
+```
 
 ## Project Structure
 
@@ -233,9 +259,11 @@ internal/api/           # agent API: registration, heartbeat, metrics, config
 internal/authentication/# users, sessions, API tokens
 internal/commands/      # CLI command implementations
 internal/config/        # config.yaml loading, generation, and validation
+internal/database/      # database connection and repository selection
 internal/host/          # host, metrics, and management method domain model
 internal/web/           # web router, handlers, middleware
-migrations/             # SQL migrations up/down
+migrations/postgres/    # PostgreSQL migration history
+migrations/sqlite/      # SQLite baseline and future migrations
 ui/                     # Templ UI using Feature-Sliced Design
 infra/dev/              # Docker Compose files for local development
 scripts/                # helper installation scripts

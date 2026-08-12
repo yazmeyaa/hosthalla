@@ -6,18 +6,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/authentication"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	cliapp "github.com/yazmeyaa/hosthalla/internal/cli"
+	appdatabase "github.com/yazmeyaa/hosthalla/internal/database"
 )
 
 type userCreator interface {
 	CreateUser(ctx context.Context, data auth_service.CreateUserDTO) (authentication.Profile, error)
 }
 
-var newUserCreator = func(pool *pgxpool.Pool) userCreator {
-	return newAuthenticationService(pool)
+var newUserCreator = func(store *appdatabase.Store) userCreator {
+	return newAuthenticationService(store)
 }
 
 func newUsersCommand() *cliapp.Command {

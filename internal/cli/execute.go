@@ -8,14 +8,14 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/config"
+	appdatabase "github.com/yazmeyaa/hosthalla/internal/database"
 	app_logger "github.com/yazmeyaa/hosthalla/internal/logger"
 )
 
 type Dependencies struct {
 	LoadConfig func(path string) (*config.AppConfig, error)
-	OpenDB     func(ctx context.Context, cfg *config.AppConfig) (*pgxpool.Pool, error)
+	OpenDB     func(ctx context.Context, cfg *config.AppConfig) (*appdatabase.Store, error)
 	NewLogger  func(output io.Writer, level slog.Level) *slog.Logger
 }
 
@@ -28,16 +28,8 @@ func DefaultDependencies() Dependencies {
 			}
 			return &cfg, nil
 		},
-		OpenDB: func(ctx context.Context, cfg *config.AppConfig) (*pgxpool.Pool, error) {
-			pool, err := pgxpool.New(ctx, cfg.Database.ConnectionString())
-			if err != nil {
-				return nil, err
-			}
-			if err := pool.Ping(ctx); err != nil {
-				pool.Close()
-				return nil, err
-			}
-			return pool, nil
+		OpenDB: func(ctx context.Context, cfg *config.AppConfig) (*appdatabase.Store, error) {
+			return appdatabase.Open(ctx, cfg.Database)
 		},
 		NewLogger: func(output io.Writer, level slog.Level) *slog.Logger {
 			return app_logger.NewLogger(app_logger.LoggerParams{

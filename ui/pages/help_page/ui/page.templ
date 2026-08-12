@@ -73,7 +73,7 @@ templ HelpInstallServerPage() {
 		<h2 class={ help_page_section_title() }>Install hosthalla to server</h2>
 		<p class={ help_page_lead() }>Install Hosthalla on the machine that will run the web interface and store your infrastructure inventory.</p>
 		<p class={ help_page_text() }>This is usually the first step on a new server. The installer downloads the release binary, puts it into the system path, and makes the `hosthalla` command available for setup, migrations, users, tokens, and the web server.</p>
-		@HelpNote("After installation, generate the config, check the database settings, run bootstrap, and then start the server.")
+		@HelpNote("The default config is /etc/hosthalla/hosthalla.yaml and the default SQLite database is /var/lib/hosthalla/hosthalla.db. PostgreSQL remains available through database.driver.")
 		<h3 class={ help_page_subtitle() }>CLI</h3>
 		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: "curl -fsSL https://raw.githubusercontent.com/yazmeyaa/hosthalla/main/scripts/install_hosthalla.sh | bash"})
 		<p class={ help_page_text() }>A successful install means the `hosthalla` command is available on the server. You can verify it with `hosthalla version`.</p>
@@ -199,10 +199,10 @@ hosthalla config validate [--path <file>]`})
 		</section>
 		<section class={ help_page_cli_group() } id="cli-db">
 			<h3 class={ help_page_subtitle() }>Database</h3>
-			<p class={ help_page_text() }>Use `db` commands to apply migrations, check migration state, or roll back one migration.</p>
-			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla db migrate
-hosthalla db status [--json]
-hosthalla db rollback`})
+			<p class={ help_page_text() }>Use `db` commands to apply migrations, check migration state, or roll back one migration. The config selects SQLite or PostgreSQL; `--driver` and `--dsn` can override it for one command.</p>
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla db migrate [--driver sqlite|postgres] [--dsn <connection-string>]
+hosthalla db status [--driver sqlite|postgres] [--dsn <connection-string>] [--json]
+hosthalla db rollback [--driver sqlite|postgres] [--dsn <connection-string>]`})
 		</section>
 		<section class={ help_page_cli_group() } id="cli-users">
 			<h3 class={ help_page_subtitle() }>Users</h3>

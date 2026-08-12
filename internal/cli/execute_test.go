@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/config"
+	appdatabase "github.com/yazmeyaa/hosthalla/internal/database"
 )
 
 func TestExecuteEmptyArgsPrintsRootHelp(t *testing.T) {
@@ -230,7 +230,7 @@ func TestExecuteOpensDBAfterConfig(t *testing.T) {
 		cfg := config.NewDefaultAppConfig()
 		return &cfg, nil
 	}
-	deps.OpenDB = func(ctx context.Context, cfg *config.AppConfig) (*pgxpool.Pool, error) {
+	deps.OpenDB = func(ctx context.Context, cfg *config.AppConfig) (*appdatabase.Store, error) {
 		steps = append(steps, "db")
 		return nil, nil
 	}
@@ -266,7 +266,7 @@ func TestExecuteDependencyErrors(t *testing.T) {
 					cfg := config.NewDefaultAppConfig()
 					return &cfg, nil
 				},
-				OpenDB: func(ctx context.Context, cfg *config.AppConfig) (*pgxpool.Pool, error) {
+				OpenDB: func(ctx context.Context, cfg *config.AppConfig) (*appdatabase.Store, error) {
 					return nil, errors.New("boom db")
 				},
 			},
@@ -345,7 +345,7 @@ func testDeps(loadCount *int) Dependencies {
 			cfg := config.NewDefaultAppConfig()
 			return &cfg, nil
 		},
-		OpenDB: func(ctx context.Context, cfg *config.AppConfig) (*pgxpool.Pool, error) {
+		OpenDB: func(ctx context.Context, cfg *config.AppConfig) (*appdatabase.Store, error) {
 			return nil, nil
 		},
 		NewLogger: func(output io.Writer, level slog.Level) *slog.Logger {

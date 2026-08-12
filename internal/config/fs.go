@@ -10,22 +10,13 @@ import (
 	"go.yaml.in/yaml/v4"
 )
 
-const configFileName = "config.yaml"
+const configFileName = "hosthalla.yaml"
+const DefaultConfigPath = "/etc/hosthalla/hosthalla.yaml"
 
-var DefaultConfigPath = resolveDefaultConfigPath()
 var ErrConfigAlreadyExists = errors.New("config file already exists")
 
 type writableFS interface {
 	WriteFile(name string, data []byte, perm fs.FileMode) error
-}
-
-func resolveDefaultConfigPath() string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil || homeDir == "" {
-		return ".hosthalla/config.yaml"
-	}
-
-	return filepath.Join(homeDir, ".hosthalla", "config.yaml")
 }
 
 func (a *AppConfig) SaveToFS(fsys fs.FS) error {

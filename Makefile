@@ -4,12 +4,9 @@ COMPOSE_NETWORK := $(COMPOSE_PROJECT)_default
 COMPOSE := docker compose --project-name $(COMPOSE_PROJECT) --file $(COMPOSE_FILE)
 
 DATABASE_URL_LOCAL := postgres://hosthalla:hosthalla@localhost:5432/hosthalla?sslmode=disable
-DATABASE_URL_DOCKER := postgres://hosthalla:hosthalla@postgres:5432/hosthalla?sslmode=disable
-
 APP := ./cmd/hosthalla
 DIST_DIR := dist
 HOSTHALLA_BIN := $(DIST_DIR)/hosthalla
-MIGRATE_IMAGE := migrate/migrate:v4.18.2
 
 GO ?= go
 VERSION := $(shell git describe --tags --always --dirty)
@@ -22,12 +19,8 @@ VERSION_FLAGS := \
 
 GO_RUN := $(GO) run -ldflags "$(VERSION_FLAGS)" $(APP)
 GO_BUILD := $(GO) build -ldflags "-s -w $(VERSION_FLAGS)"
-MIGRATE := docker run --rm \
-	-v "$(CURDIR)/migrations:/migrations" \
-	--network $(COMPOSE_NETWORK) \
-	$(MIGRATE_IMAGE) \
-	-path=/migrations \
-	-database "$(DATABASE_URL_DOCKER)"
+DB_CONFIG_FLAG := $(if $(config),--config "$(config)")
+DB_FLAGS := $(if $(driver),--driver "$(driver)") $(if $(dsn),--dsn "$(dsn)")
 
 .DEFAULT_GOAL := help
 
@@ -42,8 +35,7 @@ help: ## Show this help.
 		/^[a-zA-Z0-9_-]+:.*## / { printf "  %-14s %s\n", $$1, $$2 } \
 	' $(MAKEFILE_LIST)
 
-dev: ## Start PostgreSQL, regenerate views, and run the web server.
-	$(MAKE) infra-up
+dev: ## Regenerate views and run the web server.
 	$(MAKE) generate
 	$(GO_RUN) serve
 
@@ -78,8 +70,8 @@ infra-logs: ## Follow local infrastructure logs.
 infra-reset: ## Stop local PostgreSQL and remove its volume.
 	$(COMPOSE) down --volumes --remove-orphans
 
-db-migrate: infra-up ## Apply all pending database migrations.
-	$(MIGRATE) up
+db-migrate: ## Apply all pending database migrations.
+	$(GO_RUN) $(DB_CONFIG_FLAG) db migrate $(DB_FLAGS)
 
-db-rollback: infra-up ## Roll back one database migration.
-	$(MIGRATE) down 1
+db-rollback: ## Roll back one database migration.
+	$(GO_RUN) $(DB_CONFIG_FLAG) db rollback $(DB_FLAGS)
