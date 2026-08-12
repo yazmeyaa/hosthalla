@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
 const hostSystemInfoSelectColumns = `
@@ -224,7 +225,7 @@ func scanHostSystemInfo(row pgx.Row) (host.HostSystemInfo, error) {
 		&cpuThreads,
 		&totalDiskBytes,
 	); err != nil {
-		return host.HostSystemInfo{}, err
+		return host.HostSystemInfo{}, repository.NormalizeError(err)
 	}
 
 	convertedMemory, err := nonNegativeInt64ToUint64(totalMemoryBytes, "total_memory_bytes")

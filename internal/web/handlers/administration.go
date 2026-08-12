@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/yazmeyaa/hosthalla/internal/agent"
 	"github.com/yazmeyaa/hosthalla/internal/authentication"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
@@ -171,7 +171,7 @@ func (h *AdministrationHandler) administrationPageProps(w http.ResponseWriter, r
 				pageProps.AgentConfigs[currentAgent.ID.String()] = config
 				continue
 			}
-			if !errors.Is(err, pgx.ErrNoRows) {
+			if !errors.Is(err, sql.ErrNoRows) {
 				h.logger.Warn("failed to load agent config for administration page", slog.String("agent_id", currentAgent.ID.String()), slog.String("error", err.Error()))
 			}
 		}
@@ -207,7 +207,7 @@ func (h *AdministrationHandler) administrationPageProps(w http.ResponseWriter, r
 			pageProps.LatestSessionsByProfileID[user.ID] = latestSession
 			continue
 		}
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if !errors.Is(err, sql.ErrNoRows) {
 			h.logger.Warn("failed to load latest user session for administration page", slog.String("profile_id", user.ID), slog.String("error", err.Error()))
 		}
 	}

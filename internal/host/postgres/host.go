@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
 const hostSelectColumns = "h.id, h.name, h.description, coalesce(array_agg(t.name order by t.name) filter (where t.id is not null), '{}'::text[]) as tags, h.ip, h.monitoring_agent_id, h.created_at, h.updated_at"
@@ -36,7 +38,7 @@ func scanHost(row pgx.Row) (host.Host, error) {
 		&result.CreatedAt,
 		&result.UpdatedAt,
 	); err != nil {
-		return host.Host{}, err
+		return host.Host{}, repository.NormalizeError(err)
 	}
 	if monitoringAgentID != nil {
 		result.MonitoringAgentID = *monitoringAgentID
@@ -52,7 +54,7 @@ func scanTag(row pgx.Row) (host.Tag, error) {
 		&result.CreatedAt,
 		&result.UpdatedAt,
 	); err != nil {
-		return host.Tag{}, err
+		return host.Tag{}, repository.NormalizeError(err)
 	}
 	return result, nil
 }
@@ -96,7 +98,7 @@ func (h HostRepositoryPostgresImpl) DeleteHost(ctx context.Context, hostID uuid.
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("host not found: %s", hostID)
+		return fmt.Errorf("host not found: %s: %w", hostID, sql.ErrNoRows)
 	}
 	return nil
 }
@@ -177,9 +179,9 @@ func (h HostRepositoryPostgresImpl) UpdateHost(ctx context.Context, targetHost *
 
 	const updateHostQuery = "update host set name = $2, description = $3, ip = $4, monitoring_agent_id = $5, updated_at = now() where id = $1 returning updated_at"
 	row := tx.QueryRow(ctx, updateHostQuery, uuid.UUID(targetHost.ID), targetHost.Name, targetHost.Description, targetHost.IP, nullableUUID(targetHost.MonitoringAgentID))
-	if err := row.Scan(&targetHost.UpdatedAt); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("host not found: %s", targetHost.ID)
+	if err := repository.NormalizeError(row.Scan(&targetHost.UpdatedAt)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("host not found: %s: %w", targetHost.ID, sql.ErrNoRows)
 		}
 		return err
 	}

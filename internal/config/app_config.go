@@ -15,6 +15,19 @@ import (
 
 const DefaultLogLevel = "warning"
 const DefaultWebOrigin = "http://localhost:8080"
+const DefaultSQLitePath = "/var/lib/hosthalla/hosthalla.db"
+
+type DatabaseDriver string
+
+const (
+	DatabaseDriverSQLite   DatabaseDriver = "sqlite"
+	DatabaseDriverPostgres DatabaseDriver = "postgres"
+)
+
+type DatabaseConnection struct {
+	Driver DatabaseDriver
+	DSN    string
+}
 
 type AppConfig struct {
 	WEB       WEBConfig      `yaml:"web"`
@@ -29,11 +42,13 @@ type WEBConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Database string `yaml:"database"`
+	Driver   string `yaml:"driver,omitempty"`
+	Path     string `yaml:"path,omitempty"`
+	Host     string `yaml:"host,omitempty"`
+	Port     int    `yaml:"port,omitempty"`
+	User     string `yaml:"user,omitempty"`
+	Password string `yaml:"password,omitempty"`
+	Database string `yaml:"database,omitempty"`
 }
 
 type SecurityConfig struct {
@@ -48,11 +63,8 @@ func NewDefaultAppConfig() AppConfig {
 		},
 		WebOrigin: DefaultWebOrigin,
 		Database: DatabaseConfig{
-			Host:     "localhost",
-			Port:     5432,
-			User:     "hosthalla",
-			Password: "hosthalla",
-			Database: "hosthalla",
+			Driver: string(DatabaseDriverSQLite),
+			Path:   DefaultSQLitePath,
 		},
 		Security: SecurityConfig{
 			SecretEncryptionKey: mustGenerateSecretEncryptionKey(),
@@ -65,7 +77,72 @@ func (w WEBConfig) ListenAddress() string {
 	return net.JoinHostPort(w.Host, strconv.Itoa(w.Port))
 }
 
-func (d DatabaseConfig) ConnectionString() string {
+func (d *DatabaseConfig) ApplyDefaults() {
+	if strings.TrimSpace(d.Driver) != "" {
+		return
+	}
+	if strings.TrimSpace(d.Path) != "" {
+		d.Driver = string(DatabaseDriverSQLite)
+		return
+	}
+	if d.Host != "" || d.Port != 0 || d.User != "" || d.Password != "" || d.Database != "" {
+		d.Driver = string(DatabaseDriverPostgres)
+	}
+}
+
+func ParseDatabaseDriver(raw string) (DatabaseDriver, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "sqlite":
+		return DatabaseDriverSQLite, nil
+	case "postgres", "postgresql":
+		return DatabaseDriverPostgres, nil
+	default:
+		return "", fmt.Errorf("unsupported database driver %q: expected sqlite or postgres", raw)
+	}
+}
+
+func (d DatabaseConfig) ConnectionSettings(driverOverride, dsnOverride string) (DatabaseConnection, error) {
+	driverRaw := d.Driver
+	if strings.TrimSpace(driverOverride) != "" {
+		driverRaw = driverOverride
+	}
+	driver, err := ParseDatabaseDriver(driverRaw)
+	if err != nil {
+		return DatabaseConnection{}, err
+	}
+	if strings.TrimSpace(dsnOverride) != "" {
+		return DatabaseConnection{Driver: driver, DSN: dsnOverride}, nil
+	}
+
+	switch driver {
+	case DatabaseDriverSQLite:
+		path := strings.TrimSpace(d.Path)
+		if path == "" {
+			return DatabaseConnection{}, fmt.Errorf("database.path is required for sqlite")
+		}
+		connectionURL := &url.URL{Scheme: "file", Path: path}
+		query := connectionURL.Query()
+		query.Set("_busy_timeout", "5000")
+		query.Set("_foreign_keys", "on")
+		query.Set("_journal_mode", "WAL")
+		query.Set("_synchronous", "NORMAL")
+		connectionURL.RawQuery = query.Encode()
+		return DatabaseConnection{Driver: driver, DSN: connectionURL.String()}, nil
+	case DatabaseDriverPostgres:
+		if strings.TrimSpace(d.Host) == "" {
+			return DatabaseConnection{}, fmt.Errorf("database.host is required for postgres")
+		}
+		if d.Port < 1 || d.Port > 65535 {
+			return DatabaseConnection{}, fmt.Errorf("database.port must be between 1 and 65535 for postgres")
+		}
+		if strings.TrimSpace(d.User) == "" {
+			return DatabaseConnection{}, fmt.Errorf("database.user is required for postgres")
+		}
+		if strings.TrimSpace(d.Database) == "" {
+			return DatabaseConnection{}, fmt.Errorf("database.database is required for postgres")
+		}
+	}
+
 	var user *url.Userinfo
 	if d.Password == "" {
 		user = url.User(d.User)
@@ -73,15 +150,17 @@ func (d DatabaseConfig) ConnectionString() string {
 		user = url.UserPassword(d.User, d.Password)
 	}
 
-	return (&url.URL{
+	dsn := (&url.URL{
 		Scheme: "postgres",
 		User:   user,
 		Host:   net.JoinHostPort(d.Host, strconv.Itoa(d.Port)),
 		Path:   d.Database,
 	}).String()
+	return DatabaseConnection{Driver: driver, DSN: dsn}, nil
 }
 
 func (a *AppConfig) ApplyDefaults() {
+	a.Database.ApplyDefaults()
 	if strings.TrimSpace(a.LogLevel) == "" {
 		a.LogLevel = DefaultLogLevel
 	}

@@ -1,0 +1,15 @@
+drop table if exists host_metric;
+drop table if exists host_metric_snapshot;
+drop table if exists host_system_info_gpu;
+drop table if exists host_system_info;
+drop table if exists agent_config;
+drop table if exists host_credential;
+drop table if exists host_note;
+drop table if exists host_tag;
+drop table if exists tag;
+drop table if exists agent;
+drop table if exists host;
+drop table if exists api_token;
+drop table if exists session;
+drop table if exists password_authentication;
+drop table if exists profile;

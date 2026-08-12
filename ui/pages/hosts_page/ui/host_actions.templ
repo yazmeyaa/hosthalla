@@ -2,7 +2,7 @@ package hosts_page_ui
 
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 
-templ HostActions(hostID string, updateDialogID string, detailsDialogID string, pingResultTargetID string) {
+templ HostActions(hostID string, pingResultTargetID string) {
 	<div class={ host_actions() }>
 		<details class={ host_actions_menu(), "host-actions-menu" }>
 			<summary class={ host_actions_menu_trigger(), "ui-interactive-control" } aria-label="Host actions">⋯</summary>
@@ -20,12 +20,16 @@ templ HostActions(hostID string, updateDialogID string, detailsDialogID string, 
 						Ping
 					}
 				</form>
-				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", detailsDialogID)}) {
-					Details
-				}
-				@button.Button(button.ButtonProps{Type: "button", Variant: "secondary", OnClick: templ.JSFuncCall("openModalDialog", updateDialogID)}) {
-					Update
-				}
+				<span hx-boost="true" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML show:none" hx-push-url="true">
+					@button.Link(button.LinkProps{Href: "/hosts/" + hostID, Variant: "secondary"}) {
+						Details
+					}
+				</span>
+				<span hx-boost="true" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML show:none" hx-push-url="true">
+					@button.Link(button.LinkProps{Href: "/hosts/" + hostID + "/update", Variant: "secondary"}) {
+						Update
+					}
+				</span>
 				<form class={ host_delete_form() } method="post" action={ "/hosts/" + hostID + "/delete" } onsubmit="return confirm('Delete this host?')">
 					@button.Button(button.ButtonProps{Type: "submit", Variant: "danger"}) {
 						Delete

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -9,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/yazmeyaa/hosthalla/internal/agent"
 	"github.com/yazmeyaa/hosthalla/internal/api/middlewares"
 	"github.com/yazmeyaa/hosthalla/internal/host"
@@ -179,7 +179,7 @@ func (h *HostsHandler) parseAndEnsureHostExists(ctx context.Context, w http.Resp
 	}
 
 	if _, err := h.hostService.GetHostByID(ctx, hostID); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			h.writeErrorResponse(w, http.StatusNotFound, "host not found")
 			return uuid.UUID{}, err
 		}

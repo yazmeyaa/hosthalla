@@ -19,6 +19,7 @@ var HostsPageContent = hosts_page_ui.HostsPageContent
 var HostPingResult = hosts_page_ui.HostPingResult
 var HostPingResultSlot = hosts_page_ui.HostPingResultSlot
 var HostPingResultsBatch = hosts_page_ui.HostPingResultsBatch
+var AddHostManagementMethodFields = hosts_page_ui.AddHostManagementMethodFields
 
 func CSSClasses() []templ.CSSClass {
 	classes := hosts_page_ui.CSSClasses()

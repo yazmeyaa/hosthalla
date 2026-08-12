@@ -7,15 +7,17 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
-const hostManagementMethodSelectColumns = "id, host_id, type, username, port, secret, description, created_at, updated_at"
+const hostManagementMethodSelectColumns = "id, host_id, name, type, username, port, secret, description, created_at, updated_at"
 
 func scanHostManagementMethod(row pgx.Row) (host.HostManagementMethod, error) {
 	var result host.HostManagementMethod
 	if err := row.Scan(
 		&result.ID,
 		&result.HostID,
+		&result.Name,
 		&result.Type,
 		&result.Username,
 		&result.Port,
@@ -24,7 +26,7 @@ func scanHostManagementMethod(row pgx.Row) (host.HostManagementMethod, error) {
 		&result.CreatedAt,
 		&result.UpdatedAt,
 	); err != nil {
-		return host.HostManagementMethod{}, err
+		return host.HostManagementMethod{}, repository.NormalizeError(err)
 	}
 	return result, nil
 }
@@ -88,12 +90,13 @@ func (h HostManagementMethodRepositoryPostgresImpl) GetHostManagementMethodByID(
 }
 
 func (h HostManagementMethodRepositoryPostgresImpl) CreateHostManagementMethod(ctx context.Context, hostID uuid.UUID, data host.CreateHostManagementMethodDTO) (host.HostManagementMethod, error) {
-	const insertManagementMethodQuery = "insert into host_credential (id, host_id, type, username, port, secret, description) values ($1, $2, $3, $4, $5, $6, $7) returning id, host_id, type, username, port, secret, description, created_at, updated_at"
+	const insertManagementMethodQuery = "insert into host_credential (id, host_id, name, type, username, port, secret, description) values ($1, $2, $3, $4, $5, $6, $7, $8) returning " + hostManagementMethodSelectColumns
 	row := h.pool.QueryRow(
 		ctx,
 		insertManagementMethodQuery,
 		uuid.New(),
 		uuid.UUID(hostID),
+		data.Name,
 		data.Type,
 		data.Username,
 		data.Port,
@@ -101,6 +104,26 @@ func (h HostManagementMethodRepositoryPostgresImpl) CreateHostManagementMethod(c
 		data.Description,
 	)
 	return scanHostManagementMethod(row)
+}
+
+func (h HostManagementMethodRepositoryPostgresImpl) UpdateHostManagementMethod(ctx context.Context, methodID uuid.UUID, data host.UpdateHostManagementMethodDTO) (host.HostManagementMethod, error) {
+	const updateManagementMethodQuery = "update host_credential set name = $2, username = $3, port = $4, secret = $5, description = $6, updated_at = now() where id = $1 returning " + hostManagementMethodSelectColumns
+	row := h.pool.QueryRow(
+		ctx,
+		updateManagementMethodQuery,
+		uuid.UUID(methodID),
+		data.Name,
+		data.Username,
+		data.Port,
+		data.Secret,
+		data.Description,
+	)
+	return scanHostManagementMethod(row)
+}
+
+func (h HostManagementMethodRepositoryPostgresImpl) DeleteHostManagementMethod(ctx context.Context, methodID uuid.UUID) error {
+	_, err := h.pool.Exec(ctx, "delete from host_credential where id = $1", uuid.UUID(methodID))
+	return err
 }
 
 func NewHostManagementMethodRepository(pool *pgxpool.Pool) *HostManagementMethodRepositoryPostgresImpl {

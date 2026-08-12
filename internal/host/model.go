@@ -47,6 +47,7 @@ const (
 type HostManagementMethod struct {
 	ID          uuid.UUID
 	HostID      uuid.UUID
+	Name        string
 	Type        HostManagementMethodType
 	Username    string
 	Port        uint16

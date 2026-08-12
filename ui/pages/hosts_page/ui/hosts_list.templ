@@ -208,16 +208,25 @@ templ HostsInventoryTableRow(row hostInventoryRow, props HostsPageProps) {
 		data-sort-updated={ fmt.Sprintf("%d", row.UpdatedAtUnix) }
 		data-sort-created={ fmt.Sprintf("%d", row.CreatedAtUnix) }
 		data-host-export={ row.ExportJSON }
-		data-open-details={ row.DetailsDialogID }
+		data-open-details
 	>
 		<td class={ hosts_inventory_selection_cell() }>
 			@checkbox.RowCheckbox(checkbox.SelectionCheckboxProps{AriaLabel: "Select " + row.Host.Name})
 		</td>
 		<td class={ hosts_inventory_host_cell() }>
-			<button class={ hosts_inventory_host_link(), "ui-interactive-control" } type="button" onclick={ templ.JSFuncCall("openModalDialog", row.DetailsDialogID) }>
+			<a
+				class={ hosts_inventory_host_link(), "ui-interactive-control" }
+				href={ "/hosts/" + row.Host.ID.String() }
+				data-host-details-link
+				hx-boost="true"
+				hx-target="#app-content"
+				hx-select="#app-content"
+				hx-swap="outerHTML show:none"
+				hx-push-url="true"
+			>
 				<span class={ hosts_inventory_host_name() }>{ row.Host.Name }</span>
 				<span class={ hosts_inventory_host_subtitle() }>{ row.SecondaryIdentity }</span>
-			</button>
+			</a>
 		</td>
 		<td>@HostStatusBadge(row)</td>
 		<td>
@@ -237,12 +246,12 @@ templ HostsInventoryTableRow(row hostInventoryRow, props HostsPageProps) {
 			@HostPingResult(row.Host.ID.String(), nil)
 		</td>
 		<td class={ hosts_inventory_actions_cell() }>
-			@HostActions(row.Host.ID.String(), row.UpdateDialogID, row.DetailsDialogID, "host-ping-result-"+row.Host.ID.String())
+			@HostActions(row.Host.ID.String(), "host-ping-result-"+row.Host.ID.String())
 		</td>
 	</tr>
-	@UpdateHostDialog(row.Host, props.AvailableTags)
-	@HostDetailsDialog(row.Host, row.ManagementMethods, row.SystemInfo, row.DetailsDialogID, row.AddManagementDialogID)
-	@AddHostManagementMethodDialog(row.Host, row.AddManagementDialogID)
+	@UpdateHostDialog(row.Host, props.AvailableTags, props.OpenDialogID == row.UpdateDialogID)
+	@HostDetailsDialog(row.Host, row.ManagementMethods, row.SystemInfo, row.DetailsDialogID, row.AddManagementDialogID, props.OpenDialogID)
+	@AddHostManagementMethodDialog(row.Host, row.AddManagementDialogID, props.OpenDialogID == row.AddManagementDialogID)
 }
 
 templ HostsInventoryCards(rows []hostInventoryRow, props HostsPageProps) {
@@ -265,14 +274,23 @@ templ HostsInventoryCards(rows []hostInventoryRow, props HostsPageProps) {
 				data-sort-updated={ fmt.Sprintf("%d", row.UpdatedAtUnix) }
 				data-sort-created={ fmt.Sprintf("%d", row.CreatedAtUnix) }
 				data-host-export={ row.ExportJSON }
-				data-open-details={ row.DetailsDialogID }
+				data-open-details
 			>
 				<div class={ hosts_inventory_card_header() }>
 					@checkbox.RowCheckbox(checkbox.SelectionCheckboxProps{AriaLabel: "Select " + row.Host.Name})
-					<button class={ hosts_inventory_host_link(), "ui-interactive-control" } type="button" onclick={ templ.JSFuncCall("openModalDialog", row.DetailsDialogID) }>
+					<a
+						class={ hosts_inventory_host_link(), "ui-interactive-control" }
+						href={ "/hosts/" + row.Host.ID.String() }
+						data-host-details-link
+						hx-boost="true"
+						hx-target="#app-content"
+						hx-select="#app-content"
+						hx-swap="outerHTML show:none"
+						hx-push-url="true"
+					>
 						<span class={ hosts_inventory_host_name() }>{ row.Host.Name }</span>
 						<span class={ hosts_inventory_host_subtitle() }>{ row.SecondaryIdentity }</span>
-					</button>
+					</a>
 					@HostStatusBadge(row)
 				</div>
 				<div class={ hosts_inventory_card_meta() }>
@@ -290,7 +308,7 @@ templ HostsInventoryCards(rows []hostInventoryRow, props HostsPageProps) {
 					</time>
 					@HostsTags(row.Host.Tags, 2, props)
 					@HostPingResultSlot("host-ping-result-card-"+row.Host.ID.String(), row.Host.ID.String(), nil)
-					@HostActions(row.Host.ID.String(), row.UpdateDialogID, row.DetailsDialogID, "host-ping-result-card-"+row.Host.ID.String())
+					@HostActions(row.Host.ID.String(), "host-ping-result-card-"+row.Host.ID.String())
 				</div>
 			</article>
 		}
@@ -344,9 +362,11 @@ templ HostsInventoryEmpty(props HostsPageProps) {
 		} else {
 			<h2>Nothing in inventory yet</h2>
 			<p>Add a host to start tracking addresses, management methods, and system metrics.</p>
-			@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "create-host-dialog")}) {
-				Add Host
-			}
+			<span hx-boost="true" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML show:none" hx-push-url="true">
+				@button.Link(button.LinkProps{Href: "/hosts/create"}) {
+					Add Host
+				}
+			</span>
 		}
 	</div>
 }
@@ -384,7 +404,7 @@ func buildHostInventoryRows(
 			addressSystem = strings.TrimSpace(systemInfo.OS.Name + " " + systemInfo.OS.Version)
 		}
 		managementFilter := managementMethodFilter(listedHost, methods)
-		searchParts := []string{listedHost.Name, listedHost.Description, listedHost.IP.String(), strings.Join(listedHost.Tags, " "), managementFilter}
+		searchParts := []string{listedHost.Name, listedHost.Description, listedHost.IP.String(), strings.Join(listedHost.Tags, " "), managementFilter, managementMethodLabel(listedHost, methods)}
 		if systemInfo != nil {
 			searchParts = append(searchParts, systemInfo.Hostname, systemInfo.OS.Name, systemInfo.OS.Version)
 		}
@@ -510,7 +530,11 @@ func managementMethodLabel(listedHost host.Host, methods []host.HostManagementMe
 	}
 	labels := make([]string, 0, len(methods))
 	for _, method := range methods {
-		labels = append(labels, strings.ReplaceAll(string(method.Type), "_", " "))
+		if strings.TrimSpace(method.Name) != "" {
+			labels = append(labels, strings.TrimSpace(method.Name))
+		} else {
+			labels = append(labels, strings.ReplaceAll(string(method.Type), "_", " "))
+		}
 	}
 	return strings.Join(labels, ", ")
 }

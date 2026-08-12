@@ -4,5 +4,5 @@ import "embed"
 
 // Files contains embedded SQL migration files.
 //
-//go:embed *.sql
+//go:embed postgres/*.sql sqlite/*.sql
 var Files embed.FS

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	cliapp "github.com/yazmeyaa/hosthalla/internal/cli"
 	"github.com/yazmeyaa/hosthalla/internal/config"
+	appdatabase "github.com/yazmeyaa/hosthalla/internal/database"
 	"github.com/yazmeyaa/hosthalla/internal/version"
 )
 
@@ -83,7 +83,7 @@ func runBootstrap(ctx context.Context, env *cliapp.Env, args []string) error {
 			return fmt.Errorf("generate config: %w", err)
 		}
 		fmt.Fprintf(env.Stdout, "Config generated at %q\n", env.ConfigPath)
-		fmt.Fprintln(env.Stdout, "Edit the database settings, then run bootstrap again.")
+		fmt.Fprintln(env.Stdout, "Run bootstrap again to initialize the database.")
 		return nil
 	}
 
@@ -100,15 +100,12 @@ func runBootstrap(ctx context.Context, env *cliapp.Env, args []string) error {
 		if *username == "" || *password == "" {
 			return cliapp.UsageError{Message: "--username and --password must be provided together", Usage: "hosthalla [--config <file>] bootstrap [--username <username> --password <password>]"}
 		}
-		pool, err := pgxpool.New(ctx, env.Config.Database.ConnectionString())
+		store, err := appdatabase.Open(ctx, env.Config.Database)
 		if err != nil {
 			return fmt.Errorf("connect database: %w", err)
 		}
-		defer pool.Close()
-		if err := pool.Ping(ctx); err != nil {
-			return fmt.Errorf("ping database: %w", err)
-		}
-		env.DB = pool
+		defer store.Close()
+		env.DB = store
 		if err := runUsersCreate(ctx, env, []string{*username, *password}); err != nil {
 			return err
 		}

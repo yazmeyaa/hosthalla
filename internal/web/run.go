@@ -10,16 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/agent"
-	agent_repository "github.com/yazmeyaa/hosthalla/internal/agent/postgres"
 	"github.com/yazmeyaa/hosthalla/internal/api"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
-	authentication_repository "github.com/yazmeyaa/hosthalla/internal/authentication/storage/postgres"
 	"github.com/yazmeyaa/hosthalla/internal/config"
+	appdatabase "github.com/yazmeyaa/hosthalla/internal/database"
 	"github.com/yazmeyaa/hosthalla/internal/events"
 	"github.com/yazmeyaa/hosthalla/internal/host"
-	host_repository "github.com/yazmeyaa/hosthalla/internal/host/postgres"
 	app_logger "github.com/yazmeyaa/hosthalla/internal/logger"
 	"github.com/yazmeyaa/hosthalla/internal/version"
 )
@@ -64,20 +61,14 @@ func Run(ctx context.Context, params RunParams) error {
 	})
 	logger.Info("web logger configured", slog.String("log_level", cfg.LogLevel))
 
-	pool, err := pgxpool.New(ctx, cfg.Database.ConnectionString())
+	store, err := appdatabase.Open(ctx, cfg.Database)
 	if err != nil {
 		logger.Error("failed to connect to database", slog.String("error", err.Error()))
 		return err
 	}
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
-		logger.Error("failed to ping database", slog.String("error", err.Error()))
-		return err
-	}
-	defer pool.Close()
+	defer store.Close()
 	logger.Info("database connection pool initialized")
 
-	hostRepositories := host_repository.NewRepositories(pool)
 	secretEncryptionKey, err := cfg.SecretEncryptionKey()
 	if err != nil {
 		logger.Error("invalid secret encryption key", slog.String("error", err.Error()))
@@ -89,31 +80,24 @@ func Run(ctx context.Context, params RunParams) error {
 		return err
 	}
 
-	sessionRepository := authentication_repository.NewSessionRepository(pool)
-	apiTokenRepository := authentication_repository.NewAPITokenRepository(pool)
-	profileRepository := authentication_repository.NewProfileRepository(pool)
-	passwordAuthenticationRepository := authentication_repository.NewPasswordAuthenticationRepository(pool)
-	agentConfigRepository := agent_repository.NewAgentConfigRepository(pool)
-	agentRepository := agent_repository.NewAgentRepository(pool)
-
 	authService := auth_service.New(auth_service.NewParams{
-		ProfileRepository:                profileRepository,
-		PasswordAuthenticationRepository: passwordAuthenticationRepository,
-		SessionRepository:                sessionRepository,
-		APITokenRepository:               apiTokenRepository,
+		ProfileRepository:                store.ProfileRepository,
+		PasswordAuthenticationRepository: store.PasswordAuthenticationRepository,
+		SessionRepository:                store.SessionRepository,
+		APITokenRepository:               store.APITokenRepository,
 	})
 	hostService := host.NewService(host.NewServiceParams{
-		HostRepository:                 hostRepositories.Host,
-		HostManagementMethodRepository: hostRepositories.HostManagementMethod,
-		HostSystemInfoRepository:       hostRepositories.HostSystemInfo,
-		HostMetricSnapshotRepository:   hostRepositories.HostMetricSnapshot,
+		HostRepository:                 store.HostRepository,
+		HostManagementMethodRepository: store.HostManagementMethodRepository,
+		HostSystemInfoRepository:       store.HostSystemInfoRepository,
+		HostMetricSnapshotRepository:   store.HostMetricSnapshotRepository,
 		SecretCipher:                   secretCipher,
 		Logger:                         logger,
 		EventBus:                       eventBus,
 	})
 	agentService := agent.NewService(agent.NewServiceParams{
-		AgentRepository:       agentRepository,
-		AgentConfigRepository: agentConfigRepository,
+		AgentRepository:       store.AgentRepository,
+		AgentConfigRepository: store.AgentConfigRepository,
 		EventBus:              eventBus,
 		Logger:                logger,
 	})
@@ -121,7 +105,7 @@ func Run(ctx context.Context, params RunParams) error {
 		HostService:       hostService,
 		AgentService:      agentService,
 		AuthService:       authService,
-		SessionRepository: sessionRepository,
+		SessionRepository: store.SessionRepository,
 		Logger:            logger,
 		EventBus:          eventBus,
 		WebOrigin:         webOrigin,
@@ -130,7 +114,7 @@ func Run(ctx context.Context, params RunParams) error {
 		api.RouterParams{
 			AgentService:       agentService,
 			HostService:        hostService,
-			APITokenRepository: apiTokenRepository,
+			APITokenRepository: store.APITokenRepository,
 			Logger:             logger,
 		},
 	)

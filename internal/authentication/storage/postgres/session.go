@@ -2,12 +2,14 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/authentication"
 	"github.com/yazmeyaa/hosthalla/internal/authentication/storage"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
 const (
@@ -27,7 +29,7 @@ func scanSession(row pgx.Row) (authentication.Session, error) {
 		&session.CreatedAt,
 		&session.UpdatedAt,
 	); err != nil {
-		return authentication.Session{}, err
+		return authentication.Session{}, repository.NormalizeError(err)
 	}
 	return session, nil
 }
@@ -60,7 +62,7 @@ func (s *SessionRepositoryPostgresImpl) DeleteSession(ctx context.Context, id st
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("session not found: %s", id)
+		return fmt.Errorf("session not found: %s: %w", id, sql.ErrNoRows)
 	}
 	return nil
 }

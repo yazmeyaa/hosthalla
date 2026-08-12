@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -8,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/yazmeyaa/hosthalla/internal/agent"
 	"github.com/yazmeyaa/hosthalla/internal/host"
 )
@@ -61,7 +61,7 @@ func (h *AgentsHandler) HandleHeartbeat(w http.ResponseWriter, r *http.Request) 
 
 	currentAgent, err := h.agentService.GetByID(ctx, agentID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "agent not found", http.StatusNotFound)
 			return
 		}
@@ -111,7 +111,7 @@ func (h *AgentsHandler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 
 	currentAgent, err := h.agentService.GetByID(ctx, agentID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "agent not found", http.StatusNotFound)
 			return
 		}
@@ -154,7 +154,7 @@ func (h *AgentsHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := h.agentService.GetByID(ctx, agentID); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "agent not found", http.StatusNotFound)
 			return
 		}

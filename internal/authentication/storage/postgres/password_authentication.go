@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/authentication"
 	"github.com/yazmeyaa/hosthalla/internal/authentication/storage"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
 const (
@@ -31,7 +32,7 @@ func scanPasswordAuthentication(row pgx.Row) (authentication.PasswordAuthenticat
 		&auth.CreatedAt,
 		&auth.UpdatedAt,
 	); err != nil {
-		return authentication.PasswordAuthentication{}, err
+		return authentication.PasswordAuthentication{}, repository.NormalizeError(err)
 	}
 	return auth, nil
 }

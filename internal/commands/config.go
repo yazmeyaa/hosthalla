@@ -102,6 +102,9 @@ func newConfigValidateCommand() *cliapp.Command {
 			if _, err := cfg.PublicWebOrigin(); err != nil {
 				return fmt.Errorf("validate web_origin: %w", err)
 			}
+			if _, err := cfg.Database.ConnectionSettings("", ""); err != nil {
+				return fmt.Errorf("validate database: %w", err)
+			}
 			if _, err := cfg.SecretEncryptionKey(); err != nil {
 				return fmt.Errorf("validate security.secret_encryption_key: %w", err)
 			}

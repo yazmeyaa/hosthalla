@@ -2,7 +2,9 @@ package icons
 
 // Public API aliases for shared/ui/icons.
 var (
-	EyeOpenIcon    = EyeOpen
-	EyeClosedIcon  = EyeClosed
-	EyeIconSymbols = EyeSymbols
+	EyeOpenIcon      = EyeOpen
+	EyeClosedIcon    = EyeClosed
+	EyeIconSymbols   = EyeSymbols
+	TrashIcon        = Trash
+	TrashIconSymbols = TrashSymbols
 )

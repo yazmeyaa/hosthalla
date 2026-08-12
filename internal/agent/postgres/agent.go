@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/agent"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
 const (
@@ -33,7 +35,7 @@ func scanAgent(row pgx.Row) (agent.Agent, error) {
 		&value.CreatedAt,
 		&value.LastSeenAt,
 	); err != nil {
-		return agent.Agent{}, err
+		return agent.Agent{}, repository.NormalizeError(err)
 	}
 	return value, nil
 }
@@ -80,9 +82,9 @@ func (r *AgentRepositoryPostgresImpl) GetByHostID(ctx context.Context, hostID uu
 
 func (r *AgentRepositoryPostgresImpl) Update(ctx context.Context, value *agent.Agent) error {
 	row := r.pool.QueryRow(ctx, updateAgentQuery, value.ID, value.HostID, value.Version)
-	if err := row.Scan(&value.CreatedAt, &value.LastSeenAt); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("agent not found: %s", value.ID)
+	if err := repository.NormalizeError(row.Scan(&value.CreatedAt, &value.LastSeenAt)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("agent not found: %s: %w", value.ID, sql.ErrNoRows)
 		}
 		return err
 	}
@@ -95,7 +97,7 @@ func (r *AgentRepositoryPostgresImpl) Delete(ctx context.Context, id uuid.UUID) 
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("agent not found: %s", id)
+		return fmt.Errorf("agent not found: %s: %w", id, sql.ErrNoRows)
 	}
 	return nil
 }
@@ -106,7 +108,7 @@ func (r *AgentRepositoryPostgresImpl) UpdateLastSeenAt(ctx context.Context, id u
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("agent not found: %s", id)
+		return fmt.Errorf("agent not found: %s: %w", id, sql.ErrNoRows)
 	}
 	return nil
 }

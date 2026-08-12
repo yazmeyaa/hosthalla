@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/authentication"
 	auth_service "github.com/yazmeyaa/hosthalla/internal/authentication/service"
 	cliapp "github.com/yazmeyaa/hosthalla/internal/cli"
 	"github.com/yazmeyaa/hosthalla/internal/config"
+	appdatabase "github.com/yazmeyaa/hosthalla/internal/database"
 )
 
 type fakeUserCreator struct {
@@ -38,7 +38,7 @@ func TestUsersCreateUsesPreparedDBAndService(t *testing.T) {
 	}()
 
 	creator := &fakeUserCreator{}
-	newUserCreator = func(pool *pgxpool.Pool) userCreator {
+	newUserCreator = func(store *appdatabase.Store) userCreator {
 		return creator
 	}
 
@@ -48,7 +48,7 @@ func TestUsersCreateUsesPreparedDBAndService(t *testing.T) {
 		LoadConfig: func(path string) (*config.AppConfig, error) {
 			return &cfg, nil
 		},
-		OpenDB: func(ctx context.Context, cfg *config.AppConfig) (*pgxpool.Pool, error) {
+		OpenDB: func(ctx context.Context, cfg *config.AppConfig) (*appdatabase.Store, error) {
 			openedDB = true
 			return nil, nil
 		},

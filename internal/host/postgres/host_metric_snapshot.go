@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/host"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
 type hostMetricSnapshotQueryer interface {
@@ -359,7 +360,7 @@ func getHostMetricSnapshotByID(ctx context.Context, q hostMetricSnapshotQueryer,
 
 	var snapshot host.HostMetricSnapshot
 	if err := row.Scan(&snapshot.HostID, &snapshot.Timestamp); err != nil {
-		return host.HostMetricSnapshot{}, err
+		return host.HostMetricSnapshot{}, repository.NormalizeError(err)
 	}
 
 	metrics, err := listHostMetricsBySnapshotID(ctx, q, snapshotID)

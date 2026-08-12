@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/authentication"
 	"github.com/yazmeyaa/hosthalla/internal/authentication/storage"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
 const (
@@ -37,7 +39,7 @@ func scanAPIToken(row pgx.Row) (authentication.APIToken, error) {
 		&token.ExpiresAt,
 		&token.RevokedAt,
 	); err != nil {
-		return authentication.APIToken{}, err
+		return authentication.APIToken{}, repository.NormalizeError(err)
 	}
 	return token, nil
 }
@@ -109,7 +111,7 @@ func (r *APITokenRepositoryPostgresImpl) RevokeAPIToken(ctx context.Context, id 
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("api token not found or already revoked: %s", id)
+		return fmt.Errorf("api token not found or already revoked: %s: %w", id, sql.ErrNoRows)
 	}
 	return nil
 }
@@ -120,7 +122,7 @@ func (r *APITokenRepositoryPostgresImpl) UpdateLastUsedAt(ctx context.Context, i
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("api token not found: %s", id)
+		return fmt.Errorf("api token not found: %s: %w", id, sql.ErrNoRows)
 	}
 	return nil
 }

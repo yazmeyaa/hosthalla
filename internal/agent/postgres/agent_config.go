@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yazmeyaa/hosthalla/internal/agent"
+	"github.com/yazmeyaa/hosthalla/internal/repository"
 )
 
 const (
@@ -45,7 +47,7 @@ func scanAgentConfig(row pgx.Row) (agent.AgentConfig, error) {
 		&metricsIntervalSeconds,
 		&value.Version,
 	); err != nil {
-		return agent.AgentConfig{}, err
+		return agent.AgentConfig{}, repository.NormalizeError(err)
 	}
 
 	value.Heartbeat.Interval = time.Duration(heartbeatIntervalSecs) * time.Second
@@ -94,7 +96,7 @@ func (r *AgentConfigRepositoryPostgresImpl) GetByAgentID(ctx context.Context, ag
 	if err == nil {
 		return value, nil
 	}
-	if !errors.Is(err, pgx.ErrNoRows) {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return agent.AgentConfig{}, err
 	}
 
@@ -113,9 +115,9 @@ func (r *AgentConfigRepositoryPostgresImpl) Update(ctx context.Context, value *a
 	)
 
 	var agentID uuid.UUID
-	if err := row.Scan(&agentID); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("agent config not found: %s", value.ID)
+	if err := repository.NormalizeError(row.Scan(&agentID)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("agent config not found: %s: %w", value.ID, sql.ErrNoRows)
 		}
 		return err
 	}

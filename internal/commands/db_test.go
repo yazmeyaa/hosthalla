@@ -6,17 +6,46 @@ import (
 	"database/sql"
 	"io"
 	"log/slog"
+	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	cliapp "github.com/yazmeyaa/hosthalla/internal/cli"
 	"github.com/yazmeyaa/hosthalla/internal/config"
+	appdatabase "github.com/yazmeyaa/hosthalla/internal/database"
+	appmigrations "github.com/yazmeyaa/hosthalla/internal/migrations"
 )
 
 type fakeMigrator struct {
 	upCalled *bool
+}
+
+func TestSQLiteCLIWorkflow(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	cfg := config.NewDefaultAppConfig()
+	cfg.Database.Path = filepath.Join(filepath.Dir(configPath), "hosthalla.sqlite")
+	if err := cfg.SaveToPath(configPath); err != nil {
+		t.Fatalf("save config: %v", err)
+	}
+
+	root := NewRoot(RootParams{})
+	for _, test := range []struct {
+		args []string
+		want string
+	}{
+		{args: []string{"--config", configPath, "db", "migrate"}, want: "Database migrations applied successfully"},
+		{args: []string{"--config", configPath, "users", "create", "alice", "correct horse battery staple"}, want: "User created: alice"},
+		{args: []string{"--config", configPath, "users", "list"}, want: "alice"},
+	} {
+		var stdout, stderr bytes.Buffer
+		code := cliapp.Execute(context.Background(), root, test.args, &stdout, &stderr, cliapp.DefaultDependencies())
+		if code != cliapp.ExitCodeOK {
+			t.Fatalf("%v: exit code = %d, stderr = %q", test.args, code, stderr.String())
+		}
+		if !strings.Contains(stdout.String(), test.want) {
+			t.Fatalf("%v: stdout = %q, want %q", test.args, stdout.String(), test.want)
+		}
+	}
 }
 
 func (m fakeMigrator) Up() error {
@@ -44,22 +73,29 @@ func TestDBMigrateUsesConfigAndMigrator(t *testing.T) {
 	var migrated bool
 	openSQL = func(driverName string, dataSourceName string) (*sql.DB, error) {
 		opened = true
-		if !strings.Contains(dataSourceName, "hosthalla") {
-			t.Fatalf("unexpected connection string: %q", dataSourceName)
+		if driverName != "sqlite" {
+			t.Fatalf("driver = %q, want sqlite", driverName)
 		}
-		return sql.Open("pgx", dataSourceName)
+		if dataSourceName != "file:override.sqlite" {
+			t.Fatalf("DSN = %q, want override", dataSourceName)
+		}
+		return sql.Open("sqlite", ":memory:")
 	}
-	newMigrator = func(db *sql.DB) (migrator, error) {
+	newMigrator = func(db *sql.DB, strategy appmigrations.Strategy) (migrator, error) {
+		if strategy != appmigrations.SQLite {
+			t.Fatalf("strategy = %q, want sqlite", strategy)
+		}
 		return fakeMigrator{upCalled: &migrated}, nil
 	}
 
 	cfg := config.NewDefaultAppConfig()
+	cfg.Database = config.DatabaseConfig{Driver: "postgres", Host: "localhost", Port: 5432, User: "hosthalla", Database: "hosthalla"}
 	deps := cliapp.Dependencies{
 		LoadConfig: func(path string) (*config.AppConfig, error) {
 			return &cfg, nil
 		},
-		OpenDB: func(ctx context.Context, cfg *config.AppConfig) (*pgxpool.Pool, error) {
-			t.Fatal("db migrate should not open pgxpool")
+		OpenDB: func(ctx context.Context, cfg *config.AppConfig) (*appdatabase.Store, error) {
+			t.Fatal("db migrate should not open application store")
 			return nil, nil
 		},
 		NewLogger: func(output io.Writer, level slog.Level) *slog.Logger {
@@ -69,7 +105,7 @@ func TestDBMigrateUsesConfigAndMigrator(t *testing.T) {
 
 	root := NewRoot(RootParams{})
 	var stdout, stderr bytes.Buffer
-	code := cliapp.Execute(context.Background(), root, []string{"db", "migrate"}, &stdout, &stderr, deps)
+	code := cliapp.Execute(context.Background(), root, []string{"db", "migrate", "--driver", "sqlite", "--dsn", "file:override.sqlite"}, &stdout, &stderr, deps)
 
 	if code != cliapp.ExitCodeOK {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())

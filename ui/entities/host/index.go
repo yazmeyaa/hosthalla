@@ -7,3 +7,4 @@ var HostDetailsSummary = host_ui.HostDetailsSummary
 var HostSystemInfo = host_ui.HostSystemInfo
 var HostDetailsScripts = host_ui.HostDetailsScripts
 var MethodTypeTag = host_ui.MethodTypeTag
+var MethodNameTag = host_ui.MethodNameTag

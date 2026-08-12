@@ -28,6 +28,7 @@ type HostsPageProps struct {
 	HostSystemInfoByHostID        map[string]host.HostSystemInfo
 	HostLatestMetricsByHostID     map[string]hosts_page_model.HostLatestMetricsBadges
 	AuthLayoutProps               layout.AuthenticatedLayoutProps
+	OpenDialogID                  string
 }
 
 templ HostsPage(props HostsPageProps) {
@@ -66,14 +67,16 @@ templ HostsPageContent(props HostsPageProps) {
 					Ping All
 				}
 			</form>
-			@button.Button(button.ButtonProps{Type: "button", OnClick: templ.JSFuncCall("openModalDialog", "create-host-dialog")}) {
-				Add Host
-			}
+				<span hx-boost="true" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML show:none" hx-push-url="true">
+					@button.Link(button.LinkProps{Href: "/hosts/create"}) {
+						Add Host
+					}
+				</span>
 		</div>
 	</div>
 	<div id="hosts-ping-all-status" class={ hosts_page_ping_all_status_slot() }></div>
 	@HostsInventory(props)
-	@CreateHostDialog(props.AvailableTags)
+		@CreateHostDialog(props.AvailableTags, props.OpenDialogID == "create-host-dialog")
 	@HostImportExportDialog(props.Hosts)
 	@HostsInventoryScripts()
 	@HostActionsScripts()

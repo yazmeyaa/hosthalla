@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yazmeyaa/hosthalla/internal/events"
+	"github.com/yazmeyaa/hosthalla/internal/host/sshcheck"
 )
 
 type PingResult struct {
@@ -30,8 +31,13 @@ type Service struct {
 	hostSystemInfoRepository       HostSystemInfoRepository
 	hostMetricSnapshotRepository   HostMetricSnapshotRepository
 	secretCipher                   SecretCipher
+	sshChecker                     SSHChecker
 	logger                         *slog.Logger
 	eventBus                       events.EventBus
+}
+
+type SSHChecker interface {
+	Check(ctx context.Context, params sshcheck.Params) sshcheck.Result
 }
 
 type NewServiceParams struct {
@@ -40,6 +46,7 @@ type NewServiceParams struct {
 	HostSystemInfoRepository       HostSystemInfoRepository
 	HostMetricSnapshotRepository   HostMetricSnapshotRepository
 	SecretCipher                   SecretCipher
+	SSHChecker                     SSHChecker
 	Logger                         *slog.Logger
 	EventBus                       events.EventBus
 }
@@ -51,6 +58,10 @@ func NewService(
 	if eventBus == nil {
 		eventBus = events.NewInMemoryEventBus()
 	}
+	sshChecker := params.SSHChecker
+	if sshChecker == nil {
+		sshChecker = sshcheck.Checker{Timeout: 7 * time.Second}
+	}
 
 	return &Service{
 		hostRepository:                 params.HostRepository,
@@ -58,6 +69,7 @@ func NewService(
 		hostSystemInfoRepository:       params.HostSystemInfoRepository,
 		hostMetricSnapshotRepository:   params.HostMetricSnapshotRepository,
 		secretCipher:                   params.SecretCipher,
+		sshChecker:                     sshChecker,
 		logger:                         params.Logger,
 		eventBus:                       eventBus,
 	}
@@ -212,6 +224,62 @@ func (s *Service) GetHostManagementMethodSecret(ctx context.Context, hostID uuid
 	}
 }
 
+func (s *Service) TestSSHManagementMethod(ctx context.Context, hostID uuid.UUID, methodID uuid.UUID) (sshcheck.Result, error) {
+	targetHost, err := s.hostRepository.GetHostByID(ctx, hostID)
+	if err != nil {
+		s.logger.Error("failed to load host before ssh check", slog.String("host_id", hostID.String()), slog.String("error", err.Error()))
+		return sshcheck.Result{}, err
+	}
+
+	method, err := s.hostManagementMethodRepository.GetHostManagementMethodByID(ctx, methodID)
+	if err != nil {
+		s.logger.Error("failed to load host management method before ssh check", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		return sshcheck.Result{}, err
+	}
+	if method.HostID != hostID {
+		s.logger.Warn("host management method does not belong to host for ssh check", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("method_host_id", method.HostID.String()))
+		return sshcheck.Result{}, errors.New("management method not found")
+	}
+
+	params := sshcheck.Params{
+		Host:     targetHost.IP.String(),
+		Port:     method.Port,
+		Username: method.Username,
+		Method:   string(method.Type),
+	}
+	switch method.Type {
+	case HostManagementMethodTypeSSHPassword:
+		decryptedSecret, err := s.secretCipher.Decrypt(method.Secret)
+		if err != nil {
+			s.logger.Warn("failed to decrypt ssh password secret for ssh check", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+			return sshcheck.Result{}, fmt.Errorf("failed to decrypt secret: %w", err)
+		}
+		params.Password = string(decryptedSecret)
+	case HostManagementMethodTypeSSHKey:
+		decryptedSecret, err := s.secretCipher.Decrypt(method.Secret)
+		if err != nil {
+			s.logger.Warn("failed to decrypt ssh key secret for ssh check", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+			return sshcheck.Result{}, fmt.Errorf("failed to decrypt secret: %w", err)
+		}
+		var payload struct {
+			PrivateKey string `json:"privateKey"`
+		}
+		if err := json.Unmarshal(decryptedSecret, &payload); err != nil {
+			s.logger.Warn("failed to decode ssh key secret for ssh check", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+			return sshcheck.Result{}, fmt.Errorf("failed to decode secret: %w", err)
+		}
+		params.PrivateKey = payload.PrivateKey
+	}
+
+	result := s.sshChecker.Check(ctx, params)
+	if result.Status == sshcheck.StatusOK {
+		s.logger.Info("ssh check succeeded", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.Int64("duration_ms", result.Duration.Milliseconds()))
+	} else {
+		s.logger.Warn("ssh check failed", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("status", string(result.Status)), slog.Int64("duration_ms", result.Duration.Milliseconds()))
+	}
+	return result, nil
+}
+
 func (s *Service) GetHostSystemInfoByHostID(ctx context.Context, hostID uuid.UUID) (HostSystemInfo, error) {
 	systemInfo, err := s.hostSystemInfoRepository.GetHostSystemInfoByHostID(ctx, hostID)
 	if err != nil {
@@ -291,6 +359,7 @@ func (s *Service) CreateHostMetricSnapshot(ctx context.Context, data HostMetricS
 }
 
 type CreateSSHPasswordManagementMethodDTO struct {
+	Name        string
 	Username    string
 	Password    string
 	Port        uint16
@@ -298,8 +367,13 @@ type CreateSSHPasswordManagementMethodDTO struct {
 }
 
 func (s *Service) CreateSSHPasswordManagementMethod(ctx context.Context, hostID uuid.UUID, data CreateSSHPasswordManagementMethodDTO) (HostManagementMethod, error) {
+	name := strings.TrimSpace(data.Name)
 	username := strings.TrimSpace(data.Username)
 	password := strings.TrimSpace(data.Password)
+	if name == "" {
+		s.logger.Warn("failed to create ssh password method: name is required", slog.String("host_id", hostID.String()))
+		return HostManagementMethod{}, errors.New("name is required")
+	}
 	if username == "" {
 		s.logger.Warn("failed to create ssh password method: username is required", slog.String("host_id", hostID.String()))
 		return HostManagementMethod{}, errors.New("username is required")
@@ -315,6 +389,7 @@ func (s *Service) CreateSSHPasswordManagementMethod(ctx context.Context, hostID 
 		return HostManagementMethod{}, fmt.Errorf("failed to encrypt secret: %w", err)
 	}
 	method, err := s.hostManagementMethodRepository.CreateHostManagementMethod(ctx, hostID, CreateHostManagementMethodDTO{
+		Name:        name,
 		Type:        HostManagementMethodTypeSSHPassword,
 		Username:    username,
 		Port:        normalizePort(data.Port),
@@ -331,6 +406,7 @@ func (s *Service) CreateSSHPasswordManagementMethod(ctx context.Context, hostID 
 }
 
 type CreateSSHKeyManagementMethodDTO struct {
+	Name        string
 	Username    string
 	PublicKey   string
 	PrivateKey  string
@@ -339,9 +415,14 @@ type CreateSSHKeyManagementMethodDTO struct {
 }
 
 func (s *Service) CreateSSHKeyManagementMethod(ctx context.Context, hostID uuid.UUID, data CreateSSHKeyManagementMethodDTO) (HostManagementMethod, error) {
+	name := strings.TrimSpace(data.Name)
 	username := strings.TrimSpace(data.Username)
 	publicKey := strings.TrimSpace(data.PublicKey)
 	privateKey := strings.TrimSpace(data.PrivateKey)
+	if name == "" {
+		s.logger.Warn("failed to create ssh key method: name is required", slog.String("host_id", hostID.String()))
+		return HostManagementMethod{}, errors.New("name is required")
+	}
 	if username == "" {
 		s.logger.Warn("failed to create ssh key method: username is required", slog.String("host_id", hostID.String()))
 		return HostManagementMethod{}, errors.New("username is required")
@@ -374,6 +455,7 @@ func (s *Service) CreateSSHKeyManagementMethod(ctx context.Context, hostID uuid.
 	}
 
 	method, err := s.hostManagementMethodRepository.CreateHostManagementMethod(ctx, hostID, CreateHostManagementMethodDTO{
+		Name:        name,
 		Type:        HostManagementMethodTypeSSHKey,
 		Username:    username,
 		Port:        normalizePort(data.Port),
@@ -387,6 +469,102 @@ func (s *Service) CreateSSHKeyManagementMethod(ctx context.Context, hostID uuid.
 	s.logger.Info("created ssh key method", slog.String("host_id", hostID.String()), slog.String("method_id", method.ID.String()), slog.String("username", username))
 	s.publishHostManagementMethodCreated(ctx, hostID, method)
 	return method, nil
+}
+
+type UpdateHostManagementMethodInput struct {
+	Name        string
+	Username    string
+	Password    string
+	PublicKey   string
+	PrivateKey  string
+	Port        uint16
+	Description string
+}
+
+func (s *Service) UpdateHostManagementMethod(ctx context.Context, hostID uuid.UUID, methodID uuid.UUID, data UpdateHostManagementMethodInput) (HostManagementMethod, error) {
+	method, err := s.hostManagementMethodRepository.GetHostManagementMethodByID(ctx, methodID)
+	if err != nil {
+		s.logger.Error("failed to load host management method before update", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		return HostManagementMethod{}, err
+	}
+	if method.HostID != hostID {
+		s.logger.Warn("host management method does not belong to host for update", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("method_host_id", method.HostID.String()))
+		return HostManagementMethod{}, errors.New("management method not found")
+	}
+
+	name := strings.TrimSpace(data.Name)
+	username := strings.TrimSpace(data.Username)
+	if name == "" {
+		return HostManagementMethod{}, errors.New("name is required")
+	}
+	if username == "" {
+		return HostManagementMethod{}, errors.New("username is required")
+	}
+
+	secret := method.Secret
+	switch method.Type {
+	case HostManagementMethodTypeSSHPassword:
+		password := strings.TrimSpace(data.Password)
+		if password != "" {
+			secret, err = s.secretCipher.Encrypt([]byte(password))
+			if err != nil {
+				return HostManagementMethod{}, fmt.Errorf("failed to encrypt secret: %w", err)
+			}
+		}
+	case HostManagementMethodTypeSSHKey:
+		publicKey := strings.TrimSpace(data.PublicKey)
+		privateKey := strings.TrimSpace(data.PrivateKey)
+		if publicKey != "" || privateKey != "" {
+			currentSecret, err := s.GetHostManagementMethodSecret(ctx, hostID, methodID)
+			if err != nil {
+				return HostManagementMethod{}, err
+			}
+			if publicKey == "" {
+				publicKey = currentSecret.PublicKey
+			}
+			if privateKey == "" {
+				privateKey = currentSecret.PrivateKey
+			}
+			secretRaw, err := json.Marshal(struct {
+				PublicKey  string `json:"publicKey"`
+				PrivateKey string `json:"privateKey"`
+			}{PublicKey: publicKey, PrivateKey: privateKey})
+			if err != nil {
+				return HostManagementMethod{}, fmt.Errorf("failed to prepare ssh key secret: %w", err)
+			}
+			secret, err = s.secretCipher.Encrypt(secretRaw)
+			if err != nil {
+				return HostManagementMethod{}, fmt.Errorf("failed to encrypt secret: %w", err)
+			}
+		}
+	default:
+		return HostManagementMethod{}, errors.New("unsupported management method type")
+	}
+
+	updated, err := s.hostManagementMethodRepository.UpdateHostManagementMethod(ctx, methodID, UpdateHostManagementMethodDTO{
+		Name:        name,
+		Username:    username,
+		Port:        normalizePort(data.Port),
+		Secret:      secret,
+		Description: strings.TrimSpace(data.Description),
+	})
+	if err != nil {
+		s.logger.Error("failed to update host management method", slog.String("host_id", hostID.String()), slog.String("method_id", methodID.String()), slog.String("error", err.Error()))
+		return HostManagementMethod{}, err
+	}
+	updated.Secret = nil
+	return updated, nil
+}
+
+func (s *Service) DeleteHostManagementMethod(ctx context.Context, hostID uuid.UUID, methodID uuid.UUID) error {
+	method, err := s.hostManagementMethodRepository.GetHostManagementMethodByID(ctx, methodID)
+	if err != nil {
+		return err
+	}
+	if method.HostID != hostID {
+		return errors.New("management method not found")
+	}
+	return s.hostManagementMethodRepository.DeleteHostManagementMethod(ctx, methodID)
 }
 
 func (s *Service) PingHost(ctx context.Context, hostID uuid.UUID) (PingResult, error) {
