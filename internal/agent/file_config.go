@@ -13,10 +13,7 @@ import (
 	"go.yaml.in/yaml/v4"
 )
 
-var (
-	DefaultConfigDir  = resolveDefaultAgentConfigDir()
-	DefaultConfigPath = filepath.Join(DefaultConfigDir, "agent.yaml")
-)
+var DefaultConfigDir = "/etc/hosthalla/agent.d"
 
 // LoadedConfig is an agent configuration loaded from a configuration file.
 type LoadedConfig struct {
@@ -41,15 +38,6 @@ type fileAgentConnectionConfig struct {
 
 type fileAgentTickerConfig struct {
 	Interval string `yaml:"interval"`
-}
-
-func resolveDefaultAgentConfigDir() string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil || strings.TrimSpace(homeDir) == "" {
-		return ".hosthalla/agent.d"
-	}
-
-	return filepath.Join(homeDir, ".hosthalla", "agent.d")
 }
 
 func LoadConfigFromPath(path string) (*AgentConfig, error) {
@@ -87,7 +75,7 @@ func LoadConfigsFromDir(dir string) ([]LoadedConfig, error) {
 	configs := make([]LoadedConfig, 0, len(entries))
 	var errs []error
 	for _, entry := range entries {
-		if !entry.Type().IsRegular() || !isAgentConfigFile(entry.Name()) {
+		if !entry.Type().IsRegular() || !IsConfigFile(entry.Name()) {
 			continue
 		}
 
@@ -125,7 +113,7 @@ func LoadConfigsFromDir(dir string) ([]LoadedConfig, error) {
 	return configs, nil
 }
 
-func isAgentConfigFile(name string) bool {
+func IsConfigFile(name string) bool {
 	ext := filepath.Ext(name)
 	return ext == ".yaml" || ext == ".yml"
 }

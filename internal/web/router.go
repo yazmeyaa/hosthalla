@@ -50,6 +50,7 @@ func NewRouter(params NewRouterParams) http.Handler {
 	helpHandler := handlers.NewHelpHandler(params.AuthService, params.Logger)
 
 	mux := http.NewServeMux()
+	mux.Handle("GET /robots.txt", http.FileServer(http.FS(ui_assets.Files)))
 	mux.Handle("GET /assets/", staticAssetsHandler(http.StripPrefix("/assets/", http.FileServer(http.FS(ui_assets.Files)))))
 
 	mux.Handle("GET /", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(indexHandler.Index)))

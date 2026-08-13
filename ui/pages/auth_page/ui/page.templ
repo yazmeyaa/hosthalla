@@ -6,7 +6,10 @@ import "github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 
 templ AuthPage() {
-	@layout.GenericLayout(layout.GenericLayoutProps{Title: "Auth"}) {
+	@layout.GenericLayout(layout.GenericLayoutProps{
+		Title:       "Auth",
+		Description: "Sign in to Hosthalla to access your infrastructure dashboard.",
+	}) {
 		@layout.AppContent() {
 			<section class={ auth_page_wrapper() }>
 				@card.Card() {

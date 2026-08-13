@@ -127,9 +127,12 @@ func (h *DashboardHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	pageProps := dashboard_page.DashboardPageProps{
 		Data: data,
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
-			GenericLayoutProps: layout.GenericLayoutProps{Title: "Dashboard"},
-			Profile:            profile,
-			Path:               r.URL.Path,
+			GenericLayoutProps: layout.GenericLayoutProps{
+				Title:       "Dashboard",
+				Description: "View infrastructure health, host status, and current system metrics in Hosthalla.",
+			},
+			Profile: profile,
+			Path:    r.URL.Path,
 		},
 	}
 

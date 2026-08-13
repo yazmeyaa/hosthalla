@@ -1,6 +1,8 @@
 package web
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,6 +11,42 @@ import (
 	"github.com/a-h/templ"
 	dashboard_page "github.com/yazmeyaa/hosthalla/ui/pages/dashboard"
 )
+
+func TestRouterServesRobotsTxt(t *testing.T) {
+	handler := NewRouter(NewRouterParams{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+
+	request := httptest.NewRequest(http.MethodGet, "/robots.txt", nil)
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("unexpected status: got %d, want %d", response.Code, http.StatusOK)
+	}
+	if response.Body.String() != "User-agent: *\nDisallow: /\n" {
+		t.Fatalf("unexpected robots.txt: %q", response.Body.String())
+	}
+}
+
+func TestRouterServesFavicon(t *testing.T) {
+	handler := NewRouter(NewRouterParams{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+
+	request := httptest.NewRequest(http.MethodGet, "/assets/favicon.svg", nil)
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("unexpected status: got %d, want %d", response.Code, http.StatusOK)
+	}
+	if !strings.Contains(response.Body.String(), `<svg xmlns="http://www.w3.org/2000/svg"`) {
+		t.Fatalf("unexpected favicon: %q", response.Body.String())
+	}
+}
 
 func TestCSSMiddlewareSuppressesDashboardFragmentStyles(t *testing.T) {
 	handler := templ.NewCSSMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

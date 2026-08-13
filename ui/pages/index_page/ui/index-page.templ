@@ -12,7 +12,13 @@ type IndexPageProps struct {
 }
 
 templ IndexPage(props IndexPageProps) {
-	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{GenericLayoutProps: layout.GenericLayoutProps{Title: "Home"}, Profile: props.Profile}) {
+	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{
+		GenericLayoutProps: layout.GenericLayoutProps{
+			Title:       "Home",
+			Description: "Open the Hosthalla infrastructure management dashboard.",
+		},
+		Profile: props.Profile,
+	}) {
 		@IndexPageContent(props)
 	}
 }

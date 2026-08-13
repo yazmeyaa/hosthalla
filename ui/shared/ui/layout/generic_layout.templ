@@ -6,7 +6,8 @@ import (
 )
 
 type GenericLayoutProps struct {
-	Title string
+	Title       string
+	Description string
 }
 
 templ GenericLayout(props GenericLayoutProps) {
@@ -16,6 +17,15 @@ templ GenericLayout(props GenericLayoutProps) {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<meta name="color-scheme" content="dark light"/>
+			<meta name="description" content={ props.Description }/>
+			<meta property="og:title" content={ "Hosthalla - " + props.Title }/>
+			<meta property="og:description" content={ props.Description }/>
+			<meta property="og:type" content="website"/>
+			<meta property="og:site_name" content="Hosthalla"/>
+			<meta property="og:image" content="/assets/favicon.svg"/>
+			<meta property="og:image:type" content="image/svg+xml"/>
+			<meta property="og:image:alt" content="Hosthalla HH logo"/>
+			<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" sizes="any"/>
 			<title>Hosthalla - { props.Title }</title>
 			@ThemeBootScript()
 			<script src="/assets/htmx.min.js"></script>

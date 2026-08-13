@@ -48,9 +48,12 @@ func (h *HelpHandler) Help(w http.ResponseWriter, r *http.Request) {
 	props := help_page.HelpPageProps{
 		ActiveTopic: topic,
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
-			GenericLayoutProps: layout.GenericLayoutProps{Title: "Help"},
-			Profile:            profile,
-			Path:               r.URL.Path,
+			GenericLayoutProps: layout.GenericLayoutProps{
+				Title:       "Help",
+				Description: "Find instructions for installing, configuring, updating, and using Hosthalla.",
+			},
+			Profile: profile,
+			Path:    r.URL.Path,
 		},
 	}
 
