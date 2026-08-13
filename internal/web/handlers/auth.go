@@ -10,17 +10,18 @@ import (
 )
 
 type AuthHandler struct {
-	l   *slog.Logger
-	svc *auth_service.Service
+	l         *slog.Logger
+	svc       *auth_service.Service
+	webOrigin string
 }
 
-func NewAuthHandler(l *slog.Logger, svc *auth_service.Service) *AuthHandler {
-	return &AuthHandler{l, svc}
+func NewAuthHandler(l *slog.Logger, svc *auth_service.Service, webOrigin string) *AuthHandler {
+	return &AuthHandler{l: l, svc: svc, webOrigin: webOrigin}
 }
 
 func (h *AuthHandler) Auth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	auth_page.AuthPage().Render(ctx, w)
+	auth_page.AuthPage(h.webOrigin).Render(ctx, w)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {

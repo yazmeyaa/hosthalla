@@ -194,8 +194,10 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 		OpenDialogID:                  hostsOpenDialogID(r),
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
 			GenericLayoutProps: layout.GenericLayoutProps{
-				Title:       "Hosts",
-				Description: "Manage hosts, connection methods, tags, system information, and monitoring status in Hosthalla.",
+				Title:         "Hosthalla – Server Inventory and Infrastructure Management",
+				Description:   "Manage your server inventory in Hosthalla with searchable hosts, tags, connection methods, availability checks, system details, and current monitoring status.",
+				WebOrigin:     h.webOrigin,
+				CanonicalPath: "/hosts",
 			},
 			Profile: profile,
 			Path:    r.URL.Path,

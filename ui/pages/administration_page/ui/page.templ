@@ -31,6 +31,8 @@ type AdministrationNotice struct {
 }
 
 type AdministrationPageProps struct {
+	WebOrigin                 string
+	Path                      string
 	Profile                   authentication.Profile
 	CurrentProfileID          string
 	ActiveSection             string
@@ -75,11 +77,13 @@ type adminAgentRow struct {
 templ AdministrationPage(props AdministrationPageProps) {
 	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{
 		GenericLayoutProps: layout.GenericLayoutProps{
-			Title:       "Administration",
-			Description: "Manage Hosthalla users, agents, API tokens, and system settings.",
+			Title:         "Hosthalla – Users, Agents, and API Administration Tools",
+			Description:   "Administer Hosthalla users, monitoring agents, API tokens, sessions, runtime information, and operational issues from one protected control center.",
+			WebOrigin:     props.WebOrigin,
+			CanonicalPath: props.Path,
 		},
 		Profile: props.Profile,
-		Path:    "/administration",
+		Path:    props.Path,
 	}) {
 		@AdministrationPageContent(props)
 	}

@@ -26,6 +26,7 @@ type AdministrationHandler struct {
 	agentService *agent.Service
 	hostService  *host.Service
 	logger       *slog.Logger
+	webOrigin    string
 }
 
 type NewAdministrationHandlerParams struct {
@@ -33,10 +34,11 @@ type NewAdministrationHandlerParams struct {
 	AgentService *agent.Service
 	HostService  *host.Service
 	Logger       *slog.Logger
+	WebOrigin    string
 }
 
 func NewAdministrationHandler(params NewAdministrationHandlerParams) *AdministrationHandler {
-	return &AdministrationHandler{authService: params.AuthService, agentService: params.AgentService, hostService: params.HostService, logger: params.Logger}
+	return &AdministrationHandler{authService: params.AuthService, agentService: params.AgentService, hostService: params.HostService, logger: params.Logger, webOrigin: params.WebOrigin}
 }
 
 func (h *AdministrationHandler) Administration(w http.ResponseWriter, r *http.Request) {
@@ -137,6 +139,8 @@ func (h *AdministrationHandler) administrationPageProps(w http.ResponseWriter, r
 	}
 
 	pageProps := administration_page.AdministrationPageProps{
+		WebOrigin:                 h.webOrigin,
+		Path:                      r.URL.Path,
 		Profile:                   profile,
 		CurrentProfileID:          profile.ID,
 		ActiveSection:             section,

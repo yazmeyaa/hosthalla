@@ -32,6 +32,7 @@ type DashboardHandler struct {
 	logger         *slog.Logger
 	hostService    *host.Service
 	profileService *auth_service.Service
+	webOrigin      string
 
 	mu    sync.RWMutex
 	cache dashboardCache
@@ -45,6 +46,7 @@ type DashboardHandlerParams struct {
 	HostService    *host.Service
 	ProfileService *auth_service.Service
 	EventBus       events.EventBus
+	WebOrigin      string
 }
 
 type dashboardCache struct {
@@ -79,6 +81,7 @@ func NewDashboardHandler(params DashboardHandlerParams) *DashboardHandler {
 		logger:         params.Logger.With("component", "dashboard_handler"),
 		hostService:    params.HostService,
 		profileService: params.ProfileService,
+		webOrigin:      params.WebOrigin,
 		clients:        make(map[*dashboardClient]struct{}),
 	}
 
@@ -128,8 +131,10 @@ func (h *DashboardHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		Data: data,
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
 			GenericLayoutProps: layout.GenericLayoutProps{
-				Title:       "Dashboard",
-				Description: "View infrastructure health, host status, and current system metrics in Hosthalla.",
+				Title:         "Hosthalla – Live Infrastructure Monitoring Dashboard",
+				Description:   "Monitor infrastructure health, host availability, agent status, and live CPU, memory, disk, and network metrics from your self-hosted Hosthalla dashboard.",
+				WebOrigin:     h.webOrigin,
+				CanonicalPath: "/dashboard",
 			},
 			Profile: profile,
 			Path:    r.URL.Path,

@@ -8,14 +8,17 @@ import (
 
 
 type IndexPageProps struct {
-	Profile authentication.Profile
+	Profile   authentication.Profile
+	WebOrigin string
 }
 
 templ IndexPage(props IndexPageProps) {
 	@layout.AuthenticatedLayout(layout.AuthenticatedLayoutProps{
 		GenericLayoutProps: layout.GenericLayoutProps{
-			Title:       "Home",
-			Description: "Open the Hosthalla infrastructure management dashboard.",
+			Title:         "Hosthalla – Self-Hosted Server Infrastructure Dashboard",
+			Description:   "Track servers, store encrypted access methods, check availability, and monitor live infrastructure metrics with the compact self-hosted Hosthalla dashboard.",
+			WebOrigin:     props.WebOrigin,
+			CanonicalPath: "/",
 		},
 		Profile: props.Profile,
 	}) {

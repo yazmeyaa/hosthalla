@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07111f"/>
+      <stop offset="1" stop-color="#0b1d2f"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#10253a"/>
+      <stop offset="1" stop-color="#0b1626"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#22d3ee" stroke-opacity=".045"/>
+    </pattern>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#background)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <circle cx="1020" cy="90" r="190" fill="#22d3ee" fill-opacity=".08" filter="url(#glow)"/>
+  <circle cx="80" cy="590" r="170" fill="#0ea5e9" fill-opacity=".07" filter="url(#glow)"/>
+
+  <rect x="72" y="68" width="1056" height="494" rx="34" fill="url(#panel)" stroke="#214057" stroke-width="2"/>
+  <path d="M73 460 370 163h758" fill="none" stroke="#22d3ee" stroke-opacity=".07" stroke-width="3"/>
+
+  <g transform="translate(128 150) scale(2.75)">
+    <path d="M12 2h48a2 2 0 0 1 2 2v48a10 10 0 0 1-10 10H4a2 2 0 0 1-2-2V12A10 10 0 0 1 12 2Z" fill="#102a3a" stroke="#22d3ee" stroke-width="2"/>
+    <path d="M13 18h5v11h10V18h5v28h-5V34H18v12h-5V18Zm23 0h5v11h10V18h5v28h-5V34H41v12h-5V18Z" fill="#a5f3fc"/>
+  </g>
+
+  <text x="356" y="213" fill="#f8fafc" font-family="Adwaita Sans, DejaVu Sans, sans-serif" font-size="74" font-weight="700">Hosthalla</text>
+  <text x="360" y="270" fill="#a5f3fc" font-family="JetBrains Mono, DejaVu Sans Mono, monospace" font-size="28" font-weight="600">Infrastructure dashboard</text>
+  <text x="128" y="390" fill="#cbd5e1" font-family="Adwaita Sans, DejaVu Sans, sans-serif" font-size="31">Track servers · Store access methods · Monitor live metrics</text>
+
+  <g font-family="JetBrains Mono, DejaVu Sans Mono, monospace" font-size="20" font-weight="600">
+    <rect x="128" y="450" width="188" height="52" rx="16" fill="#0c2d3a" stroke="#155e75"/>
+    <circle cx="159" cy="476" r="7" fill="#22d3ee"/>
+    <text x="181" y="483" fill="#cffafe">HOSTS</text>
+
+    <rect x="336" y="450" width="210" height="52" rx="16" fill="#0c2d3a" stroke="#155e75"/>
+    <circle cx="367" cy="476" r="7" fill="#34d399"/>
+    <text x="389" y="483" fill="#d1fae5">METRICS</text>
+
+    <rect x="566" y="450" width="210" height="52" rx="16" fill="#0c2d3a" stroke="#155e75"/>
+    <circle cx="597" cy="476" r="7" fill="#60a5fa"/>
+    <text x="619" y="483" fill="#dbeafe">AGENTS</text>
+  </g>
+
+  <text x="1070" y="526" text-anchor="end" fill="#64748b" font-family="JetBrains Mono, DejaVu Sans Mono, monospace" font-size="17">SELF-HOSTED</text>
+</svg>
