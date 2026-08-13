@@ -17,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
 
 	"github.com/google/uuid"
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -55,7 +56,8 @@ func processAgentRegisterCommand(ctx context.Context, stdout io.Writer, stderr i
 	schemeValue := flags.String("scheme", "", "connection scheme (http or https)")
 	tokenValue := flags.String("token", "", "API token")
 	hostIDValue := flags.String("host-id", "", "host id (UUID) to register agent for")
-	configPath := flags.String("config", agent.DefaultConfigPath, "path to agent config file")
+	configPath := flags.String("config", "", "path to agent config file")
+	configDir := flags.String("config-dir", agent.DefaultConfigDir, "directory for the generated agent config")
 
 	if err := flags.Parse(args); err != nil {
 		fmt.Fprintf(stderr, "Failed to parse flags: %s\n", err)
@@ -66,10 +68,19 @@ func processAgentRegisterCommand(ctx context.Context, stdout io.Writer, stderr i
 		printAgentRegisterUsage(stderr)
 		return fmt.Errorf("agent register does not accept positional arguments")
 	}
-	if _, err := os.Lstat(*configPath); err == nil {
-		return fmt.Errorf("agent config %q already exists", *configPath)
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("check agent config %q: %w", *configPath, err)
+	configSet := flagWasSet(flags, "config")
+	configDirSet := flagWasSet(flags, "config-dir")
+	if configSet && configDirSet {
+		printAgentRegisterUsage(stderr)
+		return fmt.Errorf("--config and --config-dir cannot be used together")
+	}
+	if configSet && strings.TrimSpace(*configPath) == "" {
+		printAgentRegisterUsage(stderr)
+		return fmt.Errorf("--config cannot be empty")
+	}
+	if configDirSet && strings.TrimSpace(*configDir) == "" {
+		printAgentRegisterUsage(stderr)
+		return fmt.Errorf("--config-dir cannot be empty")
 	}
 
 	hostID, err := uuid.Parse(strings.TrimSpace(*hostIDValue))
@@ -80,6 +91,18 @@ func processAgentRegisterCommand(ctx context.Context, stdout io.Writer, stderr i
 	scheme, host, err := normalizeConnectionHost(*hostValue, *schemeValue)
 	if err != nil {
 		return fmt.Errorf("invalid --host value: %w", err)
+	}
+	targetConfigPath := strings.TrimSpace(*configPath)
+	if !configSet {
+		targetConfigPath = filepath.Join(strings.TrimSpace(*configDir), agentConfigFileName(host))
+	}
+	if !agent.IsConfigFile(targetConfigPath) {
+		return fmt.Errorf("agent config path %q must end with .yaml or .yml", targetConfigPath)
+	}
+	if _, err := os.Lstat(targetConfigPath); err == nil {
+		return fmt.Errorf("agent config %q already exists", targetConfigPath)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("check agent config %q: %w", targetConfigPath, err)
 	}
 
 	registerResponse, err := registerAgent(ctx, scheme, host, strings.TrimSpace(*tokenValue), hostID)
@@ -104,11 +127,11 @@ func processAgentRegisterCommand(ctx context.Context, stdout io.Writer, stderr i
 	}
 	cfg.Version = 1
 
-	if err := agent.SaveNewConfigToPath(*configPath, cfg); err != nil {
+	if err := agent.SaveNewConfigToPath(targetConfigPath, cfg); err != nil {
 		return fmt.Errorf("write agent config: %w", err)
 	}
 
-	fmt.Fprintf(stdout, "Agent registered. Config saved at %q\n", *configPath)
+	fmt.Fprintf(stdout, "Agent registered. Config saved at %q\n", targetConfigPath)
 	return nil
 }
 
@@ -116,7 +139,7 @@ func processAgentRunCommand(ctx context.Context, stdout io.Writer, stderr io.Wri
 	flags := flag.NewFlagSet("hosthalla agent run", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
-	configPath := flags.String("config", agent.DefaultConfigPath, "path to agent config file")
+	configPath := flags.String("config", "", "path to agent config file")
 	configDir := flags.String("config-dir", agent.DefaultConfigDir, "path to directory containing agent config files")
 	if err := flags.Parse(args); err != nil {
 		fmt.Fprintf(stderr, "Failed to parse flags: %s\n", err)
@@ -204,6 +227,22 @@ func minimumMetricsInterval(configs []agent.LoadedConfig) time.Duration {
 
 func agentServer(cfg *agent.AgentConfig) string {
 	return (&url.URL{Scheme: cfg.Connection.Scheme, Host: cfg.Connection.Host}).String()
+}
+
+func agentConfigFileName(host string) string {
+	name := strings.Map(func(r rune) rune {
+		switch {
+		case unicode.IsLetter(r), unicode.IsDigit(r), r == '.', r == '-', r == '_':
+			return unicode.ToLower(r)
+		default:
+			return '-'
+		}
+	}, strings.TrimSpace(host))
+	name = strings.Trim(name, ".-")
+	if name == "" {
+		name = "agent"
+	}
+	return name + ".yaml"
 }
 
 func agentInstanceLogger(logger *slog.Logger, loaded agent.LoadedConfig) *slog.Logger {
@@ -498,12 +537,12 @@ func isLocalhostHost(rawHost string) bool {
 
 func printAgentUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file>]")
+	fmt.Fprintln(w, "  hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file> | --config-dir <dir>]")
 	fmt.Fprintln(w, "  hosthalla agent run [--config <file> | --config-dir <dir>]")
 }
 
 func printAgentRegisterUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file>]")
+	fmt.Fprintln(w, "Usage: hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file> | --config-dir <dir>]")
 }
 
 func printAgentRunUsage(w io.Writer) {

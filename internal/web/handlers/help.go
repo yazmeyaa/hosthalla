@@ -14,10 +14,11 @@ import (
 type HelpHandler struct {
 	authService *auth_service.Service
 	logger      *slog.Logger
+	webOrigin   string
 }
 
-func NewHelpHandler(authService *auth_service.Service, logger *slog.Logger) *HelpHandler {
-	return &HelpHandler{authService: authService, logger: logger}
+func NewHelpHandler(authService *auth_service.Service, logger *slog.Logger, webOrigin string) *HelpHandler {
+	return &HelpHandler{authService: authService, logger: logger, webOrigin: webOrigin}
 }
 
 func (h *HelpHandler) Help(w http.ResponseWriter, r *http.Request) {
@@ -48,9 +49,14 @@ func (h *HelpHandler) Help(w http.ResponseWriter, r *http.Request) {
 	props := help_page.HelpPageProps{
 		ActiveTopic: topic,
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
-			GenericLayoutProps: layout.GenericLayoutProps{Title: "Help"},
-			Profile:            profile,
-			Path:               r.URL.Path,
+			GenericLayoutProps: layout.GenericLayoutProps{
+				Title:         "Hosthalla – Installation and Operations Help Center",
+				Description:   "Learn how to install, configure, operate, and update Hosthalla, register monitoring agents, create users and API keys, use the CLI, and report problems.",
+				WebOrigin:     h.webOrigin,
+				CanonicalPath: r.URL.Path,
+			},
+			Profile: profile,
+			Path:    r.URL.Path,
 		},
 	}
 

@@ -5,8 +5,13 @@ import "github.com/yazmeyaa/hosthalla/ui/shared/ui/input"
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/card"
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/button"
 
-templ AuthPage() {
-	@layout.GenericLayout(layout.GenericLayoutProps{Title: "Auth"}) {
+templ AuthPage(webOrigin string) {
+	@layout.GenericLayout(layout.GenericLayoutProps{
+		Title:         "Hosthalla – Secure Infrastructure Dashboard Sign In",
+		Description:   "Sign in to Hosthalla to securely access your self-hosted infrastructure dashboard, server inventory, monitoring metrics, and administration tools.",
+		WebOrigin:     webOrigin,
+		CanonicalPath: "/auth",
+	}) {
 		@layout.AppContent() {
 			<section class={ auth_page_wrapper() }>
 				@card.Card() {

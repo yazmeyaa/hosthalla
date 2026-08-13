@@ -193,9 +193,14 @@ func (h *HostsHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 		HostLatestMetricsByHostID:     hostLatestMetricsByHostID,
 		OpenDialogID:                  hostsOpenDialogID(r),
 		AuthLayoutProps: layout.AuthenticatedLayoutProps{
-			GenericLayoutProps: layout.GenericLayoutProps{Title: "Hosts"},
-			Profile:            profile,
-			Path:               r.URL.Path,
+			GenericLayoutProps: layout.GenericLayoutProps{
+				Title:         "Hosthalla – Server Inventory and Infrastructure Management",
+				Description:   "Manage your server inventory in Hosthalla with searchable hosts, tags, connection methods, availability checks, system details, and current monitoring status.",
+				WebOrigin:     h.webOrigin,
+				CanonicalPath: "/hosts",
+			},
+			Profile: profile,
+			Path:    r.URL.Path,
 		},
 	}
 	if isHTMXBoostedNavigationRequest(r) {

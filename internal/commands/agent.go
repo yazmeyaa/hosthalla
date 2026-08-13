@@ -14,7 +14,7 @@ func newAgentCommand() *cliapp.Command {
 		Children: []*cliapp.Command{
 			{
 				Name:  "register",
-				Usage: "hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file>]",
+				Usage: "hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file> | --config-dir <dir>]",
 				Short: "Register this machine as an agent.",
 				Run: func(ctx context.Context, env *cliapp.Env, args []string) error {
 					return runAgentCommand(ctx, env.Stdout, env.Stderr, append([]string{"register"}, args...))

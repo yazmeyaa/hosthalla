@@ -107,12 +107,12 @@ hosthalla agent run`})
 		<p class={ help_page_text() }>Once the agent is running, Hosthalla should show recent heartbeat and metrics for that host.</p>
 		<h3 class={ help_page_subtitle() }>Multiple servers</h3>
 		<p class={ help_page_text() }>Register each Hosthalla server into a separate config file, then start one agent process for the directory.</p>
-		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla agent register --host https://main.hosthalla.example.com --host-id <main-host-uuid> --token <hht_...> --config /etc/hosthalla/agent.d/main.yaml
-hosthalla agent register --host https://demo.hosthalla.example.com --host-id <demo-host-uuid> --token <hht_...> --config /etc/hosthalla/agent.d/demo.yaml
+		@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla agent register --host https://main.hosthalla.example.com --host-id <main-host-uuid> --token <hht_...>
+hosthalla agent register --host https://demo.hosthalla.example.com --host-id <demo-host-uuid> --token <hht_...>
 
 hosthalla agent run --config-dir /etc/hosthalla/agent.d`})
-		<p class={ help_page_text() }>Without either flag, the agent reads <code>~/.hosthalla/agent.d</code>. Directory mode reads only regular <code>.yaml</code> and <code>.yml</code> files without recursion. Use either <code>--config &lt;file&gt;</code> or <code>--config-dir &lt;dir&gt;</code>, not both. The agent validates every config before it starts; if one is invalid, no worker starts and all found errors are reported.</p>
-		<p class={ help_page_text() }>Registration without <code>--config</code> writes <code>~/.hosthalla/agent.d/agent.yaml</code> and does not replace an existing file. Use a new path for each additional server.</p>
+		<p class={ help_page_text() }>Without either flag, the agent reads <code>/etc/hosthalla/agent.d</code>. Directory mode reads only regular <code>.yaml</code> and <code>.yml</code> files without recursion. Use either <code>--config &lt;file&gt;</code> or <code>--config-dir &lt;dir&gt;</code>, not both. The agent validates every config before it starts; if one is invalid, no worker starts and all found errors are reported.</p>
+		<p class={ help_page_text() }>Registration without a path flag writes <code>/etc/hosthalla/agent.d/&lt;server-host&gt;.yaml</code>. Use <code>--config-dir</code> to select another directory or <code>--config</code> to select an exact <code>.yaml</code>/<code>.yml</code> path. Existing files are not replaced.</p>
 	</article>
 }
 
@@ -247,7 +247,7 @@ hosthalla agents delete <agent-id>`})
 		<section class={ help_page_cli_group() } id="cli-agent">
 			<h3 class={ help_page_subtitle() }>Local agent</h3>
 			<p class={ help_page_text() }>Use `agent` commands on the monitored machine. Register writes the local agent config, and run starts the worker.</p>
-			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla agent register --host <server-url> --host-id <uuid> --token <hht_...> [--scheme <http|https>] [--config <file>]
+			@codeblock.CodeBlock(codeblock.CodeBlockProps{Code: `hosthalla agent register --host <server-url> --host-id <uuid> --token <hht_...> [--scheme <http|https>] [--config <file> | --config-dir <dir>]
 hosthalla agent run [--config <file> | --config-dir <dir>]`})
 		</section>
 	</article>

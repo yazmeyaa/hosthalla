@@ -33,23 +33,27 @@ type NewRouterParams struct {
 
 func NewRouter(params NewRouterParams) http.Handler {
 	indexHandler := handlers.NewIndexHandler(params.HostService, params.Logger, params.AuthService)
-	authHandler := handlers.NewAuthHandler(params.Logger, params.AuthService)
+	authHandler := handlers.NewAuthHandler(params.Logger, params.AuthService, params.WebOrigin)
 	hostHandler := handlers.NewHostsHandler(params.HostService, params.AuthService, params.Logger, params.WebOrigin)
 	administrationHandler := handlers.NewAdministrationHandler(handlers.NewAdministrationHandlerParams{
 		AuthService:  params.AuthService,
 		AgentService: params.AgentService,
 		HostService:  params.HostService,
 		Logger:       params.Logger,
+		WebOrigin:    params.WebOrigin,
 	})
 	dashboardHandler := handlers.NewDashboardHandler(handlers.DashboardHandlerParams{
 		Logger:         params.Logger,
 		HostService:    params.HostService,
 		ProfileService: params.AuthService,
 		EventBus:       params.EventBus,
+		WebOrigin:      params.WebOrigin,
 	})
-	helpHandler := handlers.NewHelpHandler(params.AuthService, params.Logger)
+	helpHandler := handlers.NewHelpHandler(params.AuthService, params.Logger, params.WebOrigin)
 
 	mux := http.NewServeMux()
+	mux.Handle("GET /llms.txt", http.FileServer(http.FS(ui_assets.Files)))
+	mux.Handle("GET /robots.txt", http.FileServer(http.FS(ui_assets.Files)))
 	mux.Handle("GET /assets/", staticAssetsHandler(http.StripPrefix("/assets/", http.FileServer(http.FS(ui_assets.Files)))))
 
 	mux.Handle("GET /", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(indexHandler.Index)))

@@ -11,12 +11,12 @@ type AuthenticatedLayoutProps struct {
 }
 
 templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
-	@GenericLayout(GenericLayoutProps{Title: props.Title}) {
+	@GenericLayout(props.GenericLayoutProps) {
 		<div class={ authenticated_shell() } data-authenticated-shell>
 			<header class={ authenticated_header() }>
 				<span class={ authenticated_header_motif() } aria-hidden="true"></span>
 				<div class={ authenticated_brand() }>
-					<span class={ authenticated_brand_mark() } aria-hidden="true">HH</span>
+					<img class={ authenticated_brand_mark() } src="/assets/favicon.svg" alt="" width="34" height="34"/>
 					<div>
 						<h1 class={ authenticated_title() }>Hosthalla</h1>
 						<p class={ authenticated_subtitle() }>Infrastructure dashboard</p>

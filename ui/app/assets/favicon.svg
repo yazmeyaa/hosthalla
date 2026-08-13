@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path
+    d="M12 2h48a2 2 0 0 1 2 2v48a10 10 0 0 1-10 10H4a2 2 0 0 1-2-2V12A10 10 0 0 1 12 2Z"
+    fill="#102a3a"
+    stroke="#22d3ee"
+    stroke-width="2"
+  />
+  <path
+    d="M13 18h5v11h10V18h5v28h-5V34H18v12h-5V18Zm23 0h5v11h10V18h5v28h-5V34H41v12h-5V18Z"
+    fill="#a5f3fc"
+  />
+</svg>

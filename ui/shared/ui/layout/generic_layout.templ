@@ -6,17 +6,38 @@ import (
 )
 
 type GenericLayoutProps struct {
-	Title string
+	Title         string
+	Description   string
+	WebOrigin     string
+	CanonicalPath string
 }
 
 templ GenericLayout(props GenericLayoutProps) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" prefix="og: https://ogp.me/ns#">
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<meta name="color-scheme" content="dark light"/>
-			<title>Hosthalla - { props.Title }</title>
+			<title>{ props.Title }</title>
+			<meta name="description" content={ props.Description }/>
+			<link rel="canonical" href={ props.WebOrigin + props.CanonicalPath }/>
+			<meta property="og:title" content={ props.Title }/>
+			<meta property="og:description" content={ props.Description }/>
+			<meta property="og:type" content="website"/>
+			<meta property="og:site_name" content="Hosthalla"/>
+			<meta property="og:url" content={ props.WebOrigin + props.CanonicalPath }/>
+			<meta property="og:image" content={ props.WebOrigin + "/assets/static/og-preview.png" }/>
+			<meta property="og:image:type" content="image/png"/>
+			<meta property="og:image:width" content="1200"/>
+			<meta property="og:image:height" content="630"/>
+			<meta property="og:image:alt" content="Hosthalla infrastructure dashboard"/>
+			<meta name="twitter:card" content="summary_large_image"/>
+			<meta name="twitter:title" content={ props.Title }/>
+			<meta name="twitter:description" content={ props.Description }/>
+			<meta name="twitter:image" content={ props.WebOrigin + "/assets/static/og-preview.png" }/>
+			<meta name="twitter:image:alt" content="Hosthalla infrastructure dashboard"/>
+			<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" sizes="any"/>
 			@ThemeBootScript()
 			<script src="/assets/htmx.min.js"></script>
 			<script src="/assets/htmx-ext-ws.min.js"></script>

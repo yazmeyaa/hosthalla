@@ -1,0 +1,31 @@
+# Hosthalla
+
+> Hosthalla is a self-hosted infrastructure dashboard for tracking servers, storing access methods, checking availability, and viewing live host metrics.
+
+The web interface is intended for authenticated operators of a Hosthalla installation. Start at `/auth`; `/` redirects authenticated users to `/dashboard`. Direct links below are stable navigation targets. Pages can expose actions that change infrastructure data, so perform mutations only when explicitly requested by an authorized user.
+
+## Main application
+
+- [Sign in](/auth): Public login page for an existing Hosthalla user account.
+- [Dashboard](/dashboard): Infrastructure overview with host totals, reporting and stale states, management-method coverage, recent metrics, and live host updates.
+- [Hosts](/hosts): Searchable and filterable host inventory with names, addresses, tags, system information, availability, resource metrics, and management methods.
+- [Add host](/hosts/create): Opens the host creation workflow inside the Hosts page.
+- [Administration](/administration): Administrative overview of users, agents, API tokens, sessions, metrics, and items requiring attention.
+- [Help](/help/install-server): In-product documentation for installing, configuring, operating, and updating Hosthalla.
+
+## Administration
+
+- [Users](/administration/users): Manage web-interface accounts, profile status, passwords, and user deletion.
+- [Agents](/administration/agents): Inspect registered monitoring agents, assigned hosts, versions, heartbeat state, and metrics state.
+- [API tokens](/administration/tokens): Create and revoke API credentials used by scripts, integrations, and agent registration.
+- [System](/administration/system): View Hosthalla application version and runtime information.
+
+## Help and documentation
+
+- [Install Hosthalla server](/help/install-server): Install the binary, prepare configuration and storage, bootstrap the first user, and start the web server.
+- [Install and register agent](/help/install-agent): Connect monitored machines to Hosthalla and run one or more agent configurations.
+- [Create API key](/help/create-api-key): Issue an API token and preserve its one-time plain-text value.
+- [Create user](/help/create-user): Add a web-interface user from Administration.
+- [CLI usage](/help/cli-usage): Reference for configuration, bootstrap, database, users, tokens, hosts, agents, and local agent commands.
+- [Update Hosthalla](/help/update-hosthalla): Replace the installed binary and restart the Hosthalla process or service.
+- [Report bug](/help/report-bug): Prepare a reproducible report and open a GitHub issue.

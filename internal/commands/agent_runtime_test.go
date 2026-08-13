@@ -96,6 +96,49 @@ func TestProcessAgentRegisterDoesNotContactServerWhenConfigExists(t *testing.T) 
 	}
 }
 
+func TestProcessAgentRegisterRejectsUnsupportedConfigExtension(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	err := processAgentRegisterCommand(context.Background(), &stdout, &stderr, []string{
+		"--config", filepath.Join(t.TempDir(), "agent.conf"),
+		"--host", "example.com",
+		"--host-id", uuid.NewString(),
+		"--token", "secret",
+	})
+	if err == nil || !strings.Contains(err.Error(), "must end with .yaml or .yml") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestProcessAgentRegisterRejectsConfigAndConfigDir(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	err := processAgentRegisterCommand(context.Background(), &stdout, &stderr, []string{
+		"--config", "agent.yaml",
+		"--config-dir", "agent.d",
+	})
+	if err == nil || !strings.Contains(err.Error(), "cannot be used together") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestAgentConfigFileName(t *testing.T) {
+	tests := map[string]string{
+		"Hosthalla.Example.COM": "hosthalla.example.com.yaml",
+		"localhost:8080":        "localhost-8080.yaml",
+		"[::1]:8080":            "1--8080.yaml",
+	}
+	for host, want := range tests {
+		if got := agentConfigFileName(host); got != want {
+			t.Errorf("agentConfigFileName(%q) = %q, want %q", host, got, want)
+		}
+	}
+}
+
+func TestDefaultAgentConfigDirectory(t *testing.T) {
+	if agent.DefaultConfigDir != "/etc/hosthalla/agent.d" {
+		t.Fatalf("DefaultConfigDir = %q", agent.DefaultConfigDir)
+	}
+}
+
 func TestMinimumMetricsInterval(t *testing.T) {
 	first, second := agent.NewAgentConfig(), agent.NewAgentConfig()
 	first.Metrics.Interval = 10 * time.Second
