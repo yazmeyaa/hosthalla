@@ -32,7 +32,7 @@ func newConfigGenerateCommand() *cliapp.Command {
 		Run: func(ctx context.Context, env *cliapp.Env, args []string) error {
 			flags := flag.NewFlagSet("hosthalla config generate", flag.ContinueOnError)
 			flags.SetOutput(io.Discard)
-			path := flags.String("path", config.DefaultConfigPath, "path to config file")
+			path := flags.String("path", env.ConfigPath, "path to config file")
 			overwrite := flags.Bool("overwrite", false, "overwrite existing config file")
 			if err := flags.Parse(args); err != nil {
 				return cliapp.UsageError{Message: err.Error(), Usage: "hosthalla config generate [--path <file>] [--overwrite]"}
@@ -60,7 +60,7 @@ func newConfigShowCommand() *cliapp.Command {
 		Run: func(ctx context.Context, env *cliapp.Env, args []string) error {
 			flags := flag.NewFlagSet("hosthalla config show", flag.ContinueOnError)
 			flags.SetOutput(io.Discard)
-			path := flags.String("path", config.DefaultConfigPath, "path to config file")
+			path := flags.String("path", env.ConfigPath, "path to config file")
 			if err := flags.Parse(args); err != nil {
 				return cliapp.UsageError{Message: err.Error(), Usage: "hosthalla config show [--path <file>]"}
 			}
@@ -85,7 +85,7 @@ func newConfigValidateCommand() *cliapp.Command {
 		Run: func(ctx context.Context, env *cliapp.Env, args []string) error {
 			flags := flag.NewFlagSet("hosthalla config validate", flag.ContinueOnError)
 			flags.SetOutput(io.Discard)
-			path := flags.String("path", config.DefaultConfigPath, "path to config file")
+			path := flags.String("path", env.ConfigPath, "path to config file")
 			if err := flags.Parse(args); err != nil {
 				return cliapp.UsageError{Message: err.Error(), Usage: "hosthalla config validate [--path <file>]"}
 			}
