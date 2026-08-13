@@ -30,6 +30,35 @@ func TestRouterServesRobotsTxt(t *testing.T) {
 	}
 }
 
+func TestRouterServesLLMsTxt(t *testing.T) {
+	handler := NewRouter(NewRouterParams{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+
+	request := httptest.NewRequest(http.MethodGet, "/llms.txt", nil)
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("unexpected status: got %d, want %d", response.Code, http.StatusOK)
+	}
+	if contentType := response.Header().Get("Content-Type"); !strings.HasPrefix(contentType, "text/plain") {
+		t.Fatalf("unexpected content type: %q", contentType)
+	}
+	for _, expected := range []string{
+		"# Hosthalla",
+		"[Dashboard](/dashboard)",
+		"[Hosts](/hosts)",
+		"[Administration](/administration)",
+		"[Help](/help/install-server)",
+	} {
+		if !strings.Contains(response.Body.String(), expected) {
+			t.Fatalf("llms.txt is missing %q", expected)
+		}
+	}
+}
+
 func TestRouterServesFavicon(t *testing.T) {
 	handler := NewRouter(NewRouterParams{
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
