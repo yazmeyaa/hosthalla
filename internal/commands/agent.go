@@ -22,7 +22,7 @@ func newAgentCommand() *cliapp.Command {
 			},
 			{
 				Name:  "run",
-				Usage: "hosthalla agent run [--config <file>]",
+				Usage: "hosthalla agent run [--config <file> | --config-dir <dir>]",
 				Short: "Run the local agent worker.",
 				Run: func(ctx context.Context, env *cliapp.Env, args []string) error {
 					return runAgentCommand(ctx, env.Stdout, env.Stderr, append([]string{"run"}, args...))

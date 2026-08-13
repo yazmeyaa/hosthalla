@@ -14,11 +14,23 @@ import (
 )
 
 type Client struct {
-	config *AgentConfig
+	config     *AgentConfig
+	httpClient *http.Client
 }
 
 func NewClient(config *AgentConfig) *Client {
-	return &Client{config}
+	transport := http.DefaultTransport
+	if defaultTransport, ok := http.DefaultTransport.(*http.Transport); ok {
+		transport = defaultTransport.Clone()
+	}
+	return &Client{
+		config:     config,
+		httpClient: &http.Client{Transport: transport},
+	}
+}
+
+func (c *Client) CloseIdleConnections() {
+	c.httpClient.CloseIdleConnections()
 }
 
 type HeartbeatResponse struct {
@@ -91,7 +103,7 @@ func (c *Client) sendRequest(ctx context.Context, method string, path string, bo
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "hosthalla-agent")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
