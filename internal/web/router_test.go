@@ -81,6 +81,32 @@ func TestRouterServesFavicon(t *testing.T) {
 	}
 }
 
+func TestRouterCachesVersionedStaticAssets(t *testing.T) {
+	handler := NewRouter(NewRouterParams{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+
+	for _, path := range []string{
+		"/assets/htmx.min.js?v=test",
+		"/assets/htmx-ext-ws.min.js?v=test",
+		"/assets/favicon.svg?v=test",
+		"/assets/fonts/AdwaitaSans-Regular.8381c33b.ttf",
+		"/styles/templ.css?v=test",
+	} {
+		request := httptest.NewRequest(http.MethodGet, path, nil)
+		response := httptest.NewRecorder()
+
+		handler.ServeHTTP(response, request)
+
+		if response.Code != http.StatusOK {
+			t.Errorf("%s: unexpected status: got %d, want %d", path, response.Code, http.StatusOK)
+		}
+		if cacheControl := response.Header().Get("Cache-Control"); cacheControl != "public, max-age=31536000, immutable" {
+			t.Errorf("%s: unexpected Cache-Control: %q", path, cacheControl)
+		}
+	}
+}
+
 func TestRouterServesOpenGraphImage(t *testing.T) {
 	handler := NewRouter(NewRouterParams{
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),

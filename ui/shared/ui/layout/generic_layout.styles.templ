@@ -32,22 +32,6 @@ func CSSClasses() []templ.CSSClass {
 templ layout_styles() {
 	<style>
 		@font-face {
-			font-family: "Adwaita Sans";
-			src: url("/assets/fonts/AdwaitaSans-Regular.8381c33b.ttf") format("truetype");
-			font-style: normal;
-			font-weight: 400;
-			font-display: swap;
-		}
-
-		@font-face {
-			font-family: "Adwaita Sans";
-			src: url("/assets/fonts/AdwaitaSans-Italic.a3dc55af.ttf") format("truetype");
-			font-style: italic;
-			font-weight: 400;
-			font-display: swap;
-		}
-
-		@font-face {
 			font-family: "JetBrains Mono";
 			src: url("/assets/fonts/JetBrainsMono-wght.662a196d.ttf") format("truetype");
 			font-style: normal;
@@ -58,7 +42,7 @@ templ layout_styles() {
         :root {
             color-scheme: dark;
 
-            --font-sans: "Adwaita Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
             --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
 
             --bg: #07111f;
