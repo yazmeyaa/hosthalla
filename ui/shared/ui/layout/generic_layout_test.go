@@ -34,10 +34,16 @@ func TestGenericLayoutIncludesMetadata(t *testing.T) {
 		`<meta property="og:image:height" content="630">`,
 		`<meta name="twitter:card" content="summary_large_image">`,
 		`<meta name="twitter:image" content="https://hosthalla.example.com/assets/static/og-preview.png">`,
-		`<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" sizes="any">`,
+		`<link rel="icon" href="/assets/favicon.svg?v=dev%2Bunknown%2Bunknown" type="image/svg+xml" sizes="any">`,
+		`<script defer src="/assets/htmx.min.js?v=dev%2Bunknown%2Bunknown"></script>`,
+		`<script defer src="/assets/htmx-ext-ws.min.js?v=dev%2Bunknown%2Bunknown"></script>`,
+		`<link rel="stylesheet" href="/styles/templ.css?v=dev%2Bunknown%2Bunknown">`,
 	} {
 		if !strings.Contains(html, expected) {
 			t.Fatalf("layout is missing %q", expected)
 		}
+	}
+	if strings.Contains(html, "AdwaitaSans") {
+		t.Fatal("layout unexpectedly loads Adwaita Sans")
 	}
 }

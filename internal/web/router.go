@@ -54,7 +54,7 @@ func NewRouter(params NewRouterParams) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /llms.txt", http.FileServer(http.FS(ui_assets.Files)))
 	mux.Handle("GET /robots.txt", http.FileServer(http.FS(ui_assets.Files)))
-	mux.Handle("GET /assets/", staticAssetsHandler(http.StripPrefix("/assets/", http.FileServer(http.FS(ui_assets.Files)))))
+	mux.Handle("GET /assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(ui_assets.Files))))
 
 	mux.Handle("GET /", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(indexHandler.Index)))
 	mux.Handle("GET /dashboard", middlewares.AuthMiddleware(params.SessionRepository, http.HandlerFunc(dashboardHandler.Dashboard)))
@@ -109,7 +109,7 @@ func NewRouter(params NewRouterParams) http.Handler {
 	)
 	rootMux.Handle("/", protectedRoutes)
 
-	return templ.NewCSSMiddleware(rootMux, cssClasses()...)
+	return staticAssetsHandler(templ.NewCSSMiddleware(rootMux, cssClasses()...))
 }
 
 func cssClasses() []templ.CSSClass {
@@ -123,10 +123,12 @@ func cssClasses() []templ.CSSClass {
 
 func staticAssetsHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/assets/")
-		if strings.HasPrefix(path, "fonts/") {
+		isAsset := strings.HasPrefix(r.URL.Path, "/assets/")
+		isHashedFont := strings.HasPrefix(r.URL.Path, "/assets/fonts/")
+		isVersioned := r.URL.Query().Has("v")
+		if isHashedFont || isVersioned && (isAsset || r.URL.Path == "/styles/templ.css") {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		} else {
+		} else if isAsset {
 			w.Header().Set("Cache-Control", "public, max-age=3600")
 		}
 		next.ServeHTTP(w, r)

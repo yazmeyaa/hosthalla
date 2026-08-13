@@ -1,6 +1,8 @@
 package layout
 
 import (
+	"net/url"
+
 	"github.com/yazmeyaa/hosthalla/internal/version"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/icons"
 )
@@ -37,12 +39,12 @@ templ GenericLayout(props GenericLayoutProps) {
 			<meta name="twitter:description" content={ props.Description }/>
 			<meta name="twitter:image" content={ props.WebOrigin + "/assets/static/og-preview.png" }/>
 			<meta name="twitter:image:alt" content="Hosthalla infrastructure dashboard"/>
-			<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" sizes="any"/>
+			<link rel="icon" href={ assetURL("/assets/favicon.svg") } type="image/svg+xml" sizes="any"/>
 			@ThemeBootScript()
-			<script src="/assets/htmx.min.js"></script>
-			<script src="/assets/htmx-ext-ws.min.js"></script>
+			<script defer src={ assetURL("/assets/htmx.min.js") }></script>
+			<script defer src={ assetURL("/assets/htmx-ext-ws.min.js") }></script>
 			@layout_styles()
-			<link rel="stylesheet" href="/styles/templ.css"/>
+			<link rel="stylesheet" href={ assetURL("/styles/templ.css") }/>
 		</head>
 		<body hx-ext="ws" class={ generic_layout_styles() }>
 			@icons.EyeIconSymbols()
@@ -58,6 +60,10 @@ templ GenericLayout(props GenericLayoutProps) {
 			</footer>
 		</body>
 	</html>
+}
+
+func assetURL(path string) string {
+	return path + "?v=" + url.QueryEscape(version.VersionString()+"+"+version.BuildAt)
 }
 
 templ ThemeBootScript() {

@@ -16,7 +16,7 @@ templ AuthenticatedLayout(props AuthenticatedLayoutProps) {
 			<header class={ authenticated_header() }>
 				<span class={ authenticated_header_motif() } aria-hidden="true"></span>
 				<div class={ authenticated_brand() }>
-					<img class={ authenticated_brand_mark() } src="/assets/favicon.svg" alt="" width="34" height="34"/>
+					<img class={ authenticated_brand_mark() } src={ assetURL("/assets/favicon.svg") } alt="" width="34" height="34"/>
 					<div>
 						<h1 class={ authenticated_title() }>Hosthalla</h1>
 						<p class={ authenticated_subtitle() }>Infrastructure dashboard</p>
