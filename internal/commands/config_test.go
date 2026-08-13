@@ -34,6 +34,21 @@ func TestConfigGenerateAndShow(t *testing.T) {
 	}
 }
 
+func TestConfigCommandsUseGlobalConfigPath(t *testing.T) {
+	root := NewRoot(RootParams{})
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	var stdout, stderr bytes.Buffer
+
+	for _, command := range []string{"generate", "show", "validate"} {
+		stdout.Reset()
+		stderr.Reset()
+		code := cliapp.Execute(context.Background(), root, []string{"--config", configPath, "config", command}, &stdout, &stderr, cliapp.Dependencies{})
+		if code != cliapp.ExitCodeOK {
+			t.Fatalf("config %s exit code = %d, stderr = %q", command, code, stderr.String())
+		}
+	}
+}
+
 func TestConfigValidate(t *testing.T) {
 	root := NewRoot(RootParams{})
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
