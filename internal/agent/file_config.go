@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -12,7 +13,17 @@ import (
 	"go.yaml.in/yaml/v4"
 )
 
-var DefaultConfigPath = resolveDefaultAgentConfigPath()
+var (
+	DefaultConfigDir  = resolveDefaultAgentConfigDir()
+	DefaultConfigPath = filepath.Join(DefaultConfigDir, "agent.yaml")
+)
+
+// LoadedConfig is an agent configuration loaded from a configuration file.
+type LoadedConfig struct {
+	Name   string
+	Path   string
+	Config *AgentConfig
+}
 
 type fileAgentConfig struct {
 	AgentID    string                    `yaml:"agent_id"`
@@ -32,13 +43,13 @@ type fileAgentTickerConfig struct {
 	Interval string `yaml:"interval"`
 }
 
-func resolveDefaultAgentConfigPath() string {
+func resolveDefaultAgentConfigDir() string {
 	homeDir, err := os.UserHomeDir()
 	if err != nil || strings.TrimSpace(homeDir) == "" {
-		return ".hosthalla/agent.yaml"
+		return ".hosthalla/agent.d"
 	}
 
-	return filepath.Join(homeDir, ".hosthalla", "agent.yaml")
+	return filepath.Join(homeDir, ".hosthalla", "agent.d")
 }
 
 func LoadConfigFromPath(path string) (*AgentConfig, error) {
@@ -59,7 +70,80 @@ func LoadConfigFromPath(path string) (*AgentConfig, error) {
 	return cfg, nil
 }
 
+// LoadConfigsFromDir loads all regular .yaml and .yml files directly in dir.
+func LoadConfigsFromDir(dir string) ([]LoadedConfig, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, fmt.Errorf("resolve agent config directory %q: %w", dir, err)
+	}
+	absDir = filepath.Clean(absDir)
+
+	entries, err := os.ReadDir(absDir)
+	if err != nil {
+		return nil, fmt.Errorf("read agent config directory %q: %w", absDir, err)
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
+
+	configs := make([]LoadedConfig, 0, len(entries))
+	var errs []error
+	for _, entry := range entries {
+		if !entry.Type().IsRegular() || !isAgentConfigFile(entry.Name()) {
+			continue
+		}
+
+		path := filepath.Join(absDir, entry.Name())
+		cfg, err := LoadConfigFromPath(path)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		configs = append(configs, LoadedConfig{
+			Name:   strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())),
+			Path:   path,
+			Config: cfg,
+		})
+	}
+	if len(configs) == 0 {
+		if len(errs) > 0 {
+			return nil, errors.Join(errs...)
+		}
+		return nil, fmt.Errorf("agent config directory %q contains no .yaml or .yml files", absDir)
+	}
+
+	seen := make(map[string]string, len(configs))
+	for _, loaded := range configs {
+		key := normalizedEndpoint(loaded.Config) + "\x00" + loaded.Config.AgentID.String()
+		if firstPath, ok := seen[key]; ok {
+			errs = append(errs, fmt.Errorf("duplicate agent config for %s and agent %s: %s and %s", normalizedEndpoint(loaded.Config), loaded.Config.AgentID, firstPath, loaded.Path))
+			continue
+		}
+		seen[key] = loaded.Path
+	}
+	if len(errs) > 0 {
+		return nil, errors.Join(errs...)
+	}
+	return configs, nil
+}
+
+func isAgentConfigFile(name string) bool {
+	ext := filepath.Ext(name)
+	return ext == ".yaml" || ext == ".yml"
+}
+
+func normalizedEndpoint(cfg *AgentConfig) string {
+	return strings.ToLower(strings.TrimSpace(cfg.Connection.Scheme)) + "://" + strings.ToLower(strings.TrimSpace(cfg.Connection.Host))
+}
+
 func SaveConfigToPath(path string, cfg *AgentConfig) error {
+	return saveConfigToPath(path, cfg, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+}
+
+// SaveNewConfigToPath creates a config without replacing an existing file.
+func SaveNewConfigToPath(path string, cfg *AgentConfig) error {
+	return saveConfigToPath(path, cfg, os.O_WRONLY|os.O_CREATE|os.O_EXCL)
+}
+
+func saveConfigToPath(path string, cfg *AgentConfig, flags int) error {
 	if cfg == nil {
 		return errors.New("agent config is nil")
 	}
@@ -73,8 +157,16 @@ func SaveConfigToPath(path string, cfg *AgentConfig) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create config directory for %q: %w", path, err)
 	}
-	if err := os.WriteFile(path, raw, 0o600); err != nil {
+	file, err := os.OpenFile(path, flags, 0o600)
+	if err != nil {
 		return fmt.Errorf("write agent config %q: %w", path, err)
+	}
+	if _, err := file.Write(raw); err != nil {
+		_ = file.Close()
+		return fmt.Errorf("write agent config %q: %w", path, err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close agent config %q: %w", path, err)
 	}
 	return nil
 }

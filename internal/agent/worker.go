@@ -8,23 +8,25 @@ import (
 )
 
 type Worker struct {
-	config       *AgentConfig
-	client       *Client
-	argusService *ArgusService
-	logger       *slog.Logger
+	config    *AgentConfig
+	client    *Client
+	collector MetricsCollector
+	logger    *slog.Logger
 }
 
-func NewWorker(config *AgentConfig, argusService *ArgusService, logger *slog.Logger) *Worker {
+func NewWorker(config *AgentConfig, collector MetricsCollector, logger *slog.Logger) *Worker {
 	logger = logger.With(slog.String("component", "worker"))
 	return &Worker{
-		config:       config,
-		client:       NewClient(config),
-		argusService: argusService,
-		logger:       logger,
+		config:    config,
+		client:    NewClient(config),
+		collector: collector,
+		logger:    logger,
 	}
 }
 
-func (w *Worker) Run(ctx context.Context) {
+func (w *Worker) Run(ctx context.Context) error {
+	defer w.client.CloseIdleConnections()
+
 	heartbeatTicker := time.NewTicker(w.config.Heartbeat.Interval)
 	defer heartbeatTicker.Stop()
 
@@ -34,7 +36,7 @@ func (w *Worker) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case <-heartbeatTicker.C:
 			if err := w.sendHeartbeat(ctx); err != nil {
 				w.logger.Error("failed to send heartbeat", "error", err)
@@ -53,7 +55,7 @@ func (w *Worker) sendHeartbeat(ctx context.Context) error {
 }
 
 func (w *Worker) sendMetrics(ctx context.Context) error {
-	metric, err := w.argusService.GetMetrics(ctx)
+	metric, err := w.collector.GetMetrics(ctx)
 	if err != nil {
 		return fmt.Errorf("collect metrics: %w", err)
 	}

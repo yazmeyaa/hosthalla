@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,15 +26,78 @@ type Service struct {
 }
 
 type ArgusService struct {
-	config *AgentConfig
-	logger *slog.Logger
 }
 
-func NewArgusService(config *AgentConfig, logger *slog.Logger) *ArgusService {
-	return &ArgusService{
-		config: config,
-		logger: logger.With(slog.String("component", "argus-agent")),
+func NewArgusService() *ArgusService { return &ArgusService{} }
+
+// MetricsCollector collects metrics for the local host.
+type MetricsCollector interface {
+	GetMetrics(context.Context) (host.HostMetric, error)
+}
+
+// CachedMetricsCollector shares one host metrics collection among callers for
+// ttl. Both successful results and errors are cached.
+type CachedMetricsCollector struct {
+	collector MetricsCollector
+	ttl       time.Duration
+
+	mu        sync.Mutex
+	metric    host.HostMetric
+	err       error
+	updated   time.Time
+	running   bool
+	completed chan struct{}
+}
+
+func NewCachedMetricsCollector(collector MetricsCollector, ttl time.Duration) *CachedMetricsCollector {
+	return &CachedMetricsCollector{collector: collector, ttl: ttl}
+}
+
+func (c *CachedMetricsCollector) GetMetrics(ctx context.Context) (host.HostMetric, error) {
+	c.mu.Lock()
+	if !c.updated.IsZero() && time.Since(c.updated) < c.ttl {
+		metric, err := c.metric, c.err
+		c.mu.Unlock()
+		return metric, err
 	}
+	if c.running {
+		completed := c.completed
+		c.mu.Unlock()
+		select {
+		case <-completed:
+			c.mu.Lock()
+			metric, err := c.metric, c.err
+			c.mu.Unlock()
+			return metric, err
+		case <-ctx.Done():
+			return host.HostMetric{}, ctx.Err()
+		}
+	}
+	c.running = true
+	c.completed = make(chan struct{})
+	completed := c.completed
+	c.mu.Unlock()
+
+	var metric host.HostMetric
+	var err error
+	var recovered any
+	func() {
+		defer func() { recovered = recover() }()
+		metric, err = c.collector.GetMetrics(ctx)
+	}()
+	if recovered != nil {
+		err = fmt.Errorf("metrics collector panic: %v", recovered)
+	}
+
+	c.mu.Lock()
+	c.metric, c.err, c.updated = metric, err, time.Now()
+	c.running = false
+	close(completed)
+	c.mu.Unlock()
+	if recovered != nil {
+		panic(recovered)
+	}
+	return metric, err
 }
 
 type NewServiceParams struct {

@@ -147,7 +147,7 @@ hosthalla serve
 
 ## Monitoring Agent
 
-The agent runs on the machine you want to monitor. It registers with Hosthalla, stores its local config in `~/.hosthalla/agent.yaml`, then periodically sends heartbeat and metrics.
+The agent runs on the machine you want to monitor. It stores independent server configs in `~/.hosthalla/agent.d` by default, then periodically sends heartbeat and metrics.
 
 Recommended flow:
 
@@ -173,6 +173,30 @@ hosthalla agent run
 ```
 
 Current agent defaults: heartbeat every `2s`, metrics every `4s`. These intervals are saved in the agent config and can be updated through the server-side agent configuration.
+
+### One agent for multiple Hosthalla servers
+
+Register each server into its own configuration file, then run the agent against the directory containing those files:
+
+```sh
+hosthalla agent register \
+  --host https://main.hosthalla.example.com \
+  --host-id <main-host-uuid> \
+  --token <hht_...> \
+  --config /etc/hosthalla/agent.d/main.yaml
+
+hosthalla agent register \
+  --host https://demo.hosthalla.example.com \
+  --host-id <demo-host-uuid> \
+  --token <hht_...> \
+  --config /etc/hosthalla/agent.d/demo.yaml
+
+hosthalla agent run --config-dir /etc/hosthalla/agent.d
+```
+
+Running `hosthalla agent run` without either flag reads `~/.hosthalla/agent.d`. `--config-dir` selects another directory and reads only regular `.yaml` and `.yml` files in it (without recursion). Use either `--config <file>` or `--config-dir <dir>`, not both. Before starting any worker, the agent validates every discovered configuration; if any configuration is invalid, it reports the errors and starts none of them.
+
+Registration without `--config` writes `~/.hosthalla/agent.d/agent.yaml`. It refuses to replace an existing configuration file; choose a new `--config` path when adding another server.
 
 ## CLI
 
@@ -217,8 +241,8 @@ hosthalla agents list [--json]
 hosthalla agents show <agent-id> [--json]
 hosthalla agents delete <agent-id>
 
-hosthalla agent register --host <server-url> --host-id <uuid> --token <hht_...>
-hosthalla agent run [--config <file>]
+hosthalla agent register --host <server-url> --host-id <uuid> --token <hht_...> [--scheme <http|https>] [--config <file>]
+hosthalla agent run [--config <file> | --config-dir <dir>]
 ```
 
 `tokens create` prints the plain token only once. Store it immediately.

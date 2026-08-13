@@ -7,13 +7,16 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -63,6 +66,11 @@ func processAgentRegisterCommand(ctx context.Context, stdout io.Writer, stderr i
 		printAgentRegisterUsage(stderr)
 		return fmt.Errorf("agent register does not accept positional arguments")
 	}
+	if _, err := os.Lstat(*configPath); err == nil {
+		return fmt.Errorf("agent config %q already exists", *configPath)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("check agent config %q: %w", *configPath, err)
+	}
 
 	hostID, err := uuid.Parse(strings.TrimSpace(*hostIDValue))
 	if err != nil {
@@ -96,7 +104,7 @@ func processAgentRegisterCommand(ctx context.Context, stdout io.Writer, stderr i
 	}
 	cfg.Version = 1
 
-	if err := agent.SaveConfigToPath(*configPath, cfg); err != nil {
+	if err := agent.SaveNewConfigToPath(*configPath, cfg); err != nil {
 		return fmt.Errorf("write agent config: %w", err)
 	}
 
@@ -109,6 +117,7 @@ func processAgentRunCommand(ctx context.Context, stdout io.Writer, stderr io.Wri
 	flags.SetOutput(io.Discard)
 
 	configPath := flags.String("config", agent.DefaultConfigPath, "path to agent config file")
+	configDir := flags.String("config-dir", agent.DefaultConfigDir, "path to directory containing agent config files")
 	if err := flags.Parse(args); err != nil {
 		fmt.Fprintf(stderr, "Failed to parse flags: %s\n", err)
 		printAgentRunUsage(stderr)
@@ -118,24 +127,100 @@ func processAgentRunCommand(ctx context.Context, stdout io.Writer, stderr io.Wri
 		printAgentRunUsage(stderr)
 		return fmt.Errorf("agent run does not accept positional arguments")
 	}
+	configSet := flagWasSet(flags, "config")
+	configDirSet := flagWasSet(flags, "config-dir")
+	if configSet && configDirSet {
+		printAgentRunUsage(stderr)
+		return fmt.Errorf("--config and --config-dir cannot be used together")
+	}
+	if configDirSet && strings.TrimSpace(*configDir) == "" {
+		printAgentRunUsage(stderr)
+		return fmt.Errorf("--config-dir cannot be empty")
+	}
 
-	cfg, err := agent.LoadConfigFromPath(*configPath)
+	if configSet {
+		*configDir = ""
+	} else {
+		*configPath = ""
+	}
+	configs, err := loadAgentConfigs(*configPath, *configDir)
 	if err != nil {
-		return fmt.Errorf("load agent config: %w", err)
+		return fmt.Errorf("load agent configs: %w", err)
 	}
 
 	logger := app_logger.NewLogger(app_logger.LoggerParams{
 		Output: stdout,
 	})
-	logger.Info("starting agent worker", "version", version.VersionString(), "config_path", *configPath)
-
-	argusService := agent.NewArgusService(cfg, logger)
-	worker := agent.NewWorker(cfg, argusService, logger)
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	worker.Run(ctx)
-	return nil
+	collector := agent.NewCachedMetricsCollector(agent.NewArgusService(), minimumMetricsInterval(configs))
+	instances := make([]agent.Instance, 0, len(configs))
+	for _, loaded := range configs {
+		cfg := loaded.Config
+		instanceLogger := agentInstanceLogger(logger, loaded)
+		worker := agent.NewWorker(cfg, collector, instanceLogger)
+		instances = append(instances, agent.Instance{
+			Name:   loaded.Name,
+			Logger: instanceLogger,
+			Run:    worker.Run,
+		})
+	}
+
+	logger.Info("starting agent runtime", "version", version.VersionString(), "instances", len(instances))
+	return agent.NewRuntime(instances, logger).Run(ctx)
+}
+
+func loadAgentConfigs(configPath, configDir string) ([]agent.LoadedConfig, error) {
+	if strings.TrimSpace(configDir) != "" {
+		return agent.LoadConfigsFromDir(configDir)
+	}
+
+	absPath, err := filepath.Abs(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("resolve agent config path %q: %w", configPath, err)
+	}
+	absPath = filepath.Clean(absPath)
+	cfg, err := agent.LoadConfigFromPath(absPath)
+	if err != nil {
+		return nil, err
+	}
+	return []agent.LoadedConfig{{
+		Name:   strings.TrimSuffix(filepath.Base(absPath), filepath.Ext(absPath)),
+		Path:   absPath,
+		Config: cfg,
+	}}, nil
+}
+
+func minimumMetricsInterval(configs []agent.LoadedConfig) time.Duration {
+	minimum := configs[0].Config.Metrics.Interval
+	for _, loaded := range configs[1:] {
+		if loaded.Config.Metrics.Interval < minimum {
+			minimum = loaded.Config.Metrics.Interval
+		}
+	}
+	return minimum
+}
+
+func agentServer(cfg *agent.AgentConfig) string {
+	return (&url.URL{Scheme: cfg.Connection.Scheme, Host: cfg.Connection.Host}).String()
+}
+
+func agentInstanceLogger(logger *slog.Logger, loaded agent.LoadedConfig) *slog.Logger {
+	return logger.With(
+		"config", loaded.Name,
+		"config_path", loaded.Path,
+		"server", agentServer(loaded.Config),
+		"agent_id", loaded.Config.AgentID.String(),
+	)
+}
+
+func flagWasSet(flags *flag.FlagSet, name string) bool {
+	found := false
+	flags.Visit(func(current *flag.Flag) {
+		found = found || current.Name == name
+	})
+	return found
 }
 
 type agentRegisterResponse struct {
@@ -414,7 +499,7 @@ func isLocalhostHost(rawHost string) bool {
 func printAgentUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  hosthalla agent register --host <server> --host-id <uuid> --token <token> [--scheme <http|https>] [--config <file>]")
-	fmt.Fprintln(w, "  hosthalla agent run [--config <file>]")
+	fmt.Fprintln(w, "  hosthalla agent run [--config <file> | --config-dir <dir>]")
 }
 
 func printAgentRegisterUsage(w io.Writer) {
@@ -422,5 +507,5 @@ func printAgentRegisterUsage(w io.Writer) {
 }
 
 func printAgentRunUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: hosthalla agent run [--config <file>]")
+	fmt.Fprintln(w, "Usage: hosthalla agent run [--config <file> | --config-dir <dir>]")
 }
