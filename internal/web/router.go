@@ -109,7 +109,7 @@ func NewRouter(params NewRouterParams) http.Handler {
 	)
 	rootMux.Handle("/", protectedRoutes)
 
-	return staticAssetsHandler(templ.NewCSSMiddleware(rootMux, cssClasses()...))
+	return staticAssetsHandler(templ.NewCSSMiddleware(middlewares.WithTokiReaderMiddleware(rootMux), cssClasses()...))
 }
 
 func cssClasses() []templ.CSSClass {

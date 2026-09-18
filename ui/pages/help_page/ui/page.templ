@@ -3,6 +3,7 @@ package help_page_ui
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/callout"
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/codeblock"
 import "github.com/yazmeyaa/hosthalla/ui/shared/ui/layout"
+import "github.com/yazmeyaa/hosthalla/internal/web/i18n"
 
 type HelpPageProps struct {
 	AuthLayoutProps layout.AuthenticatedLayoutProps
@@ -70,7 +71,7 @@ templ HelpPageContent(props HelpPageProps) {
 
 templ HelpInstallServerPage() {
 	<article class={ help_page_article() }>
-		<h2 class={ help_page_section_title() }>Install hosthalla to server</h2>
+		<h2 class={ help_page_section_title() }>{i18n.Reader(ctx).String("Install hosthalla to server")}</h2>
 		<p class={ help_page_lead() }>Install Hosthalla on the machine that will run the web interface and store your infrastructure inventory.</p>
 		<p class={ help_page_text() }>This is usually the first step on a new server. The installer downloads the release binary, puts it into the system path, and makes the `hosthalla` command available for setup, migrations, users, tokens, and the web server.</p>
 		@HelpNote("The default config is /etc/hosthalla/hosthalla.yaml and the default SQLite database is /var/lib/hosthalla/hosthalla.db. PostgreSQL remains available through database.driver.")

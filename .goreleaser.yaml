@@ -4,7 +4,7 @@ project_name: hosthalla
 
 before:
   hooks:
-    - go tool templ generate
+    - make generate
 
 builds:
   - id: hosthalla

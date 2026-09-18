@@ -4,7 +4,10 @@ import (
 	"net/url"
 
 	"github.com/yazmeyaa/hosthalla/internal/version"
+	"github.com/yazmeyaa/hosthalla/internal/web/i18n"
+	"github.com/yazmeyaa/hosthalla/tokibundle"
 	"github.com/yazmeyaa/hosthalla/ui/shared/ui/icons"
+	"golang.org/x/text/language/display"
 )
 
 type GenericLayoutProps struct {
@@ -16,7 +19,7 @@ type GenericLayoutProps struct {
 
 templ GenericLayout(props GenericLayoutProps) {
 	<!DOCTYPE html>
-	<html lang="en" prefix="og: https://ogp.me/ns#">
+	<html lang={ i18n.Reader(ctx).Locale().String() } prefix="og: https://ogp.me/ns#">
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -56,10 +59,56 @@ templ GenericLayout(props GenericLayoutProps) {
 					<span class={ generic_layout_footer_version() }>{ version.TagString() }</span>
 					<span>by yazmeyaa</span>
 					<a class={ generic_layout_footer_link() } href="https://github.com/yazmeyaa/hosthalla" target="_blank" rel="noopener noreferrer">GitHub</a>
+					@LocaleSwitcher()
 				</div>
 			</footer>
 		</body>
 	</html>
+}
+
+templ LocaleSwitcher() {
+	<label>
+		Language
+		<select data-locale-select>
+			<option value="">Browser language</option>
+			for _, locale := range tokibundle.Locales() {
+				<option value={ locale.String() } selected?={ locale == i18n.Reader(ctx).Locale() }>{ display.Self.Name(locale) }</option>
+			}
+		</select>
+	</label>
+	<script>
+		(function() {
+			const select = document.querySelector("[data-locale-select]");
+			if (!select) return;
+
+			window.hosthallaLocale = {
+				get: function() {
+					const cookie = document.cookie.split(";").map(function(value) {
+						return value.trim();
+					}).find(function(value) {
+						return value.startsWith("locale=");
+					});
+					return cookie ? cookie.slice("locale=".length) : null;
+				},
+				set: function(locale) {
+					if (!Array.from(select.options).some(function(option) {
+						return option.value === locale;
+					})) return;
+
+					const maxAge = locale === "" ? 0 : 31536000;
+					const secure = window.location.protocol === "https:" ? "; Secure" : "";
+					document.cookie = "locale=" + encodeURIComponent(locale) + "; Path=/; Max-Age=" + maxAge + "; SameSite=Lax" + secure;
+					// Reload all server-rendered content and reconnect live updates in the new locale.
+					window.location.reload();
+				},
+			};
+
+			if (!window.hosthallaLocale.get()) select.value = "";
+			select.addEventListener("change", function() {
+				window.hosthallaLocale.set(select.value);
+			});
+		})();
+	</script>
 }
 
 func assetURL(path string) string {

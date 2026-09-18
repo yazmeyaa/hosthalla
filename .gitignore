@@ -1,3 +1,45 @@
+# Generated templates, translation bundles, and build output
 *_templ.go
+/tokibundle/*_gen.go
 dist/
+/hosthalla
+/hosthalla.exe
+*.test
+*.test.exe
+
+# Local development files and secrets
 .notes/
+/.temp/
+/hh_dev.config.yaml
+/hosthalla.yaml
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Runtime databases and logs
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.sqlite3-journal
+*.log
+
+# Test coverage
+/coverage/
+/coverage.out
+/coverage.html
+
+# Editor and OS temporary files
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

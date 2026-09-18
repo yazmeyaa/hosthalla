@@ -40,6 +40,7 @@ Hosthalla answers a practical day-to-day question: what machines do I have, how 
 Requirements: Go 1.26+. Docker and Docker Compose are optional and only needed for PostgreSQL development.
 
 ```sh
+make generate
 go run ./cmd/hosthalla config generate
 go run ./cmd/hosthalla bootstrap --username admin --password admin
 make dev
@@ -57,7 +58,7 @@ For regular local development, use:
 make dev
 ```
 
-`make dev` regenerates Templ views and starts the server with `go run ./cmd/hosthalla serve`. Before the first run, create the config and run `bootstrap` once.
+`make dev` regenerates Templ views and Toki translations, then starts the server using `hh_dev.config.yaml`. Before the first run, create the config and run `bootstrap` once.
 
 ## Install Binary
 
@@ -250,12 +251,12 @@ hosthalla agent run [--config <file> | --config-dir <dir>]
 | Target | Description |
 | --- | --- |
 | `make help` | Show available Make targets |
-| `make dev` | Regenerate Templ files and run the web server |
-| `make run` | Run the web server from source |
+| `make dev` | Regenerate translations and views, then run the web server |
+| `make run` | Regenerate code and run the web server from source |
 | `make build` | Build the binary |
-| `make generate` | Regenerate Templ Go files |
+| `make generate` | Regenerate Templ Go files, then Toki translations |
 | `make test` | Run Go tests |
-| `make check` | Regenerate Templ files and run Go tests |
+| `make check` | Regenerate code and run Go tests |
 | `make infra-up` | Start PostgreSQL for development |
 | `make infra-down` | Stop development infrastructure |
 | `make infra-status` | Show development service status |
@@ -263,6 +264,8 @@ hosthalla agent run [--config <file> | --config-dir <dir>]
 | `make infra-reset` | Stop development infrastructure and remove volumes |
 | `make db-migrate` | Apply migrations for the configured database; accepts `driver` and `dsn` overrides |
 | `make db-rollback` | Roll back one configured migration; accepts `driver` and `dsn` overrides |
+
+Toki (`tokibundle/*_gen.go`) and Templ (`*_templ.go`) generated Go files are not committed. Commit `.tokidomain.yml`, translation catalogs (`tokibundle/*.arb`), and `.templ` sources instead. Run `make generate` before invoking `go build`, `go run`, or `go test` directly on a fresh checkout. The Make build/test targets and GoReleaser run generation automatically using the tool versions pinned in `go.mod`. Templ runs first because Toki analyzes the generated Go sources.
 
 Examples:
 

@@ -132,6 +132,37 @@ func TestRouterServesOpenGraphImage(t *testing.T) {
 	}
 }
 
+func TestRouterResolvesPageLocale(t *testing.T) {
+	handler := NewRouter(NewRouterParams{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	for _, tt := range []struct {
+		name, cookie, acceptLanguage, want string
+	}{
+		{name: "default", want: "en"},
+		{name: "browser language", acceptLanguage: "ru-RU, en;q=0.8", want: "ru"},
+		{name: "cookie preference", cookie: "en", acceptLanguage: "ru", want: "en"},
+		{name: "russian cookie", cookie: "ru", acceptLanguage: "en", want: "ru"},
+		{name: "unsupported cookie", cookie: "zz", acceptLanguage: "ru", want: "ru"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/auth", nil)
+			request.Header.Set("Accept-Language", tt.acceptLanguage)
+			if tt.cookie != "" {
+				request.AddCookie(&http.Cookie{Name: "locale", Value: tt.cookie})
+			}
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != http.StatusOK {
+				t.Fatalf("unexpected status: %d", response.Code)
+			}
+			if !strings.Contains(response.Body.String(), `<html lang="`+tt.want+`"`) {
+				t.Errorf("page does not use locale %q", tt.want)
+			}
+		})
+	}
+}
+
 func TestAuthPageHasAbsoluteSocialMetadata(t *testing.T) {
 	handler := NewRouter(NewRouterParams{
 		Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),

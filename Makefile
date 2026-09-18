@@ -35,21 +35,23 @@ help: ## Show this help.
 		/^[a-zA-Z0-9_-]+:.*## / { printf "  %-14s %s\n", $$1, $$2 } \
 	' $(MAKEFILE_LIST)
 
-dev: ## Regenerate views and run the web server.
+dev: ## Regenerate translations and views, then run the web server.
 	$(MAKE) generate
-	$(GO_RUN) serve
+	$(GO_RUN) --config ./hh_dev.config.yaml serve
 
-run: ## Run the web server from source.
+run: generate ## Regenerate code and run the web server from source.
 	$(GO_RUN) serve
 
 build: generate ## Build the release binary into dist/hosthalla.
 	mkdir -p $(DIST_DIR)
 	$(GO_BUILD) -o $(HOSTHALLA_BIN) $(APP)
 
-generate: ## Regenerate Templ views.
+# Toki analyzes Go sources, including the generated Templ views.
+generate: ## Regenerate Templ views and Toki translations.
 	$(GO) tool templ generate
+	$(GO) tool toki generate -l en
 
-test: generate ## Regenerate Templ views and run Go tests.
+test: generate ## Regenerate code and run Go tests.
 	$(GO) test ./...
 
 check: test ## Regenerate code and run tests.

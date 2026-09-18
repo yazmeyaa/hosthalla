@@ -5,7 +5,35 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/yazmeyaa/hosthalla/internal/web/i18n"
+	"github.com/yazmeyaa/hosthalla/tokibundle"
+	"golang.org/x/text/language"
 )
+
+func TestGenericLayoutUsesReaderLocale(t *testing.T) {
+	for _, locale := range []language.Tag{language.English, language.Russian} {
+		t.Run(locale.String(), func(t *testing.T) {
+			reader, _ := tokibundle.Match(locale)
+			var output bytes.Buffer
+			if err := GenericLayout(GenericLayoutProps{}).Render(i18n.WithReader(context.Background(), reader), &output); err != nil {
+				t.Fatalf("render layout: %v", err)
+			}
+			for _, expected := range []string{
+				`<html lang="` + locale.String() + `"`,
+				`<select data-locale-select>`,
+				`<option value="">Browser language</option>`,
+				`<option value="` + locale.String() + `" selected`,
+				`English</option>`,
+				`русский</option>`,
+			} {
+				if !strings.Contains(output.String(), expected) {
+					t.Errorf("layout is missing %q", expected)
+				}
+			}
+		})
+	}
+}
 
 func TestGenericLayoutIncludesMetadata(t *testing.T) {
 	var output bytes.Buffer
