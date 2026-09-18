@@ -8,4 +8,15 @@ name: hosthalla
 # The description provides translators with additional context and instructions on
 # how to translate within a directory tree, such as the expected tone, style,
 # target audience, or terminology conventions.
-description: ""
+description: >-
+  Hosthalla is a self-hosted infrastructure inventory and monitoring application
+  for system administrators and developers. Its web interface covers hosts,
+  agent registration, system and resource metrics, SSH management, users, API
+  tokens, and installation and administration guides. Use clear, concise,
+  neutral language and standard technical terminology. Keep terminology
+  consistent across navigation, forms, status messages, and documentation.
+  Distinguish the Hosthalla server from monitored hosts and the agents running
+  on them. Keep the product name Hosthalla, CLI commands and flags, code,
+  configuration keys, file paths, URLs, and API identifiers unchanged. Preserve
+  message placeholders and formatting syntax. Translate user-facing labels
+  naturally rather than word for word, and keep short UI labels brief.
